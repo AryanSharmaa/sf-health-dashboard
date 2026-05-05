@@ -49,7 +49,7 @@ function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state }) {
     client_id:     clientId,
     redirect_uri:  redirectUri,
     state:         state || "",
-    scope:         "full refresh_token",
+    scope:         "full",
     prompt:        "consent",
   });
   return `${base}/services/oauth2/authorize?${params.toString()}`;
