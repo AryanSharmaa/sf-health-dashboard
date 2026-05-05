@@ -8,7 +8,7 @@ const {
   createSession, getSession, deleteSession,
   generateCodeVerifier, generateCodeChallenge,
   generateState, validateState,
-  getAuthorizationUrl, exchangeCodeForToken, getUserInfo,
+  getAuthorizationUrl, exchangeCodeForToken, getUserInfo, revokeToken,
 } = require("./oauth");
 
 function getRedirectUri(req) {
@@ -116,9 +116,15 @@ router.get("/session", (req, res) => {
 
 // ─── Logout ───────────────────────────────────────────────────────────────────
 
-router.post("/logout", (req, res) => {
+router.post("/logout", async (req, res) => {
   const sessionId = req.cookies?.sf_session;
-  if (sessionId) deleteSession(sessionId);
+  if (sessionId) {
+    const session = getSession(sessionId);
+    if (session?.accessToken && session?.instanceUrl) {
+      await revokeToken(session.instanceUrl, session.accessToken);
+    }
+    deleteSession(sessionId);
+  }
   res.clearCookie("sf_session", {
     httpOnly: true,
     secure:   process.env.NODE_ENV === "production",

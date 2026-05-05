@@ -75,7 +75,6 @@ function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChall
     scope:                  "full",
     code_challenge:         codeChallenge,
     code_challenge_method:  "S256",
-    prompt:                 "login",
   });
   return `${base}/services/oauth2/authorize?${params.toString()}`;
 }
@@ -161,9 +160,15 @@ async function getUserInfo(instanceUrl, accessToken) {
   });
 }
 
+async function revokeToken(instanceUrl, token) {
+  try {
+    await postForm(`${instanceUrl}/services/oauth2/revoke`, { token });
+  } catch (_) {}
+}
+
 module.exports = {
   createSession, getSession, deleteSession,
   generateCodeVerifier, generateCodeChallenge,
   generateState, validateState,
-  getAuthorizationUrl, exchangeCodeForToken, getUserInfo,
+  getAuthorizationUrl, exchangeCodeForToken, getUserInfo, revokeToken,
 };
