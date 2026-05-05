@@ -174,7 +174,7 @@
           <div class="name" id="banner-org-name">Loading...</div>
           <div class="id" id="banner-org-id"></div>
         </div>
-        <button class="btn-run" id="run-btn" onclick="startAudit()">Run Health Audit</button>
+        <button class="btn-run" id="run-btn">Run Health Audit</button>
       </div>
       <div class="status" id="status-box">
         <span class="spinner"></span>
@@ -566,11 +566,8 @@ function renderRecurringIssues(issues) {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
-document.addEventListener("DOMContentLoaded", function() {
-  var btn = document.getElementById("run-btn");
-  if (btn) btn.addEventListener("click", startAudit);
-  checkSession();
-});
+document.getElementById("run-btn").addEventListener("click", startAudit);
+checkSession();
 </script>
 </body>
 </html>
