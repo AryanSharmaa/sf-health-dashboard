@@ -57,6 +57,11 @@ app.use((req, _res, next) => {
   next();
 });
 
+// index.html must never be cached so deploys are always served fresh
+app.get("/", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/index.html"));
+});
 app.use(express.static(path.join(__dirname, "../public"), { maxAge: "1h" }));
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
@@ -216,6 +221,7 @@ app.get("/api/compare", readLimiter, async (req, res) => {
 // ─── SPA fallback ─────────────────────────────────────────────────────────────
 
 app.get("*", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 

@@ -354,7 +354,12 @@ async function startAudit() {
   setStatus(STEPS[0]);
 
   try {
-    const res    = await fetch("/api/audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", credentials: "include" });
+    const res = await fetch("/api/audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}", credentials: "include" });
+    if (res.status === 401) {
+      setStatus("Session expired — reconnecting…", "error");
+      setTimeout(() => window.location.href = "/", 1500);
+      return;
+    }
     const { jobId, error } = await res.json();
     if (error) throw new Error(error);
     await pollJob(jobId);
