@@ -112,8 +112,14 @@
 <nav>
   <div class="logo">SF<span>Health</span></div>
   <span class="tagline">Automated Salesforce Org Audit</span>
-  <div class="nav-right" id="nav-right">
-    <!-- Populated by JS after session check -->
+  <div class="nav-right" id="nav-right" style="display:none">
+    <div class="user-pill">
+      <div class="avatar" id="nav-avatar">?</div>
+      <span class="uname" id="nav-username"></span>
+    </div>
+    <button class="nav-link" id="btn-nav-audit">Audit</button>
+    <button class="nav-link" id="btn-nav-history">History</button>
+    <button class="btn-logout" id="btn-logout">Disconnect</button>
   </div>
 </nav>
 
@@ -308,19 +314,10 @@ async function checkSession() {
 
 function renderNav(session) {
   const el = document.getElementById("nav-right");
-  if (!session) { el.innerHTML = ""; return; }
-  const initials = (session.displayName || session.username || "?")[0].toUpperCase();
-  el.innerHTML = `
-    <div class="user-pill">
-      <div class="avatar">${initials}</div>
-      <span class="uname">${session.displayName || session.username}</span>
-    </div>
-    <button class="nav-link" id="btn-nav-audit">Audit</button>
-    <button class="nav-link" id="btn-nav-history">History</button>
-    <button class="btn-logout" id="btn-logout">Disconnect</button>`;
-  document.getElementById("btn-nav-audit").addEventListener("click", () => showPage("audit"));
-  document.getElementById("btn-nav-history").addEventListener("click", () => { showPage("history"); loadOrgList(); });
-  document.getElementById("btn-logout").addEventListener("click", logout);
+  if (!session) { el.style.display = "none"; return; }
+  document.getElementById("nav-avatar").textContent   = (session.displayName || session.username || "?")[0].toUpperCase();
+  document.getElementById("nav-username").textContent = session.displayName || session.username;
+  el.style.display = "flex";
 }
 
 async function logout() {
@@ -570,6 +567,9 @@ function renderRecurringIssues(issues) {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 document.getElementById("run-btn").addEventListener("click", startAudit);
+document.getElementById("btn-nav-audit").addEventListener("click", () => showPage("audit"));
+document.getElementById("btn-nav-history").addEventListener("click", () => { showPage("history"); loadOrgList(); });
+document.getElementById("btn-logout").addEventListener("click", logout);
 checkSession();
 </script>
 </body>
