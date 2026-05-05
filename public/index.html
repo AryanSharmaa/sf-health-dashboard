@@ -11,30 +11,46 @@
     nav .logo{color:white;font-size:20px;font-weight:800;letter-spacing:-0.5px}
     nav .logo span{color:#7dd3fc}
     nav .tagline{color:rgba(255,255,255,0.6);font-size:13px}
-    nav .nav-links{margin-left:auto;display:flex;gap:8px}
+    nav .nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
     nav .nav-link{color:rgba(255,255,255,0.8);background:rgba(255,255,255,0.1);border:none;padding:7px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.2s}
     nav .nav-link:hover,.nav-link.active{background:rgba(255,255,255,0.25);color:white}
+    .user-pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.15);padding:6px 12px;border-radius:99px}
+    .user-pill .avatar{width:26px;height:26px;background:#7dd3fc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#1e3a5f}
+    .user-pill .uname{color:white;font-size:13px;font-weight:500}
+    .btn-logout{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:white;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer}
+    .btn-logout:hover{background:rgba(255,255,255,0.2)}
     .main{max-width:900px;margin:36px auto;padding:0 24px}
     .card{background:white;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,0.07);padding:28px;margin-bottom:22px}
-    .card h2{font-size:17px;font-weight:700;margin-bottom:18px;color:#1a202c;display:flex;align-items:center;gap:8px}
-    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .form-group{display:flex;flex-direction:column;gap:5px}
-    .form-group label{font-size:12px;font-weight:600;color:#4a5568;text-transform:uppercase;letter-spacing:0.04em}
-    .form-group input{padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;transition:border-color 0.2s}
-    .form-group input:focus{border-color:#0070d2}
-    .form-group.full{grid-column:1/-1}
-    .btn{padding:11px 26px;background:#0070d2;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:background 0.2s}
-    .btn:hover{background:#005fb2}
-    .btn:disabled{background:#93c5fd;cursor:not-allowed}
-    .btn-sm{padding:7px 14px;font-size:13px;border-radius:6px}
-    .btn-outline{background:transparent;color:#0070d2;border:1.5px solid #0070d2}
-    .btn-outline:hover{background:#eff6ff}
+    .card h2{font-size:17px;font-weight:700;margin-bottom:18px;color:#1a202c}
+
+    /* ── Connect screen ── */
+    .connect-wrap{text-align:center;padding:20px 0 10px}
+    .sf-logo{width:56px;height:56px;background:linear-gradient(135deg,#1e3a5f,#0070d2);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:18px}
+    .sf-logo svg{width:32px;height:32px;fill:white}
+    .connect-wrap h1{font-size:26px;font-weight:800;color:#1a202c;margin-bottom:8px}
+    .connect-wrap p{color:#718096;font-size:15px;max-width:420px;margin:0 auto 28px}
+    .btn-connect{display:inline-flex;align-items:center;gap:10px;background:#0070d2;color:white;border:none;padding:14px 32px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;transition:background 0.2s;text-decoration:none}
+    .btn-connect:hover{background:#005fb2}
+    .btn-connect-sandbox{background:white;color:#0070d2;border:2px solid #0070d2;margin-left:10px}
+    .btn-connect-sandbox:hover{background:#eff6ff}
+    .connect-note{font-size:12px;color:#a0aec0;margin-top:16px}
+    .connect-note a{color:#0070d2}
+    .error-banner{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:9px;font-size:14px;margin-bottom:20px;display:none}
+
+    /* ── Audit screen ── */
+    .org-banner{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:#eff6ff;border-radius:10px;margin-bottom:20px;border:1px solid #bfdbfe}
+    .org-banner .org-info .name{font-weight:700;font-size:15px;color:#1e40af}
+    .org-banner .org-info .id{font-size:12px;color:#6b7280;margin-top:2px}
+    .btn-run{padding:11px 28px;background:#0070d2;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:background 0.2s}
+    .btn-run:hover{background:#005fb2}
+    .btn-run:disabled{background:#93c5fd;cursor:not-allowed}
     .status{display:none;padding:13px 16px;border-radius:9px;font-size:14px;font-weight:500;margin-top:14px}
     .status.running{display:block;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
     .status.error{display:block;background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
     .spinner{display:inline-block;width:13px;height:13px;border:2px solid #93c5fd;border-top-color:#1d4ed8;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;vertical-align:middle}
     @keyframes spin{to{transform:rotate(360deg)}}
-    /* Score */
+
+    /* ── Score ── */
     .score-hero{display:grid;grid-template-columns:150px 1fr;gap:28px;align-items:center}
     .gauge-wrap{text-align:center}
     .gauge-score{font-size:48px;font-weight:800;line-height:1}
@@ -44,14 +60,12 @@
     .stat-box{background:#f7fafc;border-radius:9px;padding:12px 14px}
     .stat-box .val{font-size:24px;font-weight:800}
     .stat-box .lbl{font-size:11px;color:#718096;margin-top:2px}
-    /* Categories */
     .cat-row{display:grid;grid-template-columns:140px 1fr 48px;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f7fafc}
     .cat-row:last-child{border-bottom:none}
     .cat-label{font-size:13px;font-weight:500;color:#4a5568}
     .bar-track{background:#e2e8f0;border-radius:99px;height:9px}
     .bar-fill{height:9px;border-radius:99px;transition:width 0.8s ease}
     .cat-score{font-size:14px;font-weight:700;text-align:right}
-    /* Actions */
     .action-item{display:grid;grid-template-columns:26px auto 1fr;gap:10px;align-items:start;padding:12px 0;border-bottom:1px solid #f7fafc}
     .action-item:last-child{border-bottom:none}
     .action-num{font-size:12px;color:#a0aec0;font-weight:600;padding-top:2px}
@@ -60,40 +74,34 @@
     .bg-high{background:#fff7ed;color:#ea580c}
     .bg-medium{background:#fefce8;color:#ca8a04}
     .bg-low{background:#f0fdf4;color:#16a34a}
-    /* Downloads */
     .dl-row{display:flex;gap:10px}
     .dl-btn{padding:9px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid;text-decoration:none;display:inline-block;transition:all 0.2s}
     .dl-btn.html{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
-    .dl-btn.html:hover{background:#dbeafe}
     .dl-btn.json{background:#f0fdf4;color:#166534;border-color:#bbf7d0}
-    .dl-btn.json:hover{background:#dcfce7}
-    /* Trend chart */
-    .trend-chart{width:100%;height:200px;position:relative}
-    .trend-chart svg{width:100%;height:100%}
+
+    /* ── History ── */
     .trend-empty{color:#a0aec0;font-size:14px;text-align:center;padding:40px 0}
-    /* Org history table */
     table{width:100%;border-collapse:collapse;font-size:13px}
     th{text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;padding:8px 10px;border-bottom:2px solid #f3f4f6}
     td{padding:10px;border-bottom:1px solid #f7fafc;color:#374151}
     tr:last-child td{border-bottom:none}
     tr:hover td{background:#f9fafb}
     .chip{display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;font-weight:600}
-    /* Page views */
-    .page{display:none}
-    .page.active{display:block}
-    /* Org list */
-    .org-item{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #f7fafc;cursor:pointer;transition:all 0.15s}
+    .org-item{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #f7fafc;cursor:pointer}
     .org-item:last-child{border-bottom:none}
-    .org-item:hover{background:#f9fafb;margin:0 -28px;padding:14px 28px;border-radius:8px}
-    .org-name{font-weight:600;font-size:15px}
+    .org-item:hover .org-name{color:#0070d2}
+    .org-name{font-weight:600;font-size:15px;transition:color 0.15s}
     .org-meta{font-size:12px;color:#a0aec0;margin-top:2px}
-    /* Recurring issues */
+    .trend-chart{width:100%;height:200px}
+    .cat-trend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
     .issue-row{display:flex;align-items:start;gap:10px;padding:10px 0;border-bottom:1px solid #f7fafc}
     .issue-row:last-child{border-bottom:none}
     .issue-count{background:#fef2f2;color:#dc2626;font-size:12px;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap}
     .delta-up{color:#16a34a;font-weight:700}
     .delta-down{color:#dc2626;font-weight:700}
     .delta-flat{color:#6b7280;font-weight:700}
+    .page{display:none}
+    .page.active{display:block}
   </style>
 </head>
 <body>
@@ -101,55 +109,80 @@
 <nav>
   <div class="logo">SF<span>Health</span></div>
   <span class="tagline">Automated Salesforce Org Audit</span>
-  <div class="nav-links">
-    <button class="nav-link active" onclick="showPage('audit')">New Audit</button>
-    <button class="nav-link" onclick="showPage('history')">Org History</button>
+  <div class="nav-right" id="nav-right">
+    <!-- Populated by JS after session check -->
   </div>
 </nav>
 
 <div class="main">
 
-  <!-- ══ PAGE: AUDIT ══ -->
-  <div class="page active" id="page-audit">
-
-    <!-- Connect Form -->
+  <!-- ══ PAGE: CONNECT ══ -->
+  <div class="page active" id="page-connect">
     <div class="card">
-      <h2>Connect to Salesforce Org</h2>
-      <form id="audit-form">
-        <div class="form-grid">
-          <div class="form-group full">
-            <label>Login URL</label>
-            <input type="text" id="loginUrl" value="login.salesforce.com" placeholder="login.salesforce.com or test.salesforce.com"/>
-          </div>
-          <div class="form-group">
-            <label>Username</label>
-            <input type="email" id="username" placeholder="admin@myorg.com" required/>
-          </div>
-          <div class="form-group">
-            <label>Password + Security Token</label>
-            <input type="password" id="password" placeholder="passwordSecurityToken" required/>
-          </div>
-          <div class="form-group">
-            <label>Connected App Client ID <span style="color:#a0aec0;font-weight:400;text-transform:none">(optional)</span></label>
-            <input type="text" id="clientId" placeholder="Consumer Key"/>
-          </div>
-          <div class="form-group">
-            <label>Connected App Client Secret <span style="color:#a0aec0;font-weight:400;text-transform:none">(optional)</span></label>
-            <input type="password" id="clientSecret" placeholder="Consumer Secret"/>
-          </div>
+      <div id="error-banner" class="error-banner"></div>
+      <div class="connect-wrap">
+        <div class="sf-logo">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
         </div>
-        <button type="submit" class="btn" id="run-btn" style="margin-top:16px">Run Health Audit</button>
-      </form>
+        <h1>Salesforce Org Health Dashboard</h1>
+        <p>Connect your Salesforce org securely via OAuth — your password never leaves Salesforce.</p>
+        <div>
+          <a href="/auth/salesforce?env=production" class="btn-connect">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+            Connect Production Org
+          </a>
+          <a href="/auth/salesforce?env=sandbox" class="btn-connect btn-connect-sandbox">
+            Connect Sandbox
+          </a>
+        </div>
+        <p class="connect-note">
+          You'll be redirected to Salesforce's official login page.<br/>
+          We never see or store your password.
+        </p>
+      </div>
+    </div>
+
+    <!-- How it works -->
+    <div class="card">
+      <h2>How it works</h2>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:8px">
+        <div style="text-align:center;padding:16px">
+          <div style="font-size:28px;margin-bottom:10px">🔐</div>
+          <div style="font-weight:700;margin-bottom:6px">Secure OAuth Login</div>
+          <div style="font-size:13px;color:#718096">Login via Salesforce's official page. We only receive a temporary access token.</div>
+        </div>
+        <div style="text-align:center;padding:16px">
+          <div style="font-size:28px;margin-bottom:10px">🔍</div>
+          <div style="font-weight:700;margin-bottom:6px">Automated Audit</div>
+          <div style="font-size:13px;color:#718096">We scan your org's automation, security, code quality, data, API usage, and more.</div>
+        </div>
+        <div style="text-align:center;padding:16px">
+          <div style="font-size:28px;margin-bottom:10px">📊</div>
+          <div style="font-weight:700;margin-bottom:6px">Health Score + Actions</div>
+          <div style="font-size:13px;color:#718096">Get a 0–100 score, per-category breakdown, and top 5 recommended actions.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE: AUDIT ══ -->
+  <div class="page" id="page-audit">
+
+    <div class="card">
+      <div class="org-banner" id="org-banner">
+        <div class="org-info">
+          <div class="name" id="banner-org-name">Loading...</div>
+          <div class="id" id="banner-org-id"></div>
+        </div>
+        <button class="btn-run" id="run-btn" onclick="startAudit()">Run Health Audit</button>
+      </div>
       <div class="status" id="status-box">
         <span class="spinner"></span>
         <span id="status-text">Connecting...</span>
       </div>
     </div>
 
-    <!-- Results -->
     <div id="results" style="display:none">
-
-      <!-- Overall Score -->
       <div class="card">
         <h2>Overall Health Score</h2>
         <div class="score-hero">
@@ -166,20 +199,14 @@
           <div class="stats-grid" id="stats-grid"></div>
         </div>
       </div>
-
-      <!-- Category Breakdown -->
       <div class="card">
         <h2>Category Breakdown</h2>
         <div id="categories"></div>
       </div>
-
-      <!-- Top Actions -->
       <div class="card">
         <h2>Top Recommended Actions</h2>
         <div id="actions"></div>
       </div>
-
-      <!-- Downloads -->
       <div class="card">
         <h2>Download Reports</h2>
         <div class="dl-row">
@@ -187,54 +214,35 @@
           <a class="dl-btn json" id="dl-json" href="#">JSON Data</a>
         </div>
       </div>
-
     </div>
   </div>
 
   <!-- ══ PAGE: HISTORY ══ -->
   <div class="page" id="page-history">
-
-    <div class="card" id="org-list-card">
+    <div class="card">
       <h2>Connected Orgs</h2>
-      <div id="org-list"><div class="trend-empty">No orgs audited yet — run your first audit.</div></div>
+      <div id="org-list"><div class="trend-empty">No orgs audited yet.</div></div>
     </div>
-
-    <!-- Org detail (hidden until org selected) -->
     <div id="org-detail" style="display:none">
-
       <div class="card">
-        <h2 id="detail-org-name">Org Detail</h2>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <h2 id="detail-org-name"></h2>
+        <div style="display:flex;gap:10px;align-items:center">
           <div id="detail-delta" style="font-size:22px;font-weight:800"></div>
           <div id="detail-meta" style="font-size:13px;color:#718096"></div>
         </div>
       </div>
-
-      <!-- Score trend chart -->
       <div class="card">
-        <h2>Score Over Time
-          <select id="trend-days" style="margin-left:auto;font-size:13px;padding:4px 8px;border-radius:6px;border:1.5px solid #e2e8f0;outline:none">
-            <option value="30">Last 30 days</option>
-            <option value="90" selected>Last 90 days</option>
-            <option value="180">Last 180 days</option>
-          </select>
-        </h2>
+        <h2>Score Over Time</h2>
         <div class="trend-chart" id="trend-chart"></div>
       </div>
-
-      <!-- Category trends -->
       <div class="card">
-        <h2>Category Score Trends</h2>
-        <div id="cat-trend-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px"></div>
+        <h2>Category Trends</h2>
+        <div class="cat-trend-grid" id="cat-trend-grid"></div>
       </div>
-
-      <!-- Recurring issues -->
       <div class="card">
-        <h2>Chronic Issues <span style="font-size:13px;font-weight:400;color:#a0aec0">(appear in 3+ audits)</span></h2>
+        <h2>Chronic Issues <span style="font-size:13px;font-weight:400;color:#a0aec0">(3+ audits)</span></h2>
         <div id="recurring-issues"></div>
       </div>
-
-      <!-- Audit history table -->
       <div class="card">
         <h2>Audit History</h2>
         <table>
@@ -242,11 +250,10 @@
           <tbody id="audit-table"></tbody>
         </table>
       </div>
-
     </div>
   </div>
 
-</div><!-- .main -->
+</div>
 
 <script>
 const API = "";
@@ -254,8 +261,6 @@ const CAT_LABELS = {
   automation:"Automation", security:"Security", dataQuality:"Data Quality",
   apiUsage:"API & Limits", codeQuality:"Code Quality", userAdoption:"User Adoption"
 };
-
-// ─── Utilities ────────────────────────────────────────────────────────────────
 
 function scoreColor(s){ return s>=80?"#16a34a":s>=60?"#ca8a04":"#dc2626" }
 function gradeColor(g){ return {A:"#16a34a",B:"#65a30d",C:"#ca8a04",D:"#ea580c",F:"#dc2626"}[g]||"#6b7280" }
@@ -268,19 +273,68 @@ function fmtDelta(d){
   return '<span class="delta-flat">→ 0</span>';
 }
 
-// ─── Page routing ─────────────────────────────────────────────────────────────
+// ─── Session check on load ────────────────────────────────────────────────────
 
-function showPage(name){
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  document.querySelectorAll(".nav-link").forEach(b=>b.classList.remove("active"));
-  document.getElementById(`page-${name}`).classList.add("active");
-  document.querySelector(`.nav-link[onclick="showPage('${name}')"]`).classList.add("active");
-  if(name==="history") loadOrgList();
+async function checkSession() {
+  // Show error from OAuth redirect if present
+  const params = new URLSearchParams(window.location.search);
+  const err = params.get("error");
+  if (err) {
+    const banner = document.getElementById("error-banner");
+    banner.textContent = `Connection failed: ${err}`;
+    banner.style.display = "block";
+    history.replaceState({}, "", "/");
+  }
+
+  const res     = await fetch("/auth/session");
+  const session = await res.json();
+
+  if (!session.connected) {
+    showPage("connect");
+    renderNav(null);
+    return;
+  }
+
+  renderNav(session);
+  document.getElementById("banner-org-name").textContent = session.orgName || session.orgId;
+  document.getElementById("banner-org-id").textContent   = `${session.username} · ${session.instanceUrl}`;
+  showPage("audit");
 }
 
-// ─── Audit form ───────────────────────────────────────────────────────────────
+// ─── Nav ──────────────────────────────────────────────────────────────────────
 
-function setStatus(msg, type="running"){
+function renderNav(session) {
+  const el = document.getElementById("nav-right");
+  if (!session) {
+    el.innerHTML = "";
+    return;
+  }
+  const initials = (session.displayName || session.username || "?")[0].toUpperCase();
+  el.innerHTML = `
+    <div class="user-pill">
+      <div class="avatar">${initials}</div>
+      <span class="uname">${session.displayName || session.username}</span>
+    </div>
+    <button class="nav-link ${location.hash==="#history"?"active":""}" onclick="showPage('audit')">Audit</button>
+    <button class="nav-link" onclick="showPage('history');loadOrgList()">History</button>
+    <button class="btn-logout" onclick="logout()">Disconnect</button>`;
+}
+
+async function logout() {
+  await fetch("/auth/logout", { method: "POST" });
+  window.location.reload();
+}
+
+// ─── Page routing ─────────────────────────────────────────────────────────────
+
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById(`page-${name}`).classList.add("active");
+}
+
+// ─── Audit ────────────────────────────────────────────────────────────────────
+
+function setStatus(msg, type = "running") {
   const box = document.getElementById("status-box");
   box.className = `status ${type}`;
   box.style.display = "block";
@@ -294,60 +348,48 @@ const STEPS = [
   "Identifying unused fields…","Calculating tech debt…","Generating health score…"
 ];
 
-async function pollJob(jobId){
-  let step=0;
-  const iv = setInterval(()=>{ if(step<STEPS.length) setStatus(STEPS[step++]) }, 4000);
-  while(true){
-    await new Promise(r=>setTimeout(r,3000));
-    const res  = await fetch(`${API}/api/audit/${jobId}`);
+async function startAudit() {
+  document.getElementById("run-btn").disabled = true;
+  document.getElementById("results").style.display = "none";
+  setStatus(STEPS[0]);
+
+  try {
+    const res    = await fetch("/api/audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const { jobId, error } = await res.json();
+    if (error) throw new Error(error);
+    await pollJob(jobId);
+  } catch (err) {
+    setStatus(`Failed: ${err.message}`, "error");
+    document.getElementById("run-btn").disabled = false;
+  }
+}
+
+async function pollJob(jobId) {
+  let step = 1;
+  const iv = setInterval(() => { if (step < STEPS.length) setStatus(STEPS[step++]); }, 5000);
+  while (true) {
+    await new Promise(r => setTimeout(r, 3000));
+    const res  = await fetch(`/api/audit/${jobId}`);
     const data = await res.json();
-    if(data.status==="complete"){
+    if (data.status === "complete") {
       clearInterval(iv);
-      document.getElementById("status-box").style.display="none";
-      document.getElementById("run-btn").disabled=false;
+      document.getElementById("status-box").style.display = "none";
+      document.getElementById("run-btn").disabled = false;
       renderAuditResults(data, jobId);
       return;
     }
-    if(data.status==="error"){
+    if (data.status === "error") {
       clearInterval(iv);
-      setStatus(`Error: ${data.error}`,"error");
-      document.getElementById("run-btn").disabled=false;
+      setStatus(`Error: ${data.error}`, "error");
+      document.getElementById("run-btn").disabled = false;
       return;
     }
   }
 }
 
-document.getElementById("audit-form").addEventListener("submit", async e=>{
-  e.preventDefault();
-  document.getElementById("run-btn").disabled=true;
-  document.getElementById("results").style.display="none";
-  setStatus("Connecting to Salesforce…");
-  try{
-    const res = await fetch(`${API}/api/audit`,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({
-        loginUrl:     document.getElementById("loginUrl").value.trim(),
-        username:     document.getElementById("username").value.trim(),
-        password:     document.getElementById("password").value,
-        clientId:     document.getElementById("clientId").value.trim()||undefined,
-        clientSecret: document.getElementById("clientSecret").value.trim()||undefined,
-      })
-    });
-    const {jobId,error} = await res.json();
-    if(error) throw new Error(error);
-    await pollJob(jobId);
-  }catch(err){
-    setStatus(`Failed: ${err.message}`,"error");
-    document.getElementById("run-btn").disabled=false;
-  }
-});
-
-// ─── Render audit results ─────────────────────────────────────────────────────
-
-function renderAuditResults(data, jobId){
-  const {overallScore,grade,categories,top5RecommendedActions} = data.report;
-  const meta = data.report.metadata||{};
+function renderAuditResults(data, jobId) {
+  const { overallScore, grade, categories, top5RecommendedActions } = data.report;
+  const meta = data.report.metadata || {};
 
   document.getElementById("overall-score").textContent = overallScore;
   document.getElementById("overall-score").style.color = scoreColor(overallScore);
@@ -355,184 +397,156 @@ function renderAuditResults(data, jobId){
   document.getElementById("overall-grade").style.color = gradeColor(grade);
 
   const arc    = document.getElementById("gauge-arc");
-  const filled = (overallScore/100)*175;
-  arc.setAttribute("stroke-dasharray",`${filled.toFixed(1)} ${(175-filled).toFixed(1)}`);
+  const filled = (overallScore / 100) * 175;
+  arc.setAttribute("stroke-dasharray", `${filled.toFixed(1)} ${(175 - filled).toFixed(1)}`);
   arc.setAttribute("stroke", scoreColor(overallScore));
 
-  const crit   = top5RecommendedActions.filter(a=>a.priority==="critical").length;
-  const high   = top5RecommendedActions.filter(a=>a.priority==="high").length;
-  const unused = meta.unusedFields?.unusedFieldCount||0;
-  document.getElementById("stats-grid").innerHTML=[
-    [crit,"Critical",scoreColor(crit>0?0:100)],
-    [high,"High Issues",scoreColor(high>0?59:100)],
-    [unused,"Unused Fields","#718096"],
-    [meta.techDebt?.totalApexClasses||"—","Apex Classes","#718096"],
-    [meta.techDebt?.staleApiVersionClasses||"—","Stale Classes","#718096"],
-    [meta.techDebt?.totalVFPages||"—","VF Pages","#718096"],
-  ].map(([v,l,c])=>`<div class="stat-box"><div class="val" style="color:${c}">${v}</div><div class="lbl">${l}</div></div>`).join("");
+  const crit   = top5RecommendedActions.filter(a => a.priority === "critical").length;
+  const high   = top5RecommendedActions.filter(a => a.priority === "high").length;
+  const unused = meta.unusedFields?.unusedFieldCount || 0;
+  document.getElementById("stats-grid").innerHTML = [
+    [crit,  "Critical",      scoreColor(crit > 0 ? 0 : 100)],
+    [high,  "High Issues",   scoreColor(high > 0 ? 59 : 100)],
+    [unused,"Unused Fields", "#718096"],
+    [meta.techDebt?.totalApexClasses       || "—", "Apex Classes",   "#718096"],
+    [meta.techDebt?.staleApiVersionClasses || "—", "Stale Classes",  "#718096"],
+    [meta.techDebt?.totalVFPages           || "—", "VF Pages",       "#718096"],
+  ].map(([v, l, c]) => `<div class="stat-box"><div class="val" style="color:${c}">${v}</div><div class="lbl">${l}</div></div>`).join("");
 
-  document.getElementById("categories").innerHTML = Object.entries(categories).map(([k,v])=>`
+  document.getElementById("categories").innerHTML = Object.entries(categories).map(([k, v]) => `
     <div class="cat-row">
-      <div class="cat-label">${CAT_LABELS[k]||k}</div>
+      <div class="cat-label">${CAT_LABELS[k] || k}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${v.score}%;background:${scoreColor(v.score)}"></div></div>
       <div class="cat-score" style="color:${scoreColor(v.score)}">${v.score}</div>
     </div>`).join("");
 
-  document.getElementById("actions").innerHTML = top5RecommendedActions.length===0
+  document.getElementById("actions").innerHTML = top5RecommendedActions.length === 0
     ? '<p style="color:#16a34a;font-weight:600;padding:8px 0">No issues — this org is in excellent health!</p>'
-    : top5RecommendedActions.map((a,i)=>`
+    : top5RecommendedActions.map((a, i) => `
         <div class="action-item">
-          <div class="action-num">${i+1}</div>
+          <div class="action-num">${i + 1}</div>
           <span class="badge ${priorityClass(a.priority)}">${a.priority}</span>
           <div style="font-size:13px;color:#2d3748;line-height:1.5">${a.action}</div>
         </div>`).join("");
 
-  document.getElementById("dl-html").href=`${API}/api/audit/${jobId}/report.html`;
-  document.getElementById("dl-json").href=`${API}/api/audit/${jobId}/report.json`;
-  document.getElementById("results").style.display="block";
-  document.getElementById("results").scrollIntoView({behavior:"smooth",block:"start"});
+  document.getElementById("dl-html").href = `/api/audit/${jobId}/report.html`;
+  document.getElementById("dl-json").href = `/api/audit/${jobId}/report.json`;
+  document.getElementById("results").style.display = "block";
+  document.getElementById("results").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// ─── Org history page ─────────────────────────────────────────────────────────
+// ─── History page ─────────────────────────────────────────────────────────────
 
-async function loadOrgList(){
-  const res  = await fetch(`${API}/api/orgs`);
+async function loadOrgList() {
+  const res  = await fetch("/api/orgs");
   const orgs = await res.json();
   const el   = document.getElementById("org-list");
-  if(!orgs.length){
-    el.innerHTML='<div class="trend-empty">No orgs audited yet — run your first audit.</div>';
+  if (!orgs.length) {
+    el.innerHTML = '<div class="trend-empty">No orgs audited yet — run your first audit.</div>';
     return;
   }
-  el.innerHTML = orgs.map(org=>`
+  el.innerHTML = orgs.map(org => `
     <div class="org-item" onclick="loadOrgDetail('${org.id}')">
       <div>
         <div class="org-name">${org.name}</div>
-        <div class="org-meta">${org.id} · ${org.total_audits} audit${org.total_audits!==1?"s":""} · Last: ${org.last_audit_at?fmtDate(org.last_audit_at):"—"}</div>
+        <div class="org-meta">${org.id} · ${org.total_audits} audit${org.total_audits !== 1 ? "s" : ""} · Last: ${org.last_audit_at ? fmtDate(org.last_audit_at) : "—"}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:22px;font-weight:800;color:${scoreColor(org.latest_score||0)}">${org.latest_score||"—"}</div>
+        <div style="font-size:22px;font-weight:800;color:${scoreColor(org.latest_score || 0)}">${org.latest_score || "—"}</div>
         <div style="font-size:11px;color:#a0aec0">latest score</div>
       </div>
     </div>`).join("");
 }
 
-async function loadOrgDetail(orgId){
-  document.getElementById("org-detail").style.display="block";
-  const days = document.getElementById("trend-days").value;
-
+async function loadOrgDetail(orgId) {
+  document.getElementById("org-detail").style.display = "block";
   const [auditRes, trendRes] = await Promise.all([
-    fetch(`${API}/api/orgs/${orgId}/audits`),
-    fetch(`${API}/api/orgs/${orgId}/trend?days=${days}`),
+    fetch(`/api/orgs/${orgId}/audits`),
+    fetch(`/api/orgs/${orgId}/trend?days=90`),
   ]);
   const audits = await auditRes.json();
   const trend  = await trendRes.json();
 
-  // Header
-  const orgName = audits[0] ? `Org: ${orgId}` : orgId;
-  document.getElementById("detail-org-name").textContent = orgName;
+  document.getElementById("detail-org-name").textContent = audits[0] ? `${orgId}` : orgId;
   const delta = trend.delta;
   document.getElementById("detail-delta").innerHTML =
     delta?.delta !== null && delta?.delta !== undefined
       ? `${fmtDelta(delta.delta)} from previous audit`
       : "No previous audit to compare";
   document.getElementById("detail-meta").textContent =
-    `${audits.length} audit${audits.length!==1?"s":""} · Latest: ${audits[0]?fmtDate(audits[0].created_at):"—"}`;
+    `${audits.length} audit${audits.length !== 1 ? "s" : ""} · Latest: ${audits[0] ? fmtDate(audits[0].created_at) : "—"}`;
 
-  // Trend chart
   renderTrendChart(trend.trend);
-
-  // Category mini-bars
   renderCategoryTrends(trend.categoryTrends);
+  renderRecurringIssues(trend.recurringIssues || []);
 
-  // Recurring issues
-  renderRecurringIssues(trend.recurringIssues||[]);
-
-  // Audit table
-  document.getElementById("audit-table").innerHTML = audits.map(a=>`
+  document.getElementById("audit-table").innerHTML = audits.map(a => `
     <tr>
       <td>${fmtDate(a.created_at)}</td>
       <td style="font-weight:700;color:${scoreColor(a.overall_score)}">${a.overall_score}</td>
       <td><span class="chip" style="background:${gradeColor(a.grade)}22;color:${gradeColor(a.grade)}">${a.grade}</span></td>
-      <td><span class="chip" style="background:${a.status==="complete"?"#f0fdf4":"#fef2f2"};color:${a.status==="complete"?"#166534":"#991b1b"}">${a.status}</span></td>
-      <td><a href="${API}/api/audit/${a.id}/report.html" style="color:#0070d2;font-size:12px;font-weight:600">HTML</a>
-          &nbsp;<a href="${API}/api/audit/${a.id}/report.json" style="color:#16a34a;font-size:12px;font-weight:600">JSON</a></td>
+      <td><span class="chip" style="background:${a.status === "complete" ? "#f0fdf4" : "#fef2f2"};color:${a.status === "complete" ? "#166534" : "#991b1b"}">${a.status}</span></td>
+      <td>
+        <a href="/api/audit/${a.id}/report.html" style="color:#0070d2;font-size:12px;font-weight:600">HTML</a>
+        &nbsp;<a href="/api/audit/${a.id}/report.json" style="color:#16a34a;font-size:12px;font-weight:600">JSON</a>
+      </td>
     </tr>`).join("");
 
-  document.getElementById("org-detail").scrollIntoView({behavior:"smooth",block:"start"});
+  document.getElementById("org-detail").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-// ─── SVG trend chart ──────────────────────────────────────────────────────────
-
-function renderTrendChart(points){
+function renderTrendChart(points) {
   const el = document.getElementById("trend-chart");
-  if(!points||!points.length){
-    el.innerHTML='<div class="trend-empty">Not enough data yet — run more audits to see trends.</div>';
+  if (!points || !points.length) {
+    el.innerHTML = '<div class="trend-empty">Run more audits to see trends.</div>';
     return;
   }
-  const W=800,H=160,PAD={t:10,r:10,b:30,l:34};
-  const scores = points.map(p=>p.overall_score);
-  const minS   = Math.max(0,Math.min(...scores)-5);
-  const maxS   = Math.min(100,Math.max(...scores)+5);
-  const xScale = i => PAD.l + (i/(points.length-1||1))*(W-PAD.l-PAD.r);
-  const yScale = s => H-PAD.b - ((s-minS)/(maxS-minS||1))*(H-PAD.t-PAD.b);
-
-  const pts   = points.map((p,i)=>`${xScale(i).toFixed(1)},${yScale(p.overall_score).toFixed(1)}`).join(" ");
-  const area  = `${xScale(0).toFixed(1)},${(H-PAD.b).toFixed(1)} `+pts+` ${xScale(points.length-1).toFixed(1)},${(H-PAD.b).toFixed(1)}`;
-
-  const dots  = points.map((p,i)=>
-    `<circle cx="${xScale(i).toFixed(1)}" cy="${yScale(p.overall_score).toFixed(1)}" r="4" fill="${scoreColor(p.overall_score)}" stroke="white" stroke-width="2">
-       <title>${fmtDate(p.created_at)}: ${p.overall_score}</title>
-     </circle>`).join("");
-
-  const yLabels=[minS,Math.round((minS+maxS)/2),maxS].map(v=>
-    `<text x="${PAD.l-4}" y="${yScale(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#a0aec0">${v}</text>`).join("");
-
-  const xLabels = points.filter((_,i)=>i===0||i===points.length-1||i===Math.floor(points.length/2)).map((p,_,arr)=>{
-    const idx = points.indexOf(p);
-    return `<text x="${xScale(idx).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="10" fill="#a0aec0">${fmtDate(p.created_at)}</text>`;
-  }).join("");
-
-  el.innerHTML=`
-    <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="${area}" fill="#0070d214"/>
-      <polyline points="${pts}" fill="none" stroke="#0070d2" stroke-width="2.5" stroke-linejoin="round"/>
-      ${dots}${yLabels}${xLabels}
-      <line x1="${PAD.l}" y1="${H-PAD.b}" x2="${W-PAD.r}" y2="${H-PAD.b}" stroke="#e2e8f0" stroke-width="1"/>
-    </svg>`;
+  const W = 800, H = 160, PAD = { t: 10, r: 10, b: 30, l: 34 };
+  const scores = points.map(p => p.overall_score);
+  const minS   = Math.max(0, Math.min(...scores) - 5);
+  const maxS   = Math.min(100, Math.max(...scores) + 5);
+  const xScale = i  => PAD.l + (i / (points.length - 1 || 1)) * (W - PAD.l - PAD.r);
+  const yScale = s  => H - PAD.b - ((s - minS) / (maxS - minS || 1)) * (H - PAD.t - PAD.b);
+  const pts    = points.map((p, i) => `${xScale(i).toFixed(1)},${yScale(p.overall_score).toFixed(1)}`).join(" ");
+  const area   = `${xScale(0)},${H - PAD.b} ${pts} ${xScale(points.length - 1)},${H - PAD.b}`;
+  const dots   = points.map((p, i) =>
+    `<circle cx="${xScale(i).toFixed(1)}" cy="${yScale(p.overall_score).toFixed(1)}" r="4" fill="${scoreColor(p.overall_score)}" stroke="white" stroke-width="2"><title>${fmtDate(p.created_at)}: ${p.overall_score}</title></circle>`).join("");
+  const yLbls  = [minS, Math.round((minS + maxS) / 2), maxS].map(v =>
+    `<text x="${PAD.l - 4}" y="${yScale(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#a0aec0">${v}</text>`).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+    <polygon points="${area}" fill="#0070d214"/>
+    <polyline points="${pts}" fill="none" stroke="#0070d2" stroke-width="2.5" stroke-linejoin="round"/>
+    ${dots}${yLbls}
+    <line x1="${PAD.l}" y1="${H - PAD.b}" x2="${W - PAD.r}" y2="${H - PAD.b}" stroke="#e2e8f0" stroke-width="1"/>
+  </svg>`;
 }
 
-// ─── Category mini-charts ─────────────────────────────────────────────────────
-
-function renderCategoryTrends(catTrends){
+function renderCategoryTrends(catTrends) {
   const el = document.getElementById("cat-trend-grid");
-  if(!catTrends||!Object.keys(catTrends).length){
-    el.innerHTML='<div class="trend-empty" style="grid-column:1/-1">No data yet.</div>';
+  if (!catTrends || !Object.keys(catTrends).length) {
+    el.innerHTML = '<div class="trend-empty" style="grid-column:1/-1">No data yet.</div>';
     return;
   }
-  el.innerHTML = Object.entries(catTrends).map(([cat,pts])=>{
-    const last  = pts[pts.length-1]?.score||0;
-    const first = pts[0]?.score||0;
-    const delta = last-first;
+  el.innerHTML = Object.entries(catTrends).map(([cat, pts]) => {
+    const last  = pts[pts.length - 1]?.score || 0;
+    const first = pts[0]?.score || 0;
     const color = scoreColor(last);
-    return `
-      <div style="background:#f9fafb;border-radius:10px;padding:14px">
-        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">${CAT_LABELS[cat]||cat}</div>
-        <div style="font-size:26px;font-weight:800;color:${color};margin:6px 0">${last}</div>
-        <div style="font-size:12px">${fmtDelta(delta)} over period</div>
-        <div class="bar-track" style="margin-top:8px"><div class="bar-fill" style="width:${last}%;background:${color}"></div></div>
-      </div>`;
+    return `<div style="background:#f9fafb;border-radius:10px;padding:14px">
+      <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">${CAT_LABELS[cat] || cat}</div>
+      <div style="font-size:26px;font-weight:800;color:${color};margin:6px 0">${last}</div>
+      <div style="font-size:12px">${fmtDelta(last - first)} over period</div>
+      <div class="bar-track" style="margin-top:8px"><div class="bar-fill" style="width:${last}%;background:${color}"></div></div>
+    </div>`;
   }).join("");
 }
 
-// ─── Recurring issues ─────────────────────────────────────────────────────────
-
-function renderRecurringIssues(issues){
+function renderRecurringIssues(issues) {
   const el = document.getElementById("recurring-issues");
-  if(!issues.length){
-    el.innerHTML='<div style="color:#a0aec0;font-size:14px;padding:8px 0">No recurring issues — great sign!</div>';
+  if (!issues.length) {
+    el.innerHTML = '<div style="color:#a0aec0;font-size:14px;padding:8px 0">No recurring issues — great sign!</div>';
     return;
   }
-  el.innerHTML = issues.map(i=>`
+  el.innerHTML = issues.map(i => `
     <div class="issue-row">
       <span class="issue-count">${i.occurrences}×</span>
       <div>
@@ -542,12 +556,9 @@ function renderRecurringIssues(issues){
     </div>`).join("");
 }
 
-// ─── Trend days change ────────────────────────────────────────────────────────
+// ─── Init ─────────────────────────────────────────────────────────────────────
 
-document.getElementById("trend-days").addEventListener("change", ()=>{
-  const orgId = document.getElementById("detail-org-name").dataset.orgId;
-  if(orgId) loadOrgDetail(orgId);
-});
+checkSession();
 </script>
 </body>
 </html>

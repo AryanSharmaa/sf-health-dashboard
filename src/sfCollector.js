@@ -7,6 +7,15 @@
 
 const jsforce = require("jsforce");
 
+// Connect via OAuth access token (preferred — password never required)
+function createConnectionFromToken({ instanceUrl, accessToken }) {
+  return new jsforce.Connection({
+    instanceUrl,
+    accessToken,
+  });
+}
+
+// Connect via username/password (CLI use only)
 async function createConnection({ loginUrl, username, password, clientId, clientSecret }) {
   const conn = new jsforce.Connection({
     loginUrl: loginUrl || "https://login.salesforce.com",
@@ -362,7 +371,17 @@ async function collectTechDebt(conn) {
 
 async function collectOrgMetadata(credentials) {
   const conn = await createConnection(credentials);
+  return collectOrgMetadataWithConn(conn);
+}
 
+// Collect metadata using an OAuth access token (no password needed)
+async function collectOrgMetadataFromToken({ instanceUrl, accessToken }) {
+  const conn = createConnectionFromToken({ instanceUrl, accessToken });
+  return collectOrgMetadataWithConn(conn);
+}
+
+// Internal: collect using an already-connected jsforce connection
+async function collectOrgMetadataWithConn(conn) {
   const orgInfo = await safeQuery(
     conn,
     "SELECT Id, Name, IsSandbox, OrganizationType FROM Organization LIMIT 1"
@@ -381,20 +400,14 @@ async function collectOrgMetadata(credentials) {
     ]);
 
   return {
-    orgId: orgInfo[0]?.Id || "unknown",
-    orgName: orgInfo[0]?.Name || "unknown",
+    orgId:    orgInfo[0]?.Id    || "unknown",
+    orgName:  orgInfo[0]?.Name  || "unknown",
     isSandbox: orgInfo[0]?.IsSandbox || false,
-    orgType: orgInfo[0]?.OrganizationType || "unknown",
+    orgType:  orgInfo[0]?.OrganizationType || "unknown",
     collectedAt: new Date().toISOString(),
-    automation,
-    security,
-    dataQuality,
-    apiUsage,
-    codeQuality,
-    userAdoption,
-    unusedFields,
-    techDebt,
+    automation, security, dataQuality, apiUsage,
+    codeQuality, userAdoption, unusedFields, techDebt,
   };
 }
 
-module.exports = { collectOrgMetadata, createConnection };
+module.exports = { collectOrgMetadata, collectOrgMetadataFromToken, createConnection, createConnectionFromToken };

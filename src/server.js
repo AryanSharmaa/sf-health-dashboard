@@ -1,35 +1,37 @@
 /**
- * Express API server — production-hardened.
+ * Express API server — OAuth-first, production-hardened.
  */
 
 require("dotenv").config();
-const express    = require("express");
-const cors       = require("cors");
-const helmet     = require("helmet");
+const express     = require("express");
+const cors        = require("cors");
+const helmet      = require("helmet");
 const compression = require("compression");
-const rateLimit  = require("express-rate-limit");
-const path       = require("path");
+const rateLimit   = require("express-rate-limit");
+const path        = require("path");
 const { v4: uuidv4 } = require("uuid");
 
-const { collectOrgMetadata }       = require("./sfCollector");
+const { collectOrgMetadataFromToken, collectOrgMetadata } = require("./sfCollector");
 const { scoreOrgHealth }           = require("../sfHealthScore");
 const { generateHTML, generateJSON } = require("./reportGenerator");
-const repo = require("./db/auditRepository");
+const repo       = require("./db/auditRepository");
+const authRoutes = require("./authRoutes");
+const { getSession } = require("./oauth");
 
 const app = express();
 
-// ─── Security & perf middleware ───────────────────────────────────────────────
+// ─── Security & perf ──────────────────────────────────────────────────────────
 
 app.set("trust proxy", 1);
 
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc:  ["'self'"],
-      scriptSrc:   ["'self'", "'unsafe-inline'"],   // inline JS in index.html
-      styleSrc:    ["'self'", "'unsafe-inline'"],
-      imgSrc:      ["'self'", "data:"],
-      connectSrc:  ["'self'"],
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'", "'unsafe-inline'"],
+      styleSrc:   ["'self'", "'unsafe-inline'"],
+      imgSrc:     ["'self'", "data:"],
+      connectSrc: ["'self'"],
     },
   },
 }));
@@ -38,65 +40,70 @@ app.use(compression());
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
-  : true; // allow all in dev
+  : true;
 
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: "1mb" }));
+
+// Cookie parser (lightweight, no extra dependency)
+app.use((req, _res, next) => {
+  req.cookies = {};
+  const raw = req.headers.cookie || "";
+  raw.split(";").forEach(pair => {
+    const [k, ...v] = pair.trim().split("=");
+    if (k) req.cookies[k.trim()] = decodeURIComponent(v.join("=").trim());
+  });
+  next();
+});
+
 app.use(express.static(path.join(__dirname, "../public"), { maxAge: "1h" }));
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 
-// 5 audit starts per IP per 10 minutes — prevent abuse
 const auditLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many audit requests from this IP. Please wait 10 minutes." },
+  windowMs: 10 * 60 * 1000, max: 5,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: "Too many audit requests. Please wait 10 minutes." },
 });
 
-// 60 read requests per IP per minute
 const readLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
+  windowMs: 60 * 1000, max: 60,
+  standardHeaders: true, legacyHeaders: false,
 });
 
-// In-memory store for in-flight jobs (cleared on restart — that's fine)
+// ─── Auth middleware ──────────────────────────────────────────────────────────
+
+function requireSession(req, res, next) {
+  const session = getSession(req.cookies?.sf_session);
+  if (!session) return res.status(401).json({ error: "Not connected. Please connect your Salesforce org first." });
+  req.sfSession = session;
+  next();
+}
+
+// In-memory job store for in-flight audits
 const runningJobs = new Map();
+
+// ─── Auth routes ──────────────────────────────────────────────────────────────
+
+app.use("/auth", authRoutes);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", version: "1.0.0", timestamp: new Date().toISOString() });
+  res.json({ status: "ok", version: "2.0.0", timestamp: new Date().toISOString() });
 });
 
-// ─── Start audit ──────────────────────────────────────────────────────────────
+// ─── Start audit (OAuth session) ──────────────────────────────────────────────
 
-app.post("/api/audit", auditLimiter, async (req, res) => {
-  const { loginUrl, username, password, clientId, clientSecret } = req.body;
+app.post("/api/audit", auditLimiter, requireSession, async (req, res) => {
+  const jobId  = uuidv4();
+  const { accessToken, instanceUrl, orgId, orgName } = req.sfSession;
 
-  if (!username || typeof username !== "string" || username.length > 254)
-    return res.status(400).json({ error: "Invalid username." });
-  if (!password || typeof password !== "string" || password.length > 512)
-    return res.status(400).json({ error: "Invalid password." });
-
-  const jobId = uuidv4();
   runningJobs.set(jobId, { status: "running", startedAt: new Date().toISOString() });
 
-  // Kick off async — respond immediately with jobId
   ;(async () => {
     try {
-      const credentials = {
-        loginUrl:     `https://${(loginUrl || "login.salesforce.com").replace(/^https?:\/\//, "")}`,
-        username:     username.trim(),
-        password,
-        clientId:     clientId  || undefined,
-        clientSecret: clientSecret || undefined,
-      };
-
-      const metadata    = await collectOrgMetadata(credentials);
+      const metadata    = await collectOrgMetadataFromToken({ instanceUrl, accessToken });
       const healthScore = scoreOrgHealth(metadata);
       const report      = generateJSON(healthScore, metadata);
       const html        = generateHTML(healthScore, metadata);
@@ -107,8 +114,7 @@ app.post("/api/audit", auditLimiter, async (req, res) => {
         status: "complete",
         startedAt:   runningJobs.get(jobId)?.startedAt,
         completedAt: new Date().toISOString(),
-        report,
-        html,
+        report, html,
       });
     } catch (err) {
       await repo.markAuditError({ id: jobId, error: err.message }).catch(() => {});
@@ -123,7 +129,7 @@ app.post("/api/audit", auditLimiter, async (req, res) => {
   res.status(202).json({ jobId, status: "running" });
 });
 
-// ─── Poll job status ──────────────────────────────────────────────────────────
+// ─── Poll job ─────────────────────────────────────────────────────────────────
 
 app.get("/api/audit/:jobId", readLimiter, async (req, res) => {
   const job = runningJobs.get(req.params.jobId);
@@ -141,13 +147,12 @@ app.get("/api/audit/:jobId", readLimiter, async (req, res) => {
 
 // ─── Download reports ─────────────────────────────────────────────────────────
 
-app.get("/api/audit/:jobId/report.html", readLimiter, async (req, res) => {
-  const job  = runningJobs.get(req.params.jobId);
-  const html = job?.html;
-  if (!html) return res.status(404).json({ error: "Report not ready." });
+app.get("/api/audit/:jobId/report.html", readLimiter, (req, res) => {
+  const job = runningJobs.get(req.params.jobId);
+  if (!job?.html) return res.status(404).json({ error: "Report not ready." });
   res.setHeader("Content-Type", "text/html");
   res.setHeader("Content-Disposition", `attachment; filename="sf-health-${req.params.jobId}.html"`);
-  res.send(html);
+  res.send(job.html);
 });
 
 app.get("/api/audit/:jobId/report.json", readLimiter, async (req, res) => {
@@ -162,32 +167,12 @@ app.get("/api/audit/:jobId/report.json", readLimiter, async (req, res) => {
   res.json(dbAudit.rawScore);
 });
 
-// ─── Score-only (pre-collected metadata) ─────────────────────────────────────
-
-app.post("/api/score", readLimiter, (req, res) => {
-  try {
-    res.json(scoreOrgHealth(req.body));
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// ─── Orgs ─────────────────────────────────────────────────────────────────────
+// ─── Orgs & history ───────────────────────────────────────────────────────────
 
 app.get("/api/orgs", readLimiter, async (_req, res) => {
   try { res.json(await repo.listOrgs()); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
-
-app.get("/api/orgs/:orgId", readLimiter, async (req, res) => {
-  try {
-    const org = await repo.getOrg(req.params.orgId);
-    if (!org) return res.status(404).json({ error: "Org not found." });
-    res.json(org);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ─── Audit history ────────────────────────────────────────────────────────────
 
 app.get("/api/orgs/:orgId/audits", readLimiter, async (req, res) => {
   try {
@@ -195,8 +180,6 @@ app.get("/api/orgs/:orgId/audits", readLimiter, async (req, res) => {
     res.json(await repo.listAuditsForOrg(req.params.orgId, limit));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
-// ─── Trends ───────────────────────────────────────────────────────────────────
 
 app.get("/api/orgs/:orgId/trend", readLimiter, async (req, res) => {
   try {
@@ -212,13 +195,6 @@ app.get("/api/orgs/:orgId/trend", readLimiter, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get("/api/orgs/:orgId/trend/:category", readLimiter, async (req, res) => {
-  try {
-    const days = Math.min(parseInt(req.query.days) || 90, 365);
-    res.json(await repo.getCategoryTrend(req.params.orgId, req.params.category, days));
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 app.get("/api/orgs/:orgId/issues", readLimiter, async (req, res) => {
   try {
     const [latest, recurring] = await Promise.all([
@@ -228,8 +204,6 @@ app.get("/api/orgs/:orgId/issues", readLimiter, async (req, res) => {
     res.json({ latest, recurring });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
-// ─── Compare audits ───────────────────────────────────────────────────────────
 
 app.get("/api/compare", readLimiter, async (req, res) => {
   const { a, b } = req.query;
@@ -243,8 +217,6 @@ app.get("/api/compare", readLimiter, async (req, res) => {
 app.get("*", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
 });
-
-// ─── Global error handler ─────────────────────────────────────────────────────
 
 app.use((err, _req, res, _next) => {
   console.error(err.stack);
