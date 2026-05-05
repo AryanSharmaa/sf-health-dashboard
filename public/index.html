@@ -322,7 +322,7 @@ function renderNav(session) {
 
 async function logout() {
   await fetch("/auth/logout", { method: "POST", credentials: "include" });
-  window.location.reload();
+  window.location.href = "/?t=" + Date.now();
 }
 
 // ─── Page routing ─────────────────────────────────────────────────────────────

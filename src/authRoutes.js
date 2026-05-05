@@ -119,7 +119,11 @@ router.get("/session", (req, res) => {
 router.post("/logout", (req, res) => {
   const sessionId = req.cookies?.sf_session;
   if (sessionId) deleteSession(sessionId);
-  res.clearCookie("sf_session");
+  res.clearCookie("sf_session", {
+    httpOnly: true,
+    secure:   process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
   res.json({ ok: true });
 });
 
