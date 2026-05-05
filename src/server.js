@@ -27,11 +27,12 @@ app.set("trust proxy", 1);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'", "'unsafe-inline'"],
-      styleSrc:   ["'self'", "'unsafe-inline'"],
-      imgSrc:     ["'self'", "data:"],
-      connectSrc: ["'self'"],
+      defaultSrc:    ["'self'"],
+      scriptSrc:     ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
+      styleSrc:      ["'self'", "'unsafe-inline'"],
+      imgSrc:        ["'self'", "data:"],
+      connectSrc:    ["'self'"],
     },
   },
 }));
