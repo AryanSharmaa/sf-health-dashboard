@@ -13,7 +13,7 @@ const http  = require("http");
 
 const SF_API_VERSION  = "v62.0";
 const CLAUDE_MODEL    = "claude-opus-4-7";
-const GEMINI_MODEL    = "gemini-1.5-flash";
+const GEMINI_MODEL    = "gemini-2.0-flash";
 
 const SYSTEM_PROMPT = `You are a senior Salesforce architect and certified consultant with 15+ years of experience.
 Generate a concise, actionable, step-by-step remediation guide for the Salesforce issue described.
