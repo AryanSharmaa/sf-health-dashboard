@@ -7,7 +7,7 @@ const https  = require("https");
 const http   = require("http");
 
 const sessions    = new Map();
-const SESSION_TTL_MS = 60 * 60 * 1000;
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 
 // ─── Session helpers ──────────────────────────────────────────────────────────
 
