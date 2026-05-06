@@ -65,9 +65,37 @@ CREATE TABLE IF NOT EXISTS unused_fields (
   created_at    TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- ─── Feedback ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS feedback (
+  id           INTEGER  PRIMARY KEY AUTOINCREMENT,
+  org_id       TEXT,
+  username     TEXT,
+  rating       INTEGER  NOT NULL,             -- 1–5 stars
+  ease_of_use  INTEGER,                       -- 1–5
+  usefulness   INTEGER,                       -- 1–5
+  would_recommend INTEGER,                    -- 1 yes / 0 no
+  comment      TEXT,
+  created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+-- ─── Support tickets ───────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id           INTEGER  PRIMARY KEY AUTOINCREMENT,
+  org_id       TEXT,
+  username     TEXT,
+  category     TEXT NOT NULL,                 -- bug / question / feature / other
+  subject      TEXT NOT NULL,
+  description  TEXT NOT NULL,
+  status       TEXT NOT NULL DEFAULT 'open',  -- open / in_progress / resolved
+  created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
 -- ─── Indexes ──────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
 CREATE INDEX IF NOT EXISTS idx_cat_scores_org    ON category_scores(org_id, category, created_at);
 CREATE INDEX IF NOT EXISTS idx_actions_org       ON recommended_actions(org_id, priority);
 CREATE INDEX IF NOT EXISTS idx_unused_fields_org ON unused_fields(org_id, object_name);
+CREATE INDEX IF NOT EXISTS idx_feedback_created  ON feedback(created_at);
+CREATE INDEX IF NOT EXISTS idx_tickets_status    ON support_tickets(status, created_at);

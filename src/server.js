@@ -203,6 +203,73 @@ app.post("/api/audit/:jobId/advise", aiLimiter, requireSession, async (req, res)
   }
 });
 
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+
+app.post("/api/feedback", readLimiter, async (req, res) => {
+  const { rating, easeOfUse, usefulness, wouldRecommend, comment } = req.body || {};
+  if (!rating || rating < 1 || rating > 5) return res.status(400).json({ error: "rating 1–5 required." });
+  const session = getSession(req.cookies?.sf_session);
+  try {
+    await repo.saveFeedback({
+      orgId:          session?.orgId    || null,
+      username:       session?.username || null,
+      rating, easeOfUse, usefulness, wouldRecommend, comment,
+    });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── Support tickets ──────────────────────────────────────────────────────────
+
+app.post("/api/support", readLimiter, async (req, res) => {
+  const { category, subject, description } = req.body || {};
+  if (!category || !subject || !description) return res.status(400).json({ error: "category, subject, description required." });
+  if (subject.length > 200) return res.status(400).json({ error: "Subject too long (max 200 chars)." });
+  if (description.length > 2000) return res.status(400).json({ error: "Description too long (max 2000 chars)." });
+  const session = getSession(req.cookies?.sf_session);
+  try {
+    await repo.createTicket({
+      orgId:       session?.orgId    || null,
+      username:    session?.username || null,
+      category, subject, description,
+    });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── Admin dashboard ──────────────────────────────────────────────────────────
+
+function requireAdmin(req, res, next) {
+  const key = req.headers["x-admin-key"] || req.query.key;
+  if (!process.env.ADMIN_KEY || key !== process.env.ADMIN_KEY) {
+    return res.status(401).json({ error: "Unauthorised." });
+  }
+  next();
+}
+
+app.get("/api/admin/feedback", requireAdmin, async (req, res) => {
+  try {
+    const [items, stats] = await Promise.all([repo.listFeedback(100), repo.getFeedbackStats()]);
+    res.json({ stats, items });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get("/api/admin/tickets", requireAdmin, async (req, res) => {
+  try {
+    const status = req.query.status || null;
+    res.json(await repo.listTickets(status, 100));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch("/api/admin/tickets/:id", requireAdmin, async (req, res) => {
+  const { status } = req.body || {};
+  if (!["open","in_progress","resolved"].includes(status)) return res.status(400).json({ error: "Invalid status." });
+  try {
+    await repo.updateTicketStatus(req.params.id, status);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ─── Einstein probe (debug only) ─────────────────────────────────────────────
 
 app.get("/api/einstein-probe", requireSession, async (req, res) => {

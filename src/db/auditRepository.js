@@ -303,6 +303,66 @@ async function compareAudits(auditIdA, auditIdB) {
   }));
 }
 
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+
+async function saveFeedback({ orgId, username, rating, easeOfUse, usefulness, wouldRecommend, comment }) {
+  const db = await getDb();
+  await db.query(
+    `INSERT INTO feedback (org_id, username, rating, ease_of_use, usefulness, would_recommend, comment)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [orgId || null, username || null, rating, easeOfUse || null, usefulness || null, wouldRecommend ?? null, comment || null]
+  );
+}
+
+async function listFeedback(limit = 50) {
+  const db = await getDb();
+  const { rows } = await db.query(
+    `SELECT * FROM feedback ORDER BY created_at DESC LIMIT ?`, [limit]
+  );
+  return rows;
+}
+
+async function getFeedbackStats() {
+  const db = await getDb();
+  const { rows } = await db.query(
+    `SELECT
+       COUNT(*)                        AS total,
+       ROUND(AVG(rating), 1)           AS avg_rating,
+       ROUND(AVG(ease_of_use), 1)      AS avg_ease,
+       ROUND(AVG(usefulness), 1)       AS avg_usefulness,
+       SUM(CASE WHEN would_recommend = 1 THEN 1 ELSE 0 END) AS would_recommend_count
+     FROM feedback`
+  );
+  return rows[0] || {};
+}
+
+// ─── Support tickets ──────────────────────────────────────────────────────────
+
+async function createTicket({ orgId, username, category, subject, description }) {
+  const db = await getDb();
+  await db.query(
+    `INSERT INTO support_tickets (org_id, username, category, subject, description)
+     VALUES (?, ?, ?, ?, ?)`,
+    [orgId || null, username || null, category, subject, description]
+  );
+}
+
+async function listTickets(status = null, limit = 50) {
+  const db = await getDb();
+  const { rows } = status
+    ? await db.query(`SELECT * FROM support_tickets WHERE status = ? ORDER BY created_at DESC LIMIT ?`, [status, limit])
+    : await db.query(`SELECT * FROM support_tickets ORDER BY created_at DESC LIMIT ?`, [limit]);
+  return rows;
+}
+
+async function updateTicketStatus(id, status) {
+  const db = await getDb();
+  await db.query(
+    `UPDATE support_tickets SET status = ?, updated_at = ? WHERE id = ?`,
+    [status, new Date().toISOString(), id]
+  );
+}
+
 module.exports = {
   // Orgs
   upsertOrg, listOrgs, getOrg,
@@ -316,4 +376,8 @@ module.exports = {
   getScoreTrend, getCategoryTrend, getAllCategoryTrends,
   getScoreDelta, getTopIssuesByPriority, getRecurringIssues,
   getUnusedFieldsSummary, compareAudits,
+  // Feedback
+  saveFeedback, listFeedback, getFeedbackStats,
+  // Support tickets
+  createTicket, listTickets, updateTicketStatus,
 };

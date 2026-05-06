@@ -56,8 +56,34 @@ CREATE TABLE IF NOT EXISTS unused_fields (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS feedback (
+  id              SERIAL      PRIMARY KEY,
+  org_id          TEXT,
+  username        TEXT,
+  rating          INTEGER     NOT NULL,
+  ease_of_use     INTEGER,
+  usefulness      INTEGER,
+  would_recommend INTEGER,
+  comment         TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id          SERIAL      PRIMARY KEY,
+  org_id      TEXT,
+  username    TEXT,
+  category    TEXT        NOT NULL,
+  subject     TEXT        NOT NULL,
+  description TEXT        NOT NULL,
+  status      TEXT        NOT NULL DEFAULT 'open',
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
 CREATE INDEX IF NOT EXISTS idx_cat_scores_org    ON category_scores(org_id, category, created_at);
 CREATE INDEX IF NOT EXISTS idx_actions_org       ON recommended_actions(org_id, priority);
 CREATE INDEX IF NOT EXISTS idx_unused_fields_org ON unused_fields(org_id, object_name);
+CREATE INDEX IF NOT EXISTS idx_feedback_created  ON feedback(created_at);
+CREATE INDEX IF NOT EXISTS idx_tickets_status    ON support_tickets(status, created_at);
