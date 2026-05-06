@@ -47,18 +47,18 @@ router.get("/salesforce/callback", async (req, res) => {
   const { code, state, error, error_description } = req.query;
 
   if (error) {
-    return res.redirect(`/?error=${encodeURIComponent(error_description || error)}`);
+    return res.redirect(`/app?error=${encodeURIComponent(error_description || error)}`);
   }
 
   // Validate state + retrieve PKCE verifier
   const storedState   = req.cookies?.sf_state;
   if (!state || state !== storedState) {
-    return res.redirect("/?error=Invalid+state.+Please+try+again.");
+    return res.redirect("/app?error=Invalid+state.+Please+try+again.");
   }
 
   const codeVerifier = validateState(state);
   if (!codeVerifier) {
-    return res.redirect("/?error=Session+expired.+Please+try+again.");
+    return res.redirect("/app?error=Session+expired.+Please+try+again.");
   }
 
   const clientId     = process.env.SF_CLIENT_ID;
