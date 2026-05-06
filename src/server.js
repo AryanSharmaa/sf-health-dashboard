@@ -388,6 +388,7 @@ app.patch("/api/admin/tickets/:id", requireAdmin, async (req, res) => {
 // ─── Gemini probe (debug only) ───────────────────────────────────────────────
 
 app.get("/api/gemini-probe", async (req, res) => {
+  const https = require("https");
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.json({ ok: false, error: "GEMINI_API_KEY not set in environment." });
 
