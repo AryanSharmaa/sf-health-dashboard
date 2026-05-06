@@ -193,6 +193,10 @@
     .tab-btn{flex:1;padding:9px;font-size:13px;font-weight:600;border:none;background:white;cursor:pointer;transition:all 0.15s;color:#718096}
     .tab-btn.active{background:#0070d2;color:white}
 
+    /* ── MC category labels ── */
+    .mc-cat-row{display:grid;grid-template-columns:160px 1fr 40px;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f7fafc}
+    .mc-cat-row:last-child{border-bottom:none}
+
     /* ── Footer ownership watermark ── */
     footer{background:white;border-top:1px solid #e2e8f0;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;flex-shrink:0}
     .footer-left{display:flex;align-items:center;gap:12px}
@@ -257,19 +261,34 @@
           <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
         </div>
         <h1>Salesforce Org Health Dashboard</h1>
-        <p>Connect your Salesforce org securely via OAuth — your password never leaves Salesforce.</p>
-        <div class="connect-buttons">
-          <a href="/auth/salesforce?env=production" class="btn-connect">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
-            Connect Production Org
-          </a>
-          <a href="/auth/salesforce?env=sandbox" class="btn-connect btn-connect-sandbox">
-            Connect Sandbox
-          </a>
+        <p>Connect your Salesforce org or Marketing Cloud instance — securely audited in under 2 minutes.</p>
+
+        <!-- Salesforce Core -->
+        <div style="margin-bottom:20px">
+          <div style="font-size:11px;font-weight:700;color:#a0aec0;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Salesforce Core (CRM)</div>
+          <div class="connect-buttons">
+            <a href="/auth/salesforce?env=production" class="btn-connect">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+              Connect Production Org
+            </a>
+            <a href="/auth/salesforce?env=sandbox" class="btn-connect btn-connect-sandbox">
+              Connect Sandbox
+            </a>
+          </div>
         </div>
+
+        <!-- Marketing Cloud -->
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#a0aec0;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Marketing Cloud</div>
+          <button class="btn-connect" id="btn-mc-connect" style="background:linear-gradient(135deg,#e8720c,#f59e0b);box-shadow:0 2px 8px rgba(245,158,11,0.35)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+            Connect Marketing Cloud
+          </button>
+        </div>
+
         <p class="connect-note">
-          You'll be redirected to Salesforce's official login page.<br/>
-          We never see or store your password.
+          Salesforce: redirected to official login page — we never see your password.<br/>
+          Marketing Cloud: uses your Installed Package credentials (Server-to-Server OAuth).
         </p>
       </div>
     </div>
@@ -417,6 +436,96 @@
     </div>
   </div>
 
+  <!-- ══ PAGE: MARKETING CLOUD ══ -->
+  <div class="page" id="page-mc">
+
+    <div class="card">
+      <div class="org-banner" id="mc-banner">
+        <div class="org-info">
+          <div class="name" id="mc-banner-name">Marketing Cloud</div>
+          <div class="id" id="mc-banner-sub"></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="btn-run" id="mc-run-btn" style="background:linear-gradient(135deg,#e8720c,#f59e0b);box-shadow:0 2px 6px rgba(245,158,11,0.3)">Run MC Audit</button>
+          <button class="btn-logout" id="mc-disconnect-btn" style="border-color:rgba(0,0,0,0.15);color:#6b7280">Disconnect</button>
+        </div>
+      </div>
+      <div class="status" id="mc-status-box">
+        <span class="spinner"></span>
+        <span id="mc-status-text">Connecting…</span>
+      </div>
+    </div>
+
+    <div id="mc-results" style="display:none">
+
+      <div id="mc-partial-warning" class="partial-warn" style="display:none"></div>
+
+      <!-- MC Score card -->
+      <div class="card">
+        <h2>
+          Marketing Cloud Health Score
+          <span id="mc-partial-badge" class="tag tag-yellow" style="display:none">Partial scan</span>
+        </h2>
+        <div class="score-hero">
+          <div class="gauge-wrap">
+            <svg width="150" height="96" viewBox="0 0 150 86">
+              <path d="M 15 78 A 60 60 0 0 1 135 78" fill="none" stroke="#e2e8f0" stroke-width="13" stroke-linecap="round"/>
+              <path id="mc-gauge-arc" d="M 15 78 A 60 60 0 0 1 135 78" fill="none" stroke="#e8720c"
+                stroke-width="13" stroke-linecap="round" stroke-dasharray="0 188" pathLength="188"/>
+            </svg>
+            <div class="gauge-score" id="mc-overall-score">—</div>
+            <div class="gauge-grade" id="mc-overall-grade">—</div>
+            <div class="gauge-sub">out of 100</div>
+          </div>
+          <div class="score-right">
+            <div class="stats-row" id="mc-stats-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MC Category breakdown -->
+      <div class="card">
+        <h2>Category Breakdown</h2>
+        <div id="mc-categories"></div>
+      </div>
+
+      <!-- MC Actions -->
+      <div class="card">
+        <h2>Top Recommended Actions</h2>
+        <div id="mc-actions"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ MC CONNECT MODAL ══ -->
+<div class="modal-backdrop" id="mc-modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Connect Marketing Cloud</div>
+      <button class="modal-close" id="mc-modal-close">✕</button>
+    </div>
+    <p style="font-size:13px;color:#718096;margin-bottom:20px;line-height:1.6">
+      Create an <strong>Installed Package</strong> in MC Setup → Platform Tools → Apps → Installed Packages.
+      Add a <strong>Server-to-Server API Integration</strong> component, then paste the credentials below.
+    </p>
+    <div class="form-group">
+      <label class="form-label">Subdomain or REST Base URI</label>
+      <input class="form-input" id="mc-subdomain" type="text" placeholder="mcXXXXXX  or  https://mcXXXXXX.rest.marketingcloudapis.com"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Client ID</label>
+      <input class="form-input" id="mc-client-id" type="text" placeholder="Paste Client ID"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Client Secret</label>
+      <input class="form-input" id="mc-client-secret" type="password" placeholder="Paste Client Secret"/>
+    </div>
+    <div id="mc-connect-error" style="color:#dc2626;font-size:13px;margin-bottom:12px;display:none"></div>
+    <button class="btn-submit" id="mc-connect-submit">Connect</button>
+  </div>
 </div>
 
 <!-- ══ FLOATING ACTION BUTTON ══ -->
@@ -1024,6 +1133,221 @@ document.getElementById("btn-nav-audit").addEventListener("click", () => showPag
 document.getElementById("btn-nav-history").addEventListener("click", () => { showPage("history"); loadOrgList(); });
 document.getElementById("btn-logout").addEventListener("click", logout);
 checkSession();
+
+// ─── Marketing Cloud ─────────────────────────────────────────────────────────
+
+const MC_CAT_LABELS = {
+  emailDeliverability: "Email Deliverability",
+  journeyHealth:       "Journey Health",
+  automationHealth:    "Automation Health",
+  senderAuth:          "Sender Auth",
+  accountHygiene:      "Account Hygiene",
+};
+
+const MC_STEPS = [
+  "Connecting to Marketing Cloud…",
+  "Checking Email Studio…",
+  "Scanning Journey Builder…",
+  "Auditing Automation Studio…",
+  "Reviewing Data Extensions…",
+  "Calculating MC health score…",
+];
+
+function mcScoreColor(s) { return s >= 80 ? "#16a34a" : s >= 60 ? "#ca8a04" : "#dc2626"; }
+function mcGradeColor(g) { return { A:"#16a34a",B:"#65a30d",C:"#ca8a04",D:"#ea580c",F:"#dc2626" }[g] || "#6b7280"; }
+
+// MC connect modal
+document.getElementById("btn-mc-connect").addEventListener("click", () => {
+  document.getElementById("mc-modal-backdrop").classList.add("open");
+});
+document.getElementById("mc-modal-close").addEventListener("click", () => {
+  document.getElementById("mc-modal-backdrop").classList.remove("open");
+});
+document.getElementById("mc-modal-backdrop").addEventListener("click", e => {
+  if (e.target === e.currentTarget) document.getElementById("mc-modal-backdrop").classList.remove("open");
+});
+
+document.getElementById("mc-connect-submit").addEventListener("click", async () => {
+  const subdomain    = document.getElementById("mc-subdomain").value.trim();
+  const clientId     = document.getElementById("mc-client-id").value.trim();
+  const clientSecret = document.getElementById("mc-client-secret").value.trim();
+  const errEl        = document.getElementById("mc-connect-error");
+  const btn          = document.getElementById("mc-connect-submit");
+
+  if (!subdomain || !clientId || !clientSecret) {
+    errEl.textContent = "All three fields are required."; errEl.style.display = "block"; return;
+  }
+  errEl.style.display = "none";
+  btn.disabled = true; btn.textContent = "Connecting…";
+
+  try {
+    const res = await fetch("/api/mc/connect", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subdomain, clientId, clientSecret }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Connection failed");
+    document.getElementById("mc-modal-backdrop").classList.remove("open");
+    showMcPage(data.subdomain);
+  } catch (err) {
+    errEl.textContent = err.message; errEl.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Connect";
+  }
+});
+
+async function checkMcSession() {
+  const res  = await fetch("/api/mc/session", { credentials: "include" });
+  const data = await res.json();
+  if (data.connected) showMcPage(data.subdomain, data.orgName);
+}
+
+function showMcPage(subdomain, orgName) {
+  document.getElementById("mc-banner-name").textContent = orgName || subdomain;
+  document.getElementById("mc-banner-sub").textContent  = subdomain;
+  // Add MC nav button if not already there
+  if (!document.getElementById("btn-nav-mc")) {
+    const btn = document.createElement("button");
+    btn.className = "nav-link"; btn.id = "btn-nav-mc"; btn.textContent = "MC Audit";
+    btn.addEventListener("click", () => showPage("mc"));
+    document.getElementById("btn-logout").before(btn);
+  }
+  showPage("mc");
+}
+
+document.getElementById("mc-disconnect-btn").addEventListener("click", async () => {
+  await fetch("/api/mc/disconnect", { method: "POST", credentials: "include" });
+  const mcBtn = document.getElementById("btn-nav-mc");
+  if (mcBtn) mcBtn.remove();
+  document.getElementById("mc-results").style.display = "none";
+  showPage("connect");
+});
+
+document.getElementById("mc-run-btn").addEventListener("click", startMcAudit);
+
+async function startMcAudit() {
+  document.getElementById("mc-run-btn").disabled = true;
+  document.getElementById("mc-results").style.display = "none";
+  setMcStatus(MC_STEPS[0]);
+
+  try {
+    const res = await fetch("/api/mc/audit", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: "{}", credentials: "include",
+    });
+    if (res.status === 401) {
+      setMcStatus("Session expired — please reconnect.", "error");
+      setTimeout(() => showPage("connect"), 1500);
+      return;
+    }
+    const { jobId, error } = await res.json();
+    if (error) throw new Error(error);
+    await pollMcJob(jobId);
+  } catch (err) {
+    setMcStatus("Failed: " + err.message, "error");
+    document.getElementById("mc-run-btn").disabled = false;
+  }
+}
+
+async function pollMcJob(jobId) {
+  let step = 1;
+  const iv = setInterval(() => { if (step < MC_STEPS.length) setMcStatus(MC_STEPS[step++]); }, 4000);
+  while (true) {
+    await new Promise(r => setTimeout(r, 3000));
+    const res  = await fetch("/api/mc/audit/" + jobId, { credentials: "include" });
+    const data = await res.json();
+    if (data.status === "complete") {
+      clearInterval(iv);
+      document.getElementById("mc-status-box").style.display = "none";
+      document.getElementById("mc-run-btn").disabled = false;
+      renderMcResults(data);
+      return;
+    }
+    if (data.status === "error") {
+      clearInterval(iv);
+      setMcStatus("Error: " + data.error, "error");
+      document.getElementById("mc-run-btn").disabled = false;
+      return;
+    }
+  }
+}
+
+function setMcStatus(msg, type) {
+  const box = document.getElementById("mc-status-box");
+  box.className = "status " + (type || "running");
+  box.style.display = "block";
+  document.getElementById("mc-status-text").textContent = msg;
+}
+
+function renderMcResults(data) {
+  const { overallScore, grade, categories, topRecommendedActions,
+          isPartial, partialModules } = data.report;
+
+  // Score + gauge
+  const scoreEl = document.getElementById("mc-overall-score");
+  const gradeEl = document.getElementById("mc-overall-grade");
+  scoreEl.textContent = overallScore;
+  scoreEl.style.color = mcScoreColor(overallScore);
+  gradeEl.textContent = grade;
+  gradeEl.style.color = mcGradeColor(grade);
+  const arc    = document.getElementById("mc-gauge-arc");
+  const filled = (overallScore / 100) * 188;
+  arc.setAttribute("stroke-dasharray", filled.toFixed(1) + " " + (188 - filled).toFixed(1));
+  arc.setAttribute("stroke", mcScoreColor(overallScore));
+
+  // Partial warning
+  if (isPartial && partialModules?.length) {
+    const names = partialModules.map(m => "<strong>" + m.module + "</strong>").join(", ");
+    document.getElementById("mc-partial-warning").innerHTML =
+      "⚠ <strong>Partial scan</strong> — some modules returned incomplete data. Affected: " + names + ".";
+    document.getElementById("mc-partial-warning").style.display = "block";
+    document.getElementById("mc-partial-badge").style.display   = "inline";
+  }
+
+  // Stats
+  const jb = data.report.metadata?.journeyBuilder || {};
+  const as = data.report.metadata?.automationStudio || {};
+  const de = data.report.metadata?.dataExtensions || {};
+  document.getElementById("mc-stats-grid").innerHTML = [
+    [jb.active  || 0,  "Active Journeys",   "#0070d2"],
+    [jb.errored || 0,  "Journeys in Error",  jb.errored > 0 ? "#dc2626" : "#16a34a"],
+    [as.total   || 0,  "Automations",        "#0070d2"],
+    [as.errored || 0,  "Automation Errors",  as.errored > 0 ? "#dc2626" : "#16a34a"],
+    [de.total   || 0,  "Data Extensions",    "#718096"],
+    [de.noRetention || 0, "No Retention Policy", de.noRetention > 0 ? "#ca8a04" : "#16a34a"],
+  ].map(([v, l, c]) =>
+    `<div class="stat-box"><div class="val" style="color:${c}">${v}</div><div class="lbl">${l}</div></div>`
+  ).join("");
+
+  // Category bars
+  document.getElementById("mc-categories").innerHTML = Object.entries(categories).map(([k, v]) =>
+    `<div class="mc-cat-row">
+      <div class="cat-label">${MC_CAT_LABELS[k] || k}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${v.score}%;background:${mcScoreColor(v.score)}"></div></div>
+      <div class="cat-score-val" style="color:${mcScoreColor(v.score)}">${v.score}</div>
+    </div>`
+  ).join("");
+
+  // Actions
+  document.getElementById("mc-actions").innerHTML = topRecommendedActions.length === 0
+    ? '<p style="color:#16a34a;font-weight:600;padding:8px 0">No issues — this MC instance is in excellent health!</p>'
+    : topRecommendedActions.map((a, i) =>
+        `<div class="action-item">
+          <div class="action-top">
+            <div class="action-num">${i + 1}</div>
+            <span class="badge ${priorityClass(a.priority)}">${a.priority}</span>
+            <div style="font-size:13px;color:#2d3748;line-height:1.55">${a.action}</div>
+          </div>
+        </div>`
+      ).join("");
+
+  document.getElementById("mc-results").style.display = "block";
+  document.getElementById("mc-results").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// Check MC session on load (alongside SF session check)
+checkMcSession();
 
 // ─── FAB / Modal / Feedback / Support ────────────────────────────────────────
 

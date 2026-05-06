@@ -18,6 +18,9 @@ const repo       = require("./db/auditRepository");
 const authRoutes = require("./authRoutes");
 const { getSession } = require("./oauth");
 const { generateRemediationGuide } = require("./aiAdvisor");
+const { fetchToken, createMcSession, getMcSession, deleteMcSession } = require("./mcOAuth");
+const { collectMcMetadata } = require("./mcCollector");
+const { scoreMcHealth }     = require("./mcHealthScore");
 
 const app = express();
 
@@ -352,6 +355,96 @@ app.get("/api/compare", readLimiter, async (req, res) => {
   if (!a || !b) return res.status(400).json({ error: "Provide ?a=auditId&b=auditId" });
   try { res.json(await repo.compareAudits(a, b)); }
   catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ─── Marketing Cloud routes ───────────────────────────────────────────────────
+
+const mcJobs = new Map();
+
+function requireMcSession(req, res, next) {
+  const session = getMcSession(req.cookies?.mc_session);
+  if (!session) return res.status(401).json({ error: "Not connected to Marketing Cloud." });
+  req.mcSession = session;
+  next();
+}
+
+// Connect — exchange credentials for a token and create a session
+app.post("/api/mc/connect", auditLimiter, async (req, res) => {
+  const { subdomain, clientId, clientSecret } = req.body || {};
+  if (!subdomain || !clientId || !clientSecret) {
+    return res.status(400).json({ error: "subdomain, clientId, and clientSecret are required." });
+  }
+  try {
+    const data = await fetchToken({ subdomain, clientId, clientSecret });
+    const sessionId = createMcSession({
+      subdomain, clientId, clientSecret,
+      accessToken: data.access_token,
+      expiresIn:   data.expires_in,
+      accountId:   data.rest_instance_url,
+      orgName:     subdomain,
+    });
+    res.cookie("mc_session", sessionId, {
+      httpOnly: true,
+      secure:   process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge:   8 * 60 * 60 * 1000,
+    });
+    res.json({ connected: true, subdomain });
+  } catch (err) {
+    res.status(401).json({ error: err.message });
+  }
+});
+
+// Session check
+app.get("/api/mc/session", (req, res) => {
+  const session = getMcSession(req.cookies?.mc_session);
+  if (!session) return res.json({ connected: false });
+  res.json({ connected: true, subdomain: session.subdomain, orgName: session.orgName });
+});
+
+// Disconnect
+app.post("/api/mc/disconnect", (req, res) => {
+  const sid = req.cookies?.mc_session;
+  if (sid) deleteMcSession(sid);
+  res.clearCookie("mc_session", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" });
+  res.json({ ok: true });
+});
+
+// Start MC audit
+app.post("/api/mc/audit", auditLimiter, requireMcSession, (req, res) => {
+  const jobId = uuidv4();
+  mcJobs.set(jobId, { status: "running", startedAt: new Date().toISOString() });
+
+  ;(async () => {
+    try {
+      const metadata   = await collectMcMetadata(req.mcSession);
+      const healthScore = scoreMcHealth(metadata);
+      mcJobs.set(jobId, {
+        status: "complete",
+        startedAt:   mcJobs.get(jobId)?.startedAt,
+        completedAt: new Date().toISOString(),
+        report: { ...healthScore, metadata },
+      });
+    } catch (err) {
+      mcJobs.set(jobId, {
+        status: "error",
+        startedAt: mcJobs.get(jobId)?.startedAt,
+        error: err.message,
+      });
+    }
+  })();
+
+  res.status(202).json({ jobId, status: "running" });
+});
+
+// Poll MC job
+app.get("/api/mc/audit/:jobId", readLimiter, (req, res) => {
+  const job = mcJobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: "Job not found." });
+  if (job.status !== "complete") {
+    return res.json({ jobId: req.params.jobId, status: job.status, error: job.error || null });
+  }
+  res.json({ jobId: req.params.jobId, ...job });
 });
 
 // ─── Admin page ───────────────────────────────────────────────────────────────
