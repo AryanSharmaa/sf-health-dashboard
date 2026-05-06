@@ -241,7 +241,10 @@ async function generateRemediationGuide({ action, category, priority, orgProfile
   try {
     return await tryAnthropic(prompt);
   } catch (err) {
-    if (!err.message.includes("not configured")) throw err;
+    // Fall through on any Anthropic failure (no key, no credits, rate limit, etc.)
+    if (process.env.ANTHROPIC_API_KEY) {
+      console.warn("[aiAdvisor] Anthropic failed:", err.message);
+    }
   }
 
   // 3 — Neither available
