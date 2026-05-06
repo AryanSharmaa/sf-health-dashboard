@@ -17,35 +17,6 @@ function getRedirectUri(req) {
   return `${proto}://${req.get("host")}/auth/salesforce/callback`;
 }
 
-// ─── Clear SF session conflict via hidden img, then auto-restart auth ─────────
-
-router.get("/salesforce/clear-session", (req, res) => {
-  const env      = req.query.env || "production";
-  const loginUrl = env === "sandbox" ? "https://test.salesforce.com" : "https://login.salesforce.com";
-  const retryUrl = `/auth/salesforce${env === "sandbox" ? "?env=sandbox" : ""}`;
-
-  res.setHeader("Cache-Control", "no-store");
-  // Relax CSP just for this page so the hidden img can reach SF logout
-  res.setHeader("Content-Security-Policy",
-    `default-src 'none'; script-src 'unsafe-inline'; img-src ${loginUrl}; style-src 'unsafe-inline'`);
-
-  res.send(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Reconnecting...</title>
-<style>
-  body{font-family:-apple-system,sans-serif;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;height:100vh;margin:0;background:#f3f4f6;color:#374151}
-  .spinner{width:32px;height:32px;border:3px solid #e5e7eb;border-top-color:#2563eb;
-    border-radius:50%;animation:spin .8s linear infinite;margin-bottom:16px}
-  @keyframes spin{to{transform:rotate(360deg)}}
-</style></head>
-<body>
-  <div class="spinner"></div>
-  <p>Clearing session, reconnecting&hellip;</p>
-  <img src="${loginUrl}/secur/logout.jsp" style="display:none"
-       onload="window.location.href='${retryUrl}'"
-       onerror="window.location.href='${retryUrl}'">
-</body></html>`);
-});
 
 // ─── Start OAuth ──────────────────────────────────────────────────────────────
 
@@ -77,14 +48,43 @@ router.get("/salesforce/callback", async (req, res) => {
   const { code, state, error, error_description } = req.query;
 
   if (error) {
-    const isCrossOrg = (error_description || error || "").toLowerCase().includes("cross");
+    const isCrossOrg    = (error_description || error || "").toLowerCase().includes("cross");
     const alreadyRetried = req.cookies?.sf_cross_org_retry === "1";
+
     if (isCrossOrg && !alreadyRetried) {
-      const isSandbox = (req.cookies?.sf_env || "").includes("test.salesforce.com");
-      res.cookie("sf_cross_org_retry", "1", { httpOnly: true, maxAge: 2 * 60 * 1000, sameSite: "lax" });
-      return res.redirect(`/auth/salesforce/clear-session${isSandbox ? "?env=sandbox" : ""}`);
+      // SF logout.jsp honours relative retUrl (same domain) — send user there,
+      // SF clears its own session then goes straight into the OAuth authorize screen.
+      const isSandbox    = (req.cookies?.sf_env || "").includes("test.salesforce.com");
+      const loginUrl     = isSandbox ? "https://test.salesforce.com" : "https://login.salesforce.com";
+      const clientId     = process.env.SF_CLIENT_ID;
+      const redirectUri  = getRedirectUri(req);
+
+      const codeVerifier  = generateCodeVerifier();
+      const codeChallenge = generateCodeChallenge(codeVerifier);
+      const newState      = generateState(codeVerifier);
+
+      const authParams = new URLSearchParams({
+        response_type:         "code",
+        client_id:             clientId,
+        redirect_uri:          redirectUri,
+        state:                 newState,
+        scope:                 "full",
+        code_challenge:        codeChallenge,
+        code_challenge_method: "S256",
+        prompt:                "login",
+      });
+
+      // Store new PKCE state + env before the redirect so callback can validate them
+      res.cookie("sf_state",           newState,  { httpOnly: true, maxAge: 10 * 60 * 1000, sameSite: "lax" });
+      res.cookie("sf_env",             loginUrl,  { httpOnly: true, maxAge: 10 * 60 * 1000, sameSite: "lax" });
+      res.cookie("sf_cross_org_retry", "1",       { httpOnly: true, maxAge:  5 * 60 * 1000, sameSite: "lax" });
+
+      // retUrl is a relative path on SF's own domain — logout.jsp will redirect there after clearing the session
+      const retUrl = `/services/oauth2/authorize?${authParams.toString()}`;
+      return res.redirect(`${loginUrl}/secur/logout.jsp?retUrl=${encodeURIComponent(retUrl)}`);
     }
-    // Clear retry flag and show error if auto-retry also failed
+
+    // If even the auto-retry failed, clear the flag and show the error
     res.clearCookie("sf_cross_org_retry");
     const isSandbox = (req.cookies?.sf_env || "").includes("test.salesforce.com");
     const envParam  = isSandbox ? "&env=sandbox" : "";
