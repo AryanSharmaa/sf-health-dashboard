@@ -1201,7 +1201,9 @@ function renderAuditResults(data, jobId) {
 // ─── Proactive Monitoring ─────────────────────────────────────────────────────
 
 function renderProactiveMonitoring(pm) {
-  if (!pm || (!pm.limits && !pm.errors && !pm.performance)) return;
+  if (!pm || typeof pm !== "object") return;
+  // Debug: log what we got
+  console.log("[ProactiveMon] data:", JSON.stringify(pm).slice(0, 400));
 
   const card    = document.getElementById("proactive-card");
   const content = document.getElementById("proactive-content");
@@ -1278,8 +1280,10 @@ function renderProactiveMonitoring(pm) {
 
   if (html) {
     content.innerHTML = html;
-    card.style.display = "block";
+  } else {
+    content.innerHTML = '<div style="font-size:13px;color:#a0aec0">No proactive monitoring data available for this org.</div>';
   }
+  card.style.display = "block";
 }
 
 // ─── Share report ─────────────────────────────────────────────────────────────
