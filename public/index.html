@@ -425,7 +425,7 @@
 
       <!-- Proactive Monitoring -->
       <div class="card" id="proactive-card" style="display:none">
-        <h2>Proactive Monitoring <span style="font-size:12px;font-weight:500;color:#a0aec0;margin-left:4px">Last 7 days</span></h2>
+        <h2>Operational Health <span style="font-size:12px;font-weight:500;color:#a0aec0;margin-left:4px">Last 7 days</span></h2>
         <div id="proactive-content"></div>
       </div>
 
@@ -559,6 +559,12 @@
       <div class="card">
         <h2>Top Recommended Actions</h2>
         <div id="mc-actions"></div>
+      </div>
+
+      <!-- MC Operational Health -->
+      <div class="card" id="mc-operational-card" style="display:none">
+        <h2>Operational Health <span style="font-size:12px;font-weight:500;color:#a0aec0;margin-left:4px">Current state</span></h2>
+        <div id="mc-operational-content"></div>
       </div>
 
     </div>
@@ -1203,8 +1209,6 @@ function renderAuditResults(data, jobId) {
 
 function renderProactiveMonitoring(pm) {
   if (!pm || typeof pm !== "object") return;
-  // Debug: log what we got
-  console.log("[ProactiveMon] data:", JSON.stringify(pm).slice(0, 400));
 
   const card    = document.getElementById("proactive-card");
   const content = document.getElementById("proactive-content");
@@ -1284,6 +1288,87 @@ function renderProactiveMonitoring(pm) {
   } else {
     content.innerHTML = '<div style="font-size:13px;color:#a0aec0">No proactive monitoring data available for this org.</div>';
   }
+  card.style.display = "block";
+}
+
+// ─── MC Operational Health ────────────────────────────────────────────────────
+
+function renderMcOperationalHealth(oh) {
+  if (!oh || typeof oh !== "object") return;
+
+  const card    = document.getElementById("mc-operational-card");
+  const content = document.getElementById("mc-operational-content");
+
+  function dot(status)  { return `<div class="pm-dot ${status||'ok'}"></div>`; }
+  function clr(s)       { return s === "critical" ? "#dc2626" : s === "warning" ? "#ca8a04" : "#16a34a"; }
+
+  function item(label, stat, extra) {
+    if (!stat) return "";
+    const names = stat.names?.length ? `<div style="font-size:10px;color:#6b7280;margin-top:2px">${stat.names.join(", ")}</div>` : "";
+    const val   = stat.count !== undefined
+      ? `<div class="pm-value" style="color:${clr(stat.status)};font-weight:${stat.count>0?'700':'400'}">${stat.count} ${extra||""}</div>`
+      : `<div class="pm-value" style="color:${clr(stat.status)}">${stat.available === false ? "Unavailable" : "OK"}</div>`;
+    return `<div class="pm-item">${dot(stat.status)}<div><div class="pm-label">${label}</div>${val}${names}</div></div>`;
+  }
+
+  const A = oh.apiDataAutomations || {};
+  const E = oh.email               || {};
+  const M = oh.mobile              || {};
+  const J = oh.journeyBuilder      || {};
+  const C = oh.connector           || {};
+
+  let html = "";
+
+  // API, Data & Automations
+  const autoItems = [
+    item("API User Lockouts",           A.lockedUsers),
+    item("Large DEs (>5M rows)",        A.largeDEs),
+    item("Not Running on Schedule",     A.autoNotOnSchedule),
+    item("Running Long (>2h avg)",      A.autoLongRunning),
+    item("Errored",                     A.autoErrored),
+    item("Skipped",                     A.autoSkipped),
+    item("Stopped",                     A.autoStopped),
+    item("Paused",                      A.autoPaused),
+    item("Critical Send Automations",   A.criticalSendAutos),
+  ].filter(Boolean);
+  if (autoItems.length) html += `<div class="pm-section"><div class="pm-section-title">API, Data &amp; Automations</div><div class="pm-grid">${autoItems.join("")}</div></div>`;
+
+  // Email
+  const emailItems = [
+    item("Send Speed",                  E.sendSpeed  ? { status: E.sendSpeed.status, count: E.sendSpeed.activeDefs } : null, "active defs"),
+    item("High Priority Sends",         E.highPrioritySends),
+    item("Triggered Sends Errored",     E.triggeredErrored),
+    item("Triggered Send Threshold",    E.triggeredThreshold, `/ ${E.triggeredThreshold?.threshold||500}`),
+    item("Deliverability",              E.deliverability),
+  ].filter(Boolean);
+  if (emailItems.length) html += `<div class="pm-section"><div class="pm-section-title">Email</div><div class="pm-grid">${emailItems.join("")}</div></div>`;
+
+  // Mobile
+  const mobileItems = [
+    item("Mobile Sends Errored",        M.sendsErrored),
+    item("Mobile Send Threshold",       M.sendThreshold, `/ ${M.sendThreshold?.threshold||200}`),
+    item("Zero Mobile Sends",           M.zeroSends),
+  ].filter(Boolean);
+  if (mobileItems.length) html += `<div class="pm-section"><div class="pm-section-title">Mobile</div><div class="pm-grid">${mobileItems.join("")}</div></div>`;
+
+  // Journey Builder
+  const jbItems = [
+    item("JB Email Sends Errored",      J.emailErrored),
+    item("Journey Send Threshold",      J.sendThreshold, `/ ${J.sendThreshold?.threshold||100}`),
+    item("Zero Injection Journeys",     J.zeroInjection),
+    item("Journeys in Error",           J.errored),
+  ].filter(Boolean);
+  if (jbItems.length) html += `<div class="pm-section"><div class="pm-section-title">Journey Builder</div><div class="pm-grid">${jbItems.join("")}</div></div>`;
+
+  // MC Connector
+  const connItems = [
+    item("Data Sync Deferment",         C.dataSyncDeferment),
+    item("Synchronized Data Stalled",   C.syncStalled),
+    item("Tracking Stalled",            C.trackingStalled),
+  ].filter(Boolean);
+  if (connItems.length) html += `<div class="pm-section"><div class="pm-section-title">Marketing Cloud Connector</div><div class="pm-grid">${connItems.join("")}</div></div>`;
+
+  content.innerHTML = html || '<div style="font-size:13px;color:#a0aec0">No operational health data available.</div>';
   card.style.display = "block";
 }
 
@@ -1969,6 +2054,9 @@ function renderMcResults(data) {
     if (!btn) return;
     btn.addEventListener("click", () => fetchMcAiGuide(mcJobId, a, i));
   });
+
+  // MC Operational Health
+  renderMcOperationalHealth(data.report?.metadata?.operationalHealth);
 
   document.getElementById("mc-results").style.display = "block";
   document.getElementById("mc-results").scrollIntoView({ behavior: "smooth", block: "start" });
