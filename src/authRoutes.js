@@ -48,47 +48,14 @@ router.get("/salesforce/callback", async (req, res) => {
   const { code, state, error, error_description } = req.query;
 
   if (error) {
-    const isCrossOrg    = (error_description || error || "").toLowerCase().includes("cross");
-    const alreadyRetried = req.cookies?.sf_cross_org_retry === "1";
-
-    if (isCrossOrg && !alreadyRetried) {
-      // SF logout.jsp honours relative retUrl (same domain) — send user there,
-      // SF clears its own session then goes straight into the OAuth authorize screen.
-      const isSandbox    = (req.cookies?.sf_env || "").includes("test.salesforce.com");
-      const loginUrl     = isSandbox ? "https://test.salesforce.com" : "https://login.salesforce.com";
-      const clientId     = process.env.SF_CLIENT_ID;
-      const redirectUri  = getRedirectUri(req);
-
-      const codeVerifier  = generateCodeVerifier();
-      const codeChallenge = generateCodeChallenge(codeVerifier);
-      const newState      = generateState(codeVerifier);
-
-      const authParams = new URLSearchParams({
-        response_type:         "code",
-        client_id:             clientId,
-        redirect_uri:          redirectUri,
-        state:                 newState,
-        scope:                 "full",
-        code_challenge:        codeChallenge,
-        code_challenge_method: "S256",
-        prompt:                "login",
-      });
-
-      // Store new PKCE state + env before the redirect so callback can validate them
-      res.cookie("sf_state",           newState,  { httpOnly: true, maxAge: 10 * 60 * 1000, sameSite: "lax" });
-      res.cookie("sf_env",             loginUrl,  { httpOnly: true, maxAge: 10 * 60 * 1000, sameSite: "lax" });
-      res.cookie("sf_cross_org_retry", "1",       { httpOnly: true, maxAge:  5 * 60 * 1000, sameSite: "lax" });
-
-      // retUrl is a relative path on SF's own domain — logout.jsp will redirect there after clearing the session
-      const retUrl = `/services/oauth2/authorize?${authParams.toString()}`;
-      return res.redirect(`${loginUrl}/secur/logout.jsp?retUrl=${encodeURIComponent(retUrl)}`);
-    }
-
-    // If even the auto-retry failed, clear the flag and show the error
-    res.clearCookie("sf_cross_org_retry");
+    // Any SF-side error (cross-org, access_denied, etc.) — silently restart auth with a fresh PKCE flow.
+    // The user gets a clean login screen rather than an error page.
     const isSandbox = (req.cookies?.sf_env || "").includes("test.salesforce.com");
-    const envParam  = isSandbox ? "&env=sandbox" : "";
-    return res.redirect(`/app?error=${encodeURIComponent(error_description || error)}${envParam}`);
+    res.clearCookie("sf_state");
+    res.clearCookie("sf_env");
+    res.clearCookie("sf_cross_org_retry");
+    const envParam = isSandbox ? "?env=sandbox" : "";
+    return res.redirect(`/auth/salesforce${envParam}`);
   }
 
   // Validate state + retrieve PKCE verifier
@@ -136,7 +103,6 @@ router.get("/salesforce/callback", async (req, res) => {
 
     res.clearCookie("sf_state");
     res.clearCookie("sf_env");
-    res.clearCookie("sf_cross_org_retry");
     res.redirect("/app");
   } catch (err) {
     console.error("OAuth callback error:", err.message);

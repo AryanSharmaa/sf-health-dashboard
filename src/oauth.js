@@ -75,7 +75,8 @@ function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChall
     scope:                  "full",
     code_challenge:         codeChallenge,
     code_challenge_method:  "S256",
-    prompt:                 "login",  // always show SF login screen — prevents cross-org session reuse
+    prompt:                 "login",
+    display:                "page",
   });
   return `${base}/services/oauth2/authorize?${params.toString()}`;
 }
