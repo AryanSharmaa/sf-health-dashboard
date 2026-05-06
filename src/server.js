@@ -393,7 +393,7 @@ app.get("/api/openrouter-probe", async (req, res) => {
   if (!apiKey) return res.json({ ok: false, error: "OPENROUTER_API_KEY not set." });
 
   const body = JSON.stringify({
-    model: "mistralai/mistral-7b-instruct:free",
+    model: "openrouter/free",
     messages: [{ role: "user", content: "Say hello in one word." }],
     max_tokens: 10,
   });
