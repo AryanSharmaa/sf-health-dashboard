@@ -16,7 +16,7 @@ const SF_API_VERSION  = "v62.0";
 const CLAUDE_MODEL    = "claude-opus-4-7";
 const GEMINI_MODEL    = "gemini-2.0-flash";
 const GROQ_MODEL      = "llama-3.3-70b-versatile";
-const OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct:free";
+const OPENROUTER_MODEL = "mistralai/mistral-7b-instruct:free";
 
 const SYSTEM_PROMPT = `You are a senior Salesforce architect and certified consultant with 15+ years of experience.
 Generate a concise, actionable, step-by-step remediation guide for the Salesforce issue described.
