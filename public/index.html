@@ -260,7 +260,7 @@
 <body>
 
 <nav>
-  <div class="logo" onclick="showPage('connect')" style="cursor:pointer">SF<span>Health</span></div>
+  <div class="logo" onclick="goHome()" style="cursor:pointer">SF<span>Health</span></div>
   <span class="tagline">Automated Salesforce Org Audit</span>
   <div class="nav-right" id="nav-right" style="display:none">
     <div class="user-pill">
@@ -997,6 +997,16 @@ async function logout() {
 function showPage(name) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.getElementById("page-"+name).classList.add("active");
+}
+
+function goHome() {
+  // If logged in go to audit page, otherwise connect page
+  const nav = document.getElementById("nav-right");
+  if (nav && nav.style.display !== "none") {
+    showPage("audit");
+  } else {
+    showPage("connect");
+  }
 }
 
 // ─── Audit ────────────────────────────────────────────────────────────────────
