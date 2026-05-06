@@ -19,9 +19,13 @@ function extractSubdomain(input) {
 
 // ─── Token exchange ───────────────────────────────────────────────────────────
 
-async function fetchToken({ subdomain, clientId, clientSecret }) {
-  const sub  = extractSubdomain(subdomain);
-  const body = JSON.stringify({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret });
+async function fetchToken({ subdomain, clientId, clientSecret, mid, eid }) {
+  const sub     = extractSubdomain(subdomain);
+  const payload = { grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret };
+  // MID scopes token to a specific Business Unit; EID scopes to the Enterprise (parent) account
+  if (mid) payload.account_id = parseInt(mid, 10);
+  else if (eid) payload.account_id = parseInt(eid, 10);
+  const body = JSON.stringify(payload);
 
   return new Promise((resolve, reject) => {
     const options = {
@@ -52,17 +56,19 @@ async function fetchToken({ subdomain, clientId, clientSecret }) {
 
 // ─── Session management ───────────────────────────────────────────────────────
 
-function createMcSession({ subdomain, clientId, clientSecret, accessToken, expiresIn, accountId, orgName }) {
+function createMcSession({ subdomain, clientId, clientSecret, mid, eid, accessToken, expiresIn, accountId, orgName }) {
   const sessionId = crypto.randomBytes(32).toString("hex");
   mcSessions.set(sessionId, {
     subdomain:    extractSubdomain(subdomain),
     clientId,
     clientSecret,
+    mid:  mid  || null,
+    eid:  eid  || null,
     accessToken,
-    tokenExpiresAt: Date.now() + (expiresIn || 1200) * 1000 - 60000, // 60s safety buffer
+    tokenExpiresAt: Date.now() + (expiresIn || 1200) * 1000 - 60000,
     accountId,
-    orgName:     orgName || extractSubdomain(subdomain),
-    createdAt:   Date.now(),
+    orgName:   orgName || extractSubdomain(subdomain),
+    createdAt: Date.now(),
   });
   return sessionId;
 }
@@ -81,7 +87,7 @@ function deleteMcSession(sessionId) { mcSessions.delete(sessionId); }
 
 async function getValidToken(session) {
   if (session.accessToken && Date.now() < session.tokenExpiresAt) return session.accessToken;
-  const data = await fetchToken({ subdomain: session.subdomain, clientId: session.clientId, clientSecret: session.clientSecret });
+  const data = await fetchToken({ subdomain: session.subdomain, clientId: session.clientId, clientSecret: session.clientSecret, mid: session.mid, eid: session.eid });
   session.accessToken    = data.access_token;
   session.tokenExpiresAt = Date.now() + (data.expires_in || 1200) * 1000 - 60000;
   return session.accessToken;

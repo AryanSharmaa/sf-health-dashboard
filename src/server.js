@@ -370,14 +370,14 @@ function requireMcSession(req, res, next) {
 
 // Connect — exchange credentials for a token and create a session
 app.post("/api/mc/connect", auditLimiter, async (req, res) => {
-  const { subdomain, clientId, clientSecret } = req.body || {};
+  const { subdomain, clientId, clientSecret, mid, eid } = req.body || {};
   if (!subdomain || !clientId || !clientSecret) {
     return res.status(400).json({ error: "subdomain, clientId, and clientSecret are required." });
   }
   try {
-    const data = await fetchToken({ subdomain, clientId, clientSecret });
+    const data = await fetchToken({ subdomain, clientId, clientSecret, mid, eid });
     const sessionId = createMcSession({
-      subdomain, clientId, clientSecret,
+      subdomain, clientId, clientSecret, mid, eid,
       accessToken: data.access_token,
       expiresIn:   data.expires_in,
       accountId:   data.rest_instance_url,
@@ -389,7 +389,7 @@ app.post("/api/mc/connect", auditLimiter, async (req, res) => {
       sameSite: "lax",
       maxAge:   8 * 60 * 60 * 1000,
     });
-    res.json({ connected: true, subdomain });
+    res.json({ connected: true, subdomain, mid: mid || null, eid: eid || null });
   } catch (err) {
     res.status(401).json({ error: err.message });
   }
@@ -399,7 +399,13 @@ app.post("/api/mc/connect", auditLimiter, async (req, res) => {
 app.get("/api/mc/session", (req, res) => {
   const session = getMcSession(req.cookies?.mc_session);
   if (!session) return res.json({ connected: false });
-  res.json({ connected: true, subdomain: session.subdomain, orgName: session.orgName });
+  res.json({
+    connected: true,
+    subdomain: session.subdomain,
+    orgName:   session.orgName,
+    mid:       session.mid  || null,
+    eid:       session.eid  || null,
+  });
 });
 
 // Disconnect

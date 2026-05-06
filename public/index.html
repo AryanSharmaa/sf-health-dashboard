@@ -511,20 +511,43 @@
       Create an <strong>Installed Package</strong> in MC Setup → Platform Tools → Apps → Installed Packages.
       Add a <strong>Server-to-Server API Integration</strong> component, then paste the credentials below.
     </p>
+
+    <!-- Where to find these — help text -->
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#6b7280;line-height:1.7">
+      <strong style="color:#374151">Where to find these:</strong><br/>
+      <strong>Subdomain</strong> — Installed Package → API Integration → REST Base URI (e.g. <code style="background:#f0f4f8;padding:1px 5px;border-radius:4px">mcXXXXXX</code>)<br/>
+      <strong>Client ID / Secret</strong> — same page, shown after adding API Integration component<br/>
+      <strong>MID</strong> — Setup → Company Settings → Account Management → your BU's MID number<br/>
+      <strong>EID</strong> — top-level Enterprise account ID, same location — use if you want to audit across all BUs
+    </div>
+
     <div class="form-group">
-      <label class="form-label">Subdomain or REST Base URI</label>
+      <label class="form-label">Subdomain or REST Base URI <span style="color:#dc2626">*</span></label>
       <input class="form-input" id="mc-subdomain" type="text" placeholder="mcXXXXXX  or  https://mcXXXXXX.rest.marketingcloudapis.com"/>
     </div>
     <div class="form-group">
-      <label class="form-label">Client ID</label>
-      <input class="form-input" id="mc-client-id" type="text" placeholder="Paste Client ID"/>
+      <label class="form-label">Client ID <span style="color:#dc2626">*</span></label>
+      <input class="form-input" id="mc-client-id" type="text" placeholder="Alphanumeric — from Installed Package"/>
     </div>
     <div class="form-group">
-      <label class="form-label">Client Secret</label>
-      <input class="form-input" id="mc-client-secret" type="password" placeholder="Paste Client Secret"/>
+      <label class="form-label">Client Secret <span style="color:#dc2626">*</span></label>
+      <input class="form-input" id="mc-client-secret" type="password" placeholder="From Installed Package"/>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">MID <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
+        <input class="form-input" id="mc-mid" type="text" placeholder="Business Unit MID"/>
+        <span style="font-size:11px;color:#a0aec0;margin-top:4px;display:block">Scopes audit to a specific BU</span>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">EID <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
+        <input class="form-input" id="mc-eid" type="text" placeholder="Enterprise Account EID"/>
+        <span style="font-size:11px;color:#a0aec0;margin-top:4px;display:block">Scopes audit to parent account</span>
+      </div>
+    </div>
+    <p style="font-size:11px;color:#a0aec0;margin-top:10px;margin-bottom:16px">MID takes priority over EID if both are entered. Leave both blank to use the default account.</p>
     <div id="mc-connect-error" style="color:#dc2626;font-size:13px;margin-bottom:12px;display:none"></div>
-    <button class="btn-submit" id="mc-connect-submit">Connect</button>
+    <button class="btn-submit" id="mc-connect-submit">Connect Marketing Cloud</button>
   </div>
 </div>
 
@@ -1171,11 +1194,14 @@ document.getElementById("mc-connect-submit").addEventListener("click", async () 
   const subdomain    = document.getElementById("mc-subdomain").value.trim();
   const clientId     = document.getElementById("mc-client-id").value.trim();
   const clientSecret = document.getElementById("mc-client-secret").value.trim();
+  const mid          = document.getElementById("mc-mid").value.trim();
+  const eid          = document.getElementById("mc-eid").value.trim();
   const errEl        = document.getElementById("mc-connect-error");
   const btn          = document.getElementById("mc-connect-submit");
 
   if (!subdomain || !clientId || !clientSecret) {
-    errEl.textContent = "All three fields are required."; errEl.style.display = "block"; return;
+    errEl.textContent = "Subdomain, Client ID, and Client Secret are required.";
+    errEl.style.display = "block"; return;
   }
   errEl.style.display = "none";
   btn.disabled = true; btn.textContent = "Connecting…";
@@ -1184,28 +1210,31 @@ document.getElementById("mc-connect-submit").addEventListener("click", async () 
     const res = await fetch("/api/mc/connect", {
       method: "POST", credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subdomain, clientId, clientSecret }),
+      body: JSON.stringify({ subdomain, clientId, clientSecret, mid: mid || null, eid: eid || null }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Connection failed");
     document.getElementById("mc-modal-backdrop").classList.remove("open");
-    showMcPage(data.subdomain);
+    showMcPage(data.subdomain, null, data.mid, data.eid);
   } catch (err) {
     errEl.textContent = err.message; errEl.style.display = "block";
   } finally {
-    btn.disabled = false; btn.textContent = "Connect";
+    btn.disabled = false; btn.textContent = "Connect Marketing Cloud";
   }
 });
 
 async function checkMcSession() {
   const res  = await fetch("/api/mc/session", { credentials: "include" });
   const data = await res.json();
-  if (data.connected) showMcPage(data.subdomain, data.orgName);
+  if (data.connected) showMcPage(data.subdomain, data.orgName, data.mid, data.eid);
 }
 
-function showMcPage(subdomain, orgName) {
+function showMcPage(subdomain, orgName, mid, eid) {
   document.getElementById("mc-banner-name").textContent = orgName || subdomain;
-  document.getElementById("mc-banner-sub").textContent  = subdomain;
+  const subParts = [subdomain];
+  if (mid) subParts.push("MID: " + mid);
+  if (eid) subParts.push("EID: " + eid);
+  document.getElementById("mc-banner-sub").textContent = subParts.join(" · ");
   // Add MC nav button if not already there
   if (!document.getElementById("btn-nav-mc")) {
     const btn = document.createElement("button");
