@@ -882,6 +882,21 @@ document.getElementById("btn-nav-audit").addEventListener("click", () => showPag
 document.getElementById("btn-nav-history").addEventListener("click", () => { showPage("history"); loadOrgList(); });
 document.getElementById("btn-logout").addEventListener("click", logout);
 checkSession();
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").then(reg => {
+    // If a new SW is waiting, activate it immediately and reload
+    if (reg.waiting) { reg.waiting.postMessage("skipWaiting"); location.reload(); }
+    reg.addEventListener("updatefound", () => {
+      const sw = reg.installing;
+      sw.addEventListener("statechange", () => {
+        if (sw.state === "installed" && navigator.serviceWorker.controller) {
+          location.reload();
+        }
+      });
+    });
+  });
+}
 </script>
 </body>
 </html>
