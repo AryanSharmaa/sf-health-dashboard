@@ -159,6 +159,22 @@
     .delta-up{color:#16a34a;font-weight:700}
     .delta-down{color:#dc2626;font-weight:700}
     .delta-flat{color:#6b7280;font-weight:700}
+
+    /* ── Proactive Monitoring ── */
+    .pm-section{margin-bottom:20px}
+    .pm-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:10px}
+    .pm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+    .pm-item{background:#f8fafc;border-radius:10px;padding:12px 14px;border:1px solid #e2e8f0;display:flex;align-items:flex-start;gap:10px}
+    .pm-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+    .pm-dot.ok{background:#16a34a}
+    .pm-dot.warning{background:#ca8a04}
+    .pm-dot.critical{background:#dc2626}
+    .pm-label{font-size:12px;font-weight:600;color:#374151;line-height:1.4}
+    .pm-value{font-size:11px;color:#6b7280;margin-top:2px}
+    .pm-bar-wrap{display:flex;align-items:center;gap:6px;margin-top:5px}
+    .pm-bar-track{flex:1;height:4px;background:#e2e8f0;border-radius:99px}
+    .pm-bar-fill{height:4px;border-radius:99px}
+    .pm-pct{font-size:10px;font-weight:700;min-width:30px;text-align:right}
     .page{display:none}
     .page.active{display:block}
 
@@ -404,6 +420,12 @@
       <div class="card">
         <h2>Top Recommended Actions</h2>
         <div id="actions"></div>
+      </div>
+
+      <!-- Proactive Monitoring -->
+      <div class="card" id="proactive-card" style="display:none">
+        <h2>Proactive Monitoring <span style="font-size:12px;font-weight:500;color:#a0aec0;margin-left:4px">Last 7 days</span></h2>
+        <div id="proactive-content"></div>
       </div>
 
       <!-- Downloads + Share + Schedule -->
@@ -1160,6 +1182,9 @@ function renderAuditResults(data, jobId) {
     btn.addEventListener("click", () => fetchAiGuide(jobId, a, i));
   });
 
+  // Proactive monitoring
+  renderProactiveMonitoring(meta.proactiveMonitoring);
+
   document.getElementById("dl-html").href = "/api/audit/"+jobId+"/report.html";
   document.getElementById("dl-json").href = "/api/audit/"+jobId+"/report.json";
   document.getElementById("dl-pdf").href  = "/api/audit/"+jobId+"/report.pdf";
@@ -1171,6 +1196,90 @@ function renderAuditResults(data, jobId) {
 
   document.getElementById("results").style.display = "block";
   document.getElementById("results").scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+// ─── Proactive Monitoring ─────────────────────────────────────────────────────
+
+function renderProactiveMonitoring(pm) {
+  if (!pm || (!pm.limits && !pm.errors && !pm.performance)) return;
+
+  const card    = document.getElementById("proactive-card");
+  const content = document.getElementById("proactive-content");
+
+  function dot(status)  { return `<div class="pm-dot ${status||'ok'}"></div>`; }
+  function pctColor(s)  { return s === "critical" ? "#dc2626" : s === "warning" ? "#ca8a04" : "#16a34a"; }
+
+  function limitItem(label, stat) {
+    if (!stat || stat.max === 0) return "";
+    const pctDisplay = (stat.pct * 100).toFixed(0);
+    return `<div class="pm-item">
+      ${dot(stat.status)}
+      <div style="flex:1;min-width:0">
+        <div class="pm-label">${label}</div>
+        <div class="pm-value">${stat.used.toLocaleString()} / ${stat.max.toLocaleString()}</div>
+        <div class="pm-bar-wrap">
+          <div class="pm-bar-track"><div class="pm-bar-fill" style="width:${pctDisplay}%;background:${pctColor(stat.status)}"></div></div>
+          <div class="pm-pct" style="color:${pctColor(stat.status)}">${pctDisplay}%</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function errorItem(label, stat) {
+    if (!stat) return "";
+    return `<div class="pm-item">
+      ${dot(stat.status)}
+      <div>
+        <div class="pm-label">${label}</div>
+        <div class="pm-value" style="color:${pctColor(stat.status)};font-weight:${stat.count>0?'700':'400'}">${stat.count} event${stat.count!==1?"s":""}</div>
+      </div>
+    </div>`;
+  }
+
+  const L = pm.limits || {};
+  const E = pm.errors || {};
+  const P = pm.performance || {};
+
+  // Only show limit items where max > 0 (limitItem returns "" otherwise, filtered by Boolean)
+  const limitItems = [
+    limitItem("Async Apex Executions",           L.asyncApexExecutions),
+    limitItem("Bulk API Requests",               L.bulkApiRequestsV1),
+    limitItem("Platform Event Delivery",         L.platformEventDelivery),
+    limitItem("Single Email Messages",           L.singleEmailMessages),
+    limitItem("Workflow Emails",                 L.workflowEmails),
+    limitItem("Streaming API Clients",           L.streamingApiConcurrentClients),
+    limitItem("Hourly Platform Events",          L.hourlyPlatformEventsPublished),
+    limitItem("Content Files",                   L.contentDocuments),
+  ].filter(Boolean);
+
+  const errorItems = [
+    errorItem("Login Failures (7d)",         E.loginFailures7d),
+    errorItem("Apex CPU Timeouts (7d)",      E.apexCpuTimeouts7d),
+    errorItem("Async Apex Failures (7d)",    E.asyncApexErrors7d),
+    errorItem("Callout Errors (7d)",         E.calloutErrors7d),
+  ].filter(Boolean);
+
+  const perfItems = [
+    errorItem("Slow Apex Runs >5s (7d)",     P.slowApexExecutions7d),
+    errorItem("Pending Async Jobs",          P.pendingAsyncJobs),
+    errorItem("Failed Scheduled Jobs",       P.failedScheduledJobs),
+  ].filter(Boolean);
+
+  let html = "";
+  if (limitItems.length) {
+    html += `<div class="pm-section"><div class="pm-section-title">Governor Limits</div><div class="pm-grid">${limitItems.join("")}</div></div>`;
+  }
+  if (errorItems.length) {
+    html += `<div class="pm-section"><div class="pm-section-title">Error Signals</div><div class="pm-grid">${errorItems.join("")}</div></div>`;
+  }
+  if (perfItems.length) {
+    html += `<div class="pm-section"><div class="pm-section-title">Performance</div><div class="pm-grid">${perfItems.join("")}</div></div>`;
+  }
+
+  if (html) {
+    content.innerHTML = html;
+    card.style.display = "block";
+  }
 }
 
 // ─── Share report ─────────────────────────────────────────────────────────────

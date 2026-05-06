@@ -250,9 +250,10 @@ function generateJSON(healthScore, metadata = {}) {
   return {
     ...healthScore,
     metadata: {
-      unusedFields: metadata?.unusedFields || {},
-      techDebt: metadata?.techDebt || {},
-      governorLimits: metadata?.apiUsage?.governorLimits || {},
+      unusedFields:        metadata?.unusedFields        || {},
+      techDebt:            metadata?.techDebt            || {},
+      governorLimits:      metadata?.apiUsage?.governorLimits || {},
+      proactiveMonitoring: metadata?.proactiveMonitoring || {},
     },
   };
 }
