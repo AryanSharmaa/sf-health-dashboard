@@ -385,6 +385,52 @@ app.patch("/api/admin/tickets/:id", requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── OpenRouter probe (debug only) ───────────────────────────────────────────
+
+app.get("/api/openrouter-probe", async (req, res) => {
+  const https  = require("https");
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return res.json({ ok: false, error: "OPENROUTER_API_KEY not set." });
+
+  const body = JSON.stringify({
+    model: "meta-llama/llama-3.1-8b-instruct:free",
+    messages: [{ role: "user", content: "Say hello in one word." }],
+    max_tokens: 10,
+  });
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const opts = {
+        hostname: "openrouter.ai",
+        path: "/api/v1/chat/completions",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "HTTP-Referer": process.env.APP_URL || "https://sf-health-dashboard.onrender.com",
+          "X-Title": "SF Health Dashboard",
+          "Content-Length": Buffer.byteLength(body),
+        },
+      };
+      const r = https.request(opts, resp => {
+        let raw = "";
+        resp.on("data", c => raw += c);
+        resp.on("end", () => {
+          try { resolve({ status: resp.statusCode, body: JSON.parse(raw) }); }
+          catch { resolve({ status: resp.statusCode, body: raw.slice(0, 500) }); }
+        });
+      });
+      r.on("error", reject);
+      r.write(body);
+      r.end();
+    });
+    const text = result.body?.choices?.[0]?.message?.content || null;
+    res.json({ ok: result.status === 200, status: result.status, text, error: result.body?.error?.message || null });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
 // ─── Groq probe (debug only) ─────────────────────────────────────────────────
 
 app.get("/api/groq-probe", async (req, res) => {

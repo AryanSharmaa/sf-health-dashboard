@@ -16,6 +16,7 @@ const SF_API_VERSION  = "v62.0";
 const CLAUDE_MODEL    = "claude-opus-4-7";
 const GEMINI_MODEL    = "gemini-2.0-flash";
 const GROQ_MODEL      = "llama-3.3-70b-versatile";
+const OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct:free";
 
 const SYSTEM_PROMPT = `You are a senior Salesforce architect and certified consultant with 15+ years of experience.
 Generate a concise, actionable, step-by-step remediation guide for the Salesforce issue described.
@@ -172,7 +173,60 @@ async function tryGroq(prompt) {
   return text;
 }
 
-// ─── Strategy 3: Google Gemini Flash (free tier fallback) ────────────────────
+// ─── Strategy 3: OpenRouter free tier ────────────────────────────────────────
+
+async function tryOpenRouter(prompt) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error("OPENROUTER_API_KEY not configured.");
+
+  const body = JSON.stringify({
+    model: OPENROUTER_MODEL,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user",   content: prompt },
+    ],
+    max_tokens: 1024,
+    temperature: 0.3,
+  });
+
+  const options = {
+    hostname: "openrouter.ai",
+    path:     "/api/v1/chat/completions",
+    method:   "POST",
+    headers:  {
+      "Content-Type":  "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+      "HTTP-Referer":  process.env.APP_URL || "https://sf-health-dashboard.onrender.com",
+      "X-Title":       "SF Health Dashboard",
+      "Content-Length": Buffer.byteLength(body),
+    },
+  };
+
+  const { status, body: parsed } = await new Promise((resolve, reject) => {
+    const req = https.request(options, (res) => {
+      let raw = "";
+      res.on("data", c => raw += c);
+      res.on("end", () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); }
+        catch { resolve({ status: res.statusCode, body: raw }); }
+      });
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+
+  if (status !== 200) {
+    const msg = parsed?.error?.message || `OpenRouter API status ${status}`;
+    throw new Error(msg);
+  }
+
+  const text = parsed?.choices?.[0]?.message?.content;
+  if (!text) throw new Error("Empty response from OpenRouter.");
+  return text;
+}
+
+// ─── Strategy 4: Google Gemini Flash (free tier fallback) ────────────────────
 
 async function tryGemini(prompt) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -287,14 +341,21 @@ async function generateRemediationGuide({ action, category, priority, orgProfile
     if (process.env.GROQ_API_KEY) console.warn("[aiAdvisor] Groq failed:", err.message);
   }
 
-  // 3 — Try Gemini Flash (free tier fallback)
+  // 3 — Try OpenRouter (free tier)
+  try {
+    return await tryOpenRouter(prompt);
+  } catch (err) {
+    if (process.env.OPENROUTER_API_KEY) console.warn("[aiAdvisor] OpenRouter failed:", err.message);
+  }
+
+  // 4 — Try Gemini Flash
   try {
     return await tryGemini(prompt);
   } catch (err) {
     if (process.env.GEMINI_API_KEY) console.warn("[aiAdvisor] Gemini failed:", err.message);
   }
 
-  // 4 — Fall back to Anthropic API (paid)
+  // 5 — Fall back to Anthropic API (paid)
   try {
     return await tryAnthropic(prompt);
   } catch (err) {
