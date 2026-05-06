@@ -1347,9 +1347,10 @@ async function fetchAiGuide(jobId, action, index) {
 
     if (data.unavailable) {
       panel.innerHTML =
-        '<div style="color:#6b7280;font-size:13px;display:flex;align-items:center;gap:8px">' +
-        '<span style="font-size:16px">🤖</span>' +
-        '<span>AI guides require Einstein Generative AI on your org. Ask your Salesforce admin to enable it in <strong>Setup → Einstein Setup</strong>.</span>' +
+        '<div style="color:#6b7280;font-size:13px;line-height:1.6">' +
+        '<strong style="color:#1a202c">AI not configured</strong><br>' +
+        'To enable free AI guides, add a <strong>GEMINI_API_KEY</strong> environment variable in your Render dashboard.<br>' +
+        '<span style="font-size:12px">Get a free key at <strong>aistudio.google.com</strong> → Get API key (1M tokens/day free).</span>' +
         '</div>';
       btn.textContent = "✦ AI Fix Guide";
       btn.disabled = false;
@@ -1358,7 +1359,7 @@ async function fetchAiGuide(jobId, action, index) {
 
     if (data.error) throw new Error(data.error);
     panel.innerHTML =
-      '<div class="ai-badge">✦ Claude AI</div>' +
+      '<div class="ai-badge">✦ Gemini AI</div>' +
       '<div class="ai-steps">' + formatAiGuide(data.guide) + "</div>";
     btn.textContent = "✦ Hide Guide";
   } catch (err) {
@@ -1397,9 +1398,10 @@ async function fetchMcAiGuide(jobId, action, index) {
 
     if (data.unavailable) {
       panel.innerHTML =
-        '<div style="color:#6b7280;font-size:13px;display:flex;align-items:center;gap:8px">' +
-        '<span style="font-size:16px">🤖</span>' +
-        '<span>AI guides require an Anthropic API key configured on the server. Contact the site owner.</span>' +
+        '<div style="color:#6b7280;font-size:13px;line-height:1.6">' +
+        '<strong style="color:#1a202c">AI not configured</strong><br>' +
+        'Add a <strong>GEMINI_API_KEY</strong> in your Render dashboard for free AI guides.<br>' +
+        '<span style="font-size:12px">Get a free key at <strong>aistudio.google.com</strong> (1M tokens/day free).</span>' +
         '</div>';
       btn.textContent = "✦ AI Fix Guide";
       btn.disabled = false;
@@ -1408,7 +1410,7 @@ async function fetchMcAiGuide(jobId, action, index) {
 
     if (data.error) throw new Error(data.error);
     panel.innerHTML =
-      '<div class="ai-badge">✦ Claude AI</div>' +
+      '<div class="ai-badge">✦ Gemini AI</div>' +
       '<div class="ai-steps">' + formatAiGuide(data.guide) + "</div>";
     btn.textContent = "✦ Hide Guide";
   } catch (err) {

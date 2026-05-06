@@ -227,11 +227,14 @@ async function generateRemediationGuide({ action, category, priority, orgProfile
     } catch { /* fall through */ }
   }
 
-  // 2 — Try Gemini Flash (free tier)
+  // 2 — Try Gemini Flash (free tier) — fall through on any failure
   try {
     return await tryGemini(prompt);
   } catch (err) {
-    if (!err.message.includes("not configured")) throw err;
+    if (process.env.GEMINI_API_KEY) {
+      console.warn("[aiAdvisor] Gemini failed, falling back to Anthropic:", err.message);
+    }
+    // fall through whether key is missing or API call failed
   }
 
   // 3 — Fall back to Anthropic API (paid)
