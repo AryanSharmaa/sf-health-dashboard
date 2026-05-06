@@ -25,6 +25,16 @@ services:
         sync: false          # optional paid fallback — only used if Gemini key not set
       - key: ADMIN_KEY
         sync: false          # secret key to access /api/admin/* endpoints
+      - key: SMTP_HOST
+        sync: false          # e.g. smtp.gmail.com — for scheduled audit emails
+      - key: SMTP_PORT
+        sync: false          # 587 (TLS) or 465 (SSL)
+      - key: SMTP_USER
+        sync: false          # your email address
+      - key: SMTP_PASS
+        sync: false          # app password (Gmail) or SMTP password
+      - key: SMTP_FROM
+        sync: false          # e.g. SF Health Dashboard <you@company.com>
       # PORT is injected by Render at runtime — do not override it here
 
 databases:

@@ -363,6 +363,95 @@ async function updateTicketStatus(id, status) {
   );
 }
 
+// ─── Shared reports ───────────────────────────────────────────────────────────
+
+async function createShare({ token, auditId, orgId, expiresAt }) {
+  const db = await getDb();
+  await db.query(
+    `INSERT INTO shared_reports (token, audit_id, org_id, expires_at) VALUES (?, ?, ?, ?)`,
+    [token, auditId, orgId, expiresAt]
+  );
+}
+
+async function getShare(token) {
+  const db = await getDb();
+  const { rows } = await db.query(
+    `SELECT * FROM shared_reports WHERE token = ?`, [token]
+  );
+  return rows[0] || null;
+}
+
+async function listSharesForAudit(auditId) {
+  const db = await getDb();
+  const { rows } = await db.query(
+    `SELECT token, expires_at, created_at FROM shared_reports WHERE audit_id = ? ORDER BY created_at DESC`,
+    [auditId]
+  );
+  return rows;
+}
+
+async function deleteShare(token) {
+  const db = await getDb();
+  await db.query(`DELETE FROM shared_reports WHERE token = ?`, [token]);
+}
+
+// ─── Scheduled audits ─────────────────────────────────────────────────────────
+
+async function createSchedule({ id, orgId, orgName, instanceUrl, accessToken, refreshToken, clientId, clientSecret, loginUrl, email, frequency, dayOfWeek, hour }) {
+  const db = await getDb();
+  await db.query(
+    `INSERT INTO scheduled_audits
+       (id, org_id, org_name, instance_url, access_token, refresh_token, client_id, client_secret, login_url, email, frequency, day_of_week, hour)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, orgId, orgName, instanceUrl, accessToken, refreshToken || null, clientId || null, clientSecret || null, loginUrl || null, email, frequency, dayOfWeek, hour]
+  );
+}
+
+async function getSchedule(id) {
+  const db = await getDb();
+  const { rows } = await db.query(`SELECT * FROM scheduled_audits WHERE id = ?`, [id]);
+  return rows[0] || null;
+}
+
+async function listSchedulesForOrg(orgId) {
+  const db = await getDb();
+  const { rows } = await db.query(
+    `SELECT id, org_name, email, frequency, day_of_week, hour, enabled, last_run_at, last_score, last_grade, created_at
+     FROM scheduled_audits WHERE org_id = ? ORDER BY created_at DESC`,
+    [orgId]
+  );
+  return rows;
+}
+
+async function listAllEnabledSchedules() {
+  const db = await getDb();
+  const { rows } = await db.query(
+    `SELECT * FROM scheduled_audits WHERE enabled = 1 OR enabled = TRUE`
+  );
+  return rows;
+}
+
+async function updateScheduleLastRun({ id, score, grade }) {
+  const db = await getDb();
+  await db.query(
+    `UPDATE scheduled_audits SET last_run_at = ?, last_score = ?, last_grade = ?, updated_at = ? WHERE id = ?`,
+    [new Date().toISOString(), score, grade, new Date().toISOString(), id]
+  );
+}
+
+async function updateScheduleEnabled(id, enabled) {
+  const db = await getDb();
+  await db.query(
+    `UPDATE scheduled_audits SET enabled = ?, updated_at = ? WHERE id = ?`,
+    [enabled ? 1 : 0, new Date().toISOString(), id]
+  );
+}
+
+async function deleteSchedule(id) {
+  const db = await getDb();
+  await db.query(`DELETE FROM scheduled_audits WHERE id = ?`, [id]);
+}
+
 module.exports = {
   // Orgs
   upsertOrg, listOrgs, getOrg,
@@ -380,4 +469,9 @@ module.exports = {
   saveFeedback, listFeedback, getFeedbackStats,
   // Support tickets
   createTicket, listTickets, updateTicketStatus,
+  // Shared reports
+  createShare, getShare, listSharesForAudit, deleteShare,
+  // Scheduled audits
+  createSchedule, getSchedule, listSchedulesForOrg, listAllEnabledSchedules,
+  updateScheduleLastRun, updateScheduleEnabled, deleteSchedule,
 };

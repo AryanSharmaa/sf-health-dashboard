@@ -80,6 +80,36 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS shared_reports (
+  token       TEXT        PRIMARY KEY,
+  audit_id    TEXT        NOT NULL REFERENCES audits(id) ON DELETE CASCADE,
+  org_id      TEXT        NOT NULL,
+  expires_at  TIMESTAMPTZ NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS scheduled_audits (
+  id              TEXT        PRIMARY KEY,
+  org_id          TEXT        NOT NULL,
+  org_name        TEXT        NOT NULL,
+  instance_url    TEXT        NOT NULL,
+  access_token    TEXT        NOT NULL,
+  refresh_token   TEXT,
+  client_id       TEXT,
+  client_secret   TEXT,
+  login_url       TEXT,
+  email           TEXT        NOT NULL,
+  frequency       TEXT        NOT NULL DEFAULT 'weekly',
+  day_of_week     INTEGER     NOT NULL DEFAULT 1,
+  hour            INTEGER     NOT NULL DEFAULT 9,
+  enabled         BOOLEAN     NOT NULL DEFAULT TRUE,
+  last_run_at     TIMESTAMPTZ,
+  last_score      INTEGER,
+  last_grade      TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
 CREATE INDEX IF NOT EXISTS idx_cat_scores_org    ON category_scores(org_id, category, created_at);
@@ -87,3 +117,6 @@ CREATE INDEX IF NOT EXISTS idx_actions_org       ON recommended_actions(org_id, 
 CREATE INDEX IF NOT EXISTS idx_unused_fields_org ON unused_fields(org_id, object_name);
 CREATE INDEX IF NOT EXISTS idx_feedback_created  ON feedback(created_at);
 CREATE INDEX IF NOT EXISTS idx_tickets_status    ON support_tickets(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_shares_audit      ON shared_reports(audit_id);
+CREATE INDEX IF NOT EXISTS idx_schedules_org     ON scheduled_audits(org_id);
+CREATE INDEX IF NOT EXISTS idx_schedules_enabled ON scheduled_audits(enabled, frequency, day_of_week, hour);

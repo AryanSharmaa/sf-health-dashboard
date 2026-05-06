@@ -91,6 +91,40 @@ CREATE TABLE IF NOT EXISTS support_tickets (
   updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- ─── Shared Reports ───────────────────────────────────────────────────────
+-- Public shareable links for audit results
+CREATE TABLE IF NOT EXISTS shared_reports (
+  token       TEXT        PRIMARY KEY,             -- crypto random 32-char hex
+  audit_id    TEXT        NOT NULL REFERENCES audits(id) ON DELETE CASCADE,
+  org_id      TEXT        NOT NULL,
+  expires_at  TEXT        NOT NULL,                -- ISO8601 — default 30 days
+  created_at  TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+-- ─── Scheduled Audits ─────────────────────────────────────────────────────
+-- Stored credentials + schedule for auto-run audits
+CREATE TABLE IF NOT EXISTS scheduled_audits (
+  id              TEXT        PRIMARY KEY,          -- UUID
+  org_id          TEXT        NOT NULL,
+  org_name        TEXT        NOT NULL,
+  instance_url    TEXT        NOT NULL,
+  access_token    TEXT        NOT NULL,             -- encrypted with SCHEDULE_SECRET
+  refresh_token   TEXT,
+  client_id       TEXT,
+  client_secret   TEXT,
+  login_url       TEXT,
+  email           TEXT        NOT NULL,             -- where to send results
+  frequency       TEXT        NOT NULL DEFAULT 'weekly',  -- weekly | daily | monthly
+  day_of_week     INTEGER     NOT NULL DEFAULT 1,   -- 0=Sun … 6=Sat (weekly)
+  hour            INTEGER     NOT NULL DEFAULT 9,   -- 0–23 UTC
+  enabled         INTEGER     NOT NULL DEFAULT 1,   -- 0/1
+  last_run_at     TEXT,
+  last_score      INTEGER,
+  last_grade      TEXT,
+  created_at      TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at      TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
 -- ─── Indexes ──────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
@@ -99,3 +133,6 @@ CREATE INDEX IF NOT EXISTS idx_actions_org       ON recommended_actions(org_id, 
 CREATE INDEX IF NOT EXISTS idx_unused_fields_org ON unused_fields(org_id, object_name);
 CREATE INDEX IF NOT EXISTS idx_feedback_created  ON feedback(created_at);
 CREATE INDEX IF NOT EXISTS idx_tickets_status    ON support_tickets(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_shares_audit      ON shared_reports(audit_id);
+CREATE INDEX IF NOT EXISTS idx_schedules_org     ON scheduled_audits(org_id);
+CREATE INDEX IF NOT EXISTS idx_schedules_enabled ON scheduled_audits(enabled, frequency, day_of_week, hour);

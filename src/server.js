@@ -11,6 +11,8 @@ const rateLimit   = require("express-rate-limit");
 const path        = require("path");
 const { v4: uuidv4 } = require("uuid");
 
+const crypto  = require("crypto");
+
 const { collectOrgMetadataFromToken, collectOrgMetadata } = require("./sfCollector");
 const { scoreOrgHealth }           = require("../sfHealthScore");
 const { generateHTML, generateJSON } = require("./reportGenerator");
@@ -21,6 +23,7 @@ const { generateRemediationGuide } = require("./aiAdvisor");
 const { fetchToken, createMcSession, getMcSession, deleteMcSession } = require("./mcOAuth");
 const { collectMcMetadata } = require("./mcCollector");
 const { scoreMcHealth }     = require("./mcHealthScore");
+const { startScheduler }    = require("./scheduler");
 
 const app = express();
 
@@ -59,6 +62,24 @@ app.use((req, _res, next) => {
     if (k) req.cookies[k.trim()] = decodeURIComponent(v.join("=").trim());
   });
   next();
+});
+
+// ─── Shared report (public, no auth) ─────────────────────────────────────────
+
+app.get("/share/:token", async (req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/share.html"));
+});
+
+app.get("/api/share/:token", readLimiter, async (req, res) => {
+  const share = await repo.getShare(req.params.token).catch(() => null);
+  if (!share) return res.status(404).json({ error: "Report not found or link expired." });
+  if (new Date(share.expires_at) < new Date()) {
+    return res.status(410).json({ error: "This share link has expired." });
+  }
+  const audit = await repo.getAudit(share.audit_id).catch(() => null);
+  if (!audit) return res.status(404).json({ error: "Audit not found." });
+  res.json({ share, report: audit.rawScore, metadata: audit.rawMetadata });
 });
 
 // Landing page at root, app at /app — never cached
@@ -208,6 +229,93 @@ app.post("/api/audit/:jobId/advise", aiLimiter, requireSession, async (req, res)
     if (err.isUnavailable) return res.json({ unavailable: true });
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─── Share a report ───────────────────────────────────────────────────────────
+
+app.post("/api/audit/:jobId/share", readLimiter, requireSession, async (req, res) => {
+  const job = runningJobs.get(req.params.jobId);
+  if (!job?.report) {
+    const dbAudit = await repo.getAudit(req.params.jobId).catch(() => null);
+    if (!dbAudit) return res.status(404).json({ error: "Audit not found." });
+  }
+
+  const existing = await repo.listSharesForAudit(req.params.jobId).catch(() => []);
+  if (existing.length > 0 && new Date(existing[0].expires_at) > new Date()) {
+    const appUrl = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+    return res.json({ token: existing[0].token, url: `${appUrl}/share/${existing[0].token}`, expiresAt: existing[0].expires_at });
+  }
+
+  const token     = crypto.randomBytes(24).toString("hex");
+  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
+  const orgId     = job?.report?.orgId || req.sfSession.orgId;
+
+  await repo.createShare({ token, auditId: req.params.jobId, orgId, expiresAt });
+  const appUrl = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+  res.json({ token, url: `${appUrl}/share/${token}`, expiresAt });
+});
+
+// ─── PDF download ─────────────────────────────────────────────────────────────
+
+app.get("/api/audit/:jobId/report.pdf", readLimiter, (req, res) => {
+  const job = runningJobs.get(req.params.jobId);
+  if (!job?.html) return res.status(404).json({ error: "Report not ready." });
+  // Serve the HTML report with a print stylesheet injected — browser renders it as PDF via window.print
+  const printHtml = job.html.replace(
+    "</head>",
+    `<style>@media screen{body{background:#fff}.header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style>
+     <script>window.addEventListener('load',()=>window.print())</script></head>`
+  );
+  res.setHeader("Content-Type", "text/html");
+  res.setHeader("Content-Disposition", `inline; filename="sf-health-${req.params.jobId}.html"`);
+  res.send(printHtml);
+});
+
+// ─── Scheduled audits ─────────────────────────────────────────────────────────
+
+app.post("/api/schedules", readLimiter, requireSession, async (req, res) => {
+  const { email, frequency = "weekly", dayOfWeek = 1, hour = 9 } = req.body || {};
+  if (!email || !email.includes("@")) return res.status(400).json({ error: "Valid email required." });
+  if (!["daily", "weekly", "monthly"].includes(frequency)) return res.status(400).json({ error: "Invalid frequency." });
+
+  const { accessToken, instanceUrl, orgId, orgName, refreshToken, clientId, clientSecret, loginUrl } = req.sfSession;
+  const id = uuidv4();
+
+  await repo.createSchedule({
+    id, orgId, orgName, instanceUrl, accessToken,
+    refreshToken: refreshToken || null,
+    clientId:     clientId    || null,
+    clientSecret: clientSecret || null,
+    loginUrl:     loginUrl    || null,
+    email, frequency,
+    dayOfWeek: parseInt(dayOfWeek),
+    hour:      parseInt(hour),
+  });
+
+  res.json({ id, email, frequency, dayOfWeek, hour, enabled: true });
+});
+
+app.get("/api/schedules", readLimiter, requireSession, async (req, res) => {
+  try {
+    const rows = await repo.listSchedulesForOrg(req.sfSession.orgId);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch("/api/schedules/:id", readLimiter, requireSession, async (req, res) => {
+  const { enabled } = req.body || {};
+  if (enabled === undefined) return res.status(400).json({ error: "enabled required." });
+  const schedule = await repo.getSchedule(req.params.id).catch(() => null);
+  if (!schedule || schedule.org_id !== req.sfSession.orgId) return res.status(404).json({ error: "Not found." });
+  await repo.updateScheduleEnabled(req.params.id, !!enabled);
+  res.json({ ok: true });
+});
+
+app.delete("/api/schedules/:id", readLimiter, requireSession, async (req, res) => {
+  const schedule = await repo.getSchedule(req.params.id).catch(() => null);
+  if (!schedule || schedule.org_id !== req.sfSession.orgId) return res.status(404).json({ error: "Not found." });
+  await repo.deleteSchedule(req.params.id);
+  res.json({ ok: true });
 });
 
 // ─── Feedback ─────────────────────────────────────────────────────────────────
@@ -487,9 +595,14 @@ app.get("/admin", (_req, res) => {
 
 app.get("*", (req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  // Auth callbacks and app routes serve the app; everything else serves landing
-  const isAppRoute = req.path.startsWith("/auth") || req.path.startsWith("/app");
-  res.sendFile(path.join(__dirname, isAppRoute ? "../public/index.html" : "../public/landing.html"));
+  // Auth/app routes → app; share routes → share page; else → landing
+  if (req.path.startsWith("/auth") || req.path.startsWith("/app")) {
+    return res.sendFile(path.join(__dirname, "../public/index.html"));
+  }
+  if (req.path.startsWith("/share/")) {
+    return res.sendFile(path.join(__dirname, "../public/share.html"));
+  }
+  res.sendFile(path.join(__dirname, "../public/landing.html"));
 });
 
 app.use((err, _req, res, _next) => {
@@ -503,6 +616,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n  SF Health Dashboard → http://localhost:${PORT}`);
   console.log(`  NODE_ENV: ${process.env.NODE_ENV || "development"}\n`);
+  startScheduler();
 });
 
 module.exports = app;
