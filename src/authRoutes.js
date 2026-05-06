@@ -17,6 +17,17 @@ function getRedirectUri(req) {
   return `${proto}://${req.get("host")}/auth/salesforce/callback`;
 }
 
+// ─── Force SF logout then re-auth (clears cross-org session conflict) ─────────
+
+router.get("/salesforce/force-logout", (req, res) => {
+  const env = req.query.env || "production";
+  const loginUrl = env === "sandbox" ? "https://test.salesforce.com" : "https://login.salesforce.com";
+  const appUrl   = process.env.APP_URL || `${req.headers["x-forwarded-proto"] || req.protocol}://${req.get("host")}`;
+  const retryUrl = `${appUrl}/auth/salesforce${env === "sandbox" ? "?env=sandbox" : ""}`;
+  // SF's logout endpoint accepts retUrl — after logout SF redirects there so auth restarts automatically
+  res.redirect(`${loginUrl}/secur/logout.jsp?retUrl=${encodeURIComponent(retryUrl)}`);
+});
+
 // ─── Start OAuth ──────────────────────────────────────────────────────────────
 
 router.get("/salesforce", (req, res) => {
@@ -47,7 +58,9 @@ router.get("/salesforce/callback", async (req, res) => {
   const { code, state, error, error_description } = req.query;
 
   if (error) {
-    return res.redirect(`/app?error=${encodeURIComponent(error_description || error)}`);
+    const isSandbox = (req.cookies?.sf_env || "").includes("test.salesforce.com");
+    const envParam  = isSandbox ? "&env=sandbox" : "";
+    return res.redirect(`/app?error=${encodeURIComponent(error_description || error)}${envParam}`);
   }
 
   // Validate state + retrieve PKCE verifier

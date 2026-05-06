@@ -985,13 +985,13 @@ async function checkSession() {
     const banner = document.getElementById("error-banner");
     const isCrossOrg = err.toLowerCase().includes("cross-org") || err.toLowerCase().includes("cross_org");
     if (isCrossOrg) {
+      const env = params.get("env") || "production";
       banner.innerHTML =
-        "<strong>Salesforce session conflict detected.</strong> Your browser has an active Salesforce session " +
-        "from a different org. To fix this:<br/>" +
-        "<strong>1.</strong> Log out of Salesforce in this browser completely.<br/>" +
-        "<strong>2.</strong> Clear cookies for <code>salesforce.com</code> and <code>force.com</code> " +
-        "(Browser Settings → Privacy → Clear browsing data → Cookies → add those sites).<br/>" +
-        "<strong>3.</strong> Try connecting again in a private/incognito window if the issue persists.";
+        "<strong>Salesforce session conflict.</strong> Your browser has an active Salesforce session from a different org. " +
+        "Click below to sign out of Salesforce and reconnect automatically — no manual cookie clearing needed.<br/><br/>" +
+        `<a href="/auth/salesforce/force-logout${env === "sandbox" ? "?env=sandbox" : ""}" ` +
+        `style="display:inline-block;padding:8px 18px;background:#0070d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px">` +
+        "Sign out of Salesforce &amp; Retry</a>";
       banner.style.cssText = "display:block;background:#fef9c3;border:1px solid #fde047;color:#713f12;padding:14px 16px;border-radius:9px;font-size:13px;margin-bottom:20px;line-height:1.7";
     } else {
       banner.textContent = `Connection failed: ${err}`;
