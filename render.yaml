@@ -23,8 +23,7 @@ services:
         sync: false          # optional — fallback AI when Einstein not on customer's org
       - key: ADMIN_KEY
         sync: false          # secret key to access /api/admin/* endpoints
-      - key: PORT
-        value: 3000
+      # PORT is injected by Render at runtime — do not override it here
 
 databases:
   - name: sf-health-db
