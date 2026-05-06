@@ -193,6 +193,18 @@
     .tab-btn{flex:1;padding:9px;font-size:13px;font-weight:600;border:none;background:white;cursor:pointer;transition:all 0.15s;color:#718096}
     .tab-btn.active{background:#0070d2;color:white}
 
+    /* ── MC Setup Guide ── */
+    .guide-step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #f3f4f6}
+    .guide-step-num{flex-shrink:0;width:28px;height:28px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;margin-top:1px}
+    .guide-step-body{flex:1}
+    .guide-step-title{font-size:14px;font-weight:700;color:#1a202c;margin-bottom:4px}
+    .guide-step-desc{font-size:13px;color:#6b7280;line-height:1.6}
+    .guide-path{display:inline-flex;align-items:center;gap:4px;margin-top:8px;background:#f0f4f8;border:1px solid #e2e8f0;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:600;color:#374151;font-family:monospace}
+    .guide-scope{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;color:#166534}
+    .guide-cred-row{display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px}
+    .guide-cred-label{font-size:12px;font-weight:700;color:#1a202c;min-width:90px}
+    .guide-cred-desc{font-size:12px;color:#6b7280}
+
     /* ── MC category labels ── */
     .mc-cat-row{display:grid;grid-template-columns:160px 1fr 40px;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f7fafc}
     .mc-cat-row:last-child{border-bottom:none}
@@ -502,52 +514,148 @@
 
 <!-- ══ MC CONNECT MODAL ══ -->
 <div class="modal-backdrop" id="mc-modal-backdrop">
-  <div class="modal">
+  <div class="modal" style="max-width:540px">
     <div class="modal-header">
-      <div class="modal-title">Connect Marketing Cloud</div>
+      <div class="modal-title" id="mc-modal-title">Connect Marketing Cloud</div>
       <button class="modal-close" id="mc-modal-close">✕</button>
     </div>
-    <p style="font-size:13px;color:#718096;margin-bottom:20px;line-height:1.6">
-      Create an <strong>Installed Package</strong> in MC Setup → Platform Tools → Apps → Installed Packages.
-      Add a <strong>Server-to-Server API Integration</strong> component, then paste the credentials below.
-    </p>
 
-    <!-- Where to find these — help text -->
-    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:#6b7280;line-height:1.7">
-      <strong style="color:#374151">Where to find these:</strong><br/>
-      <strong>Subdomain</strong> — Installed Package → API Integration → REST Base URI (e.g. <code style="background:#f0f4f8;padding:1px 5px;border-radius:4px">mcXXXXXX</code>)<br/>
-      <strong>Client ID / Secret</strong> — same page, shown after adding API Integration component<br/>
-      <strong>MID</strong> — Setup → Company Settings → Account Management → your BU's MID number<br/>
-      <strong>EID</strong> — top-level Enterprise account ID, same location — use if you want to audit across all BUs
+    <!-- ── CONNECT FORM VIEW ── -->
+    <div id="mc-view-form">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <p style="font-size:13px;color:#718096;line-height:1.6;margin:0">
+          Paste your Installed Package credentials below to connect.
+        </p>
+        <button id="btn-show-guide" style="flex-shrink:0;margin-left:12px;background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+          📖 Setup Guide
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Subdomain or REST Base URI <span style="color:#dc2626">*</span></label>
+        <input class="form-input" id="mc-subdomain" type="text" placeholder="mcXXXXXX  or  https://mcXXXXXX.rest.marketingcloudapis.com"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Client ID <span style="color:#dc2626">*</span></label>
+        <input class="form-input" id="mc-client-id" type="text" placeholder="Alphanumeric — from Installed Package"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Client Secret <span style="color:#dc2626">*</span></label>
+        <input class="form-input" id="mc-client-secret" type="password" placeholder="From Installed Package"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">MID <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
+          <input class="form-input" id="mc-mid" type="text" placeholder="Business Unit MID"/>
+          <span style="font-size:11px;color:#a0aec0;margin-top:4px;display:block">Scopes audit to a specific BU</span>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">EID <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
+          <input class="form-input" id="mc-eid" type="text" placeholder="Enterprise Account EID"/>
+          <span style="font-size:11px;color:#a0aec0;margin-top:4px;display:block">Scopes audit to parent account</span>
+        </div>
+      </div>
+      <p style="font-size:11px;color:#a0aec0;margin-top:10px;margin-bottom:16px">MID takes priority over EID if both are entered. Leave both blank to use the default account.</p>
+      <div id="mc-connect-error" style="color:#dc2626;font-size:13px;margin-bottom:12px;display:none"></div>
+      <button class="btn-submit" id="mc-connect-submit">Connect Marketing Cloud</button>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">Subdomain or REST Base URI <span style="color:#dc2626">*</span></label>
-      <input class="form-input" id="mc-subdomain" type="text" placeholder="mcXXXXXX  or  https://mcXXXXXX.rest.marketingcloudapis.com"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Client ID <span style="color:#dc2626">*</span></label>
-      <input class="form-input" id="mc-client-id" type="text" placeholder="Alphanumeric — from Installed Package"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Client Secret <span style="color:#dc2626">*</span></label>
-      <input class="form-input" id="mc-client-secret" type="password" placeholder="From Installed Package"/>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">MID <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
-        <input class="form-input" id="mc-mid" type="text" placeholder="Business Unit MID"/>
-        <span style="font-size:11px;color:#a0aec0;margin-top:4px;display:block">Scopes audit to a specific BU</span>
+    <!-- ── SETUP GUIDE VIEW ── -->
+    <div id="mc-view-guide" style="display:none">
+      <button id="btn-back-form" style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:#0070d2;font-size:13px;font-weight:600;cursor:pointer;padding:0;margin-bottom:18px">
+        ← Back to Connect
+      </button>
+
+      <div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:20px">
+        You need to create a free <strong>Installed Package</strong> in Marketing Cloud once.
+        It takes about <strong>5 minutes</strong> and gives this tool read-only API access to your account.
       </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">EID <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
-        <input class="form-input" id="mc-eid" type="text" placeholder="Enterprise Account EID"/>
-        <span style="font-size:11px;color:#a0aec0;margin-top:4px;display:block">Scopes audit to parent account</span>
+
+      <!-- Step 1 -->
+      <div class="guide-step">
+        <div class="guide-step-num">1</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Log in to Marketing Cloud Setup</div>
+          <div class="guide-step-desc">In the top-right corner of MC, click your name → <strong>Setup</strong>. This opens the Admin Setup area (different from the main MC navigation).</div>
+          <div class="guide-path">Your Name → Setup</div>
+        </div>
       </div>
+
+      <!-- Step 2 -->
+      <div class="guide-step">
+        <div class="guide-step-num">2</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Navigate to Installed Packages</div>
+          <div class="guide-step-desc">In the left sidebar under <strong>Platform Tools</strong>, expand <strong>Apps</strong> and click <strong>Installed Packages</strong>.</div>
+          <div class="guide-path">Setup → Platform Tools → Apps → Installed Packages</div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="guide-step">
+        <div class="guide-step-num">3</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Create a New Package</div>
+          <div class="guide-step-desc">Click <strong>New</strong> (top right). Give it a name like <em>"SF Health Audit"</em> and a description. Leave all other settings as default. Click <strong>Save</strong>.</div>
+          <div class="guide-path">Installed Packages → New → Name: "SF Health Audit" → Save</div>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="guide-step">
+        <div class="guide-step-num">4</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Add an API Integration Component</div>
+          <div class="guide-step-desc">Inside the package, click <strong>Add Component</strong>. Select <strong>API Integration</strong> as the component type, then select <strong>Server-to-Server</strong>. Click <strong>Next</strong>.</div>
+          <div class="guide-path">Package → Add Component → API Integration → Server-to-Server → Next</div>
+        </div>
+      </div>
+
+      <!-- Step 5 -->
+      <div class="guide-step">
+        <div class="guide-step-num">5</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Set the Required Scopes</div>
+          <div class="guide-step-desc">On the scopes screen, enable <strong>Read</strong> access for each of these — the audit only needs read permissions:</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">
+            <div class="guide-scope">✓ Journeys</div>
+            <div class="guide-scope">✓ Automations</div>
+            <div class="guide-scope">✓ Email</div>
+            <div class="guide-scope">✓ Contacts</div>
+            <div class="guide-scope">✓ Tracking &amp; Analytics</div>
+            <div class="guide-scope">✓ Accounts</div>
+          </div>
+          <div style="font-size:11px;color:#a0aec0;margin-top:8px">Click <strong>Save</strong> when done.</div>
+        </div>
+      </div>
+
+      <!-- Step 6 -->
+      <div class="guide-step">
+        <div class="guide-step-num">6</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Copy Your Credentials</div>
+          <div class="guide-step-desc">After saving, the package page shows your credentials. Copy all three:</div>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+            <div class="guide-cred-row"><span class="guide-cred-label">Client ID</span><span class="guide-cred-desc">Alphanumeric string — copy exactly as shown</span></div>
+            <div class="guide-cred-row"><span class="guide-cred-label">Client Secret</span><span class="guide-cred-desc">Click <strong>Show</strong> to reveal, then copy</span></div>
+            <div class="guide-cred-row"><span class="guide-cred-label">REST Base URI</span><span class="guide-cred-desc">Looks like <code style="background:#f0f4f8;padding:1px 5px;border-radius:4px;font-size:11px">https://mcXXXXX.rest.marketingcloudapis.com</code></span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 7 -->
+      <div class="guide-step" style="border-bottom:none;padding-bottom:0">
+        <div class="guide-step-num">7</div>
+        <div class="guide-step-body">
+          <div class="guide-step-title">Find Your MID / EID <span style="font-size:11px;font-weight:400;color:#a0aec0">(optional but recommended)</span></div>
+          <div class="guide-step-desc">Still in Setup, go to <strong>Company Settings → Account Management</strong>. You'll see a table of Business Units. The number in the <strong>MID</strong> column for your BU is what to enter. The top-level row shows your EID.</div>
+          <div class="guide-path">Setup → Company Settings → Account Management → MID column</div>
+        </div>
+      </div>
+
+      <button class="btn-submit" id="btn-guide-done" style="margin-top:22px">I'm Ready — Enter Credentials</button>
     </div>
-    <p style="font-size:11px;color:#a0aec0;margin-top:10px;margin-bottom:16px">MID takes priority over EID if both are entered. Leave both blank to use the default account.</p>
-    <div id="mc-connect-error" style="color:#dc2626;font-size:13px;margin-bottom:12px;display:none"></div>
-    <button class="btn-submit" id="mc-connect-submit">Connect Marketing Cloud</button>
+
   </div>
 </div>
 
@@ -1179,8 +1287,9 @@ const MC_STEPS = [
 function mcScoreColor(s) { return s >= 80 ? "#16a34a" : s >= 60 ? "#ca8a04" : "#dc2626"; }
 function mcGradeColor(g) { return { A:"#16a34a",B:"#65a30d",C:"#ca8a04",D:"#ea580c",F:"#dc2626" }[g] || "#6b7280"; }
 
-// MC connect modal
+// MC connect modal open/close
 document.getElementById("btn-mc-connect").addEventListener("click", () => {
+  showMcModalView("form");
   document.getElementById("mc-modal-backdrop").classList.add("open");
 });
 document.getElementById("mc-modal-close").addEventListener("click", () => {
@@ -1189,6 +1298,18 @@ document.getElementById("mc-modal-close").addEventListener("click", () => {
 document.getElementById("mc-modal-backdrop").addEventListener("click", e => {
   if (e.target === e.currentTarget) document.getElementById("mc-modal-backdrop").classList.remove("open");
 });
+
+// Guide toggle
+document.getElementById("btn-show-guide").addEventListener("click", () => showMcModalView("guide"));
+document.getElementById("btn-back-form").addEventListener("click",  () => showMcModalView("form"));
+document.getElementById("btn-guide-done").addEventListener("click", () => showMcModalView("form"));
+
+function showMcModalView(view) {
+  const isGuide = view === "guide";
+  document.getElementById("mc-view-form").style.display  = isGuide ? "none"  : "block";
+  document.getElementById("mc-view-guide").style.display = isGuide ? "block" : "none";
+  document.getElementById("mc-modal-title").textContent  = isGuide ? "Setup Guide — Installed Package" : "Connect Marketing Cloud";
+}
 
 document.getElementById("mc-connect-submit").addEventListener("click", async () => {
   const subdomain    = document.getElementById("mc-subdomain").value.trim();
