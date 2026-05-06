@@ -374,37 +374,51 @@ async function collectOrgMetadata(credentials) {
   return collectOrgMetadataWithConn(conn);
 }
 
-// Collect metadata using an OAuth access token (no password needed)
 async function collectOrgMetadataFromToken({ instanceUrl, accessToken }) {
   const conn = createConnectionFromToken({ instanceUrl, accessToken });
   return collectOrgMetadataWithConn(conn);
 }
 
-// Internal: collect using an already-connected jsforce connection
+// Wraps a collector so failures are tracked as partial rather than crashing the audit
+async function safeCollect(name, fn, partialModules) {
+  try {
+    return await fn();
+  } catch (err) {
+    partialModules.push({ module: name, reason: err.message });
+    return {};
+  }
+}
+
 async function collectOrgMetadataWithConn(conn) {
   const orgInfo = await safeQuery(
     conn,
     "SELECT Id, Name, IsSandbox, OrganizationType FROM Organization LIMIT 1"
   );
 
+  const partialModules = [];
+
   const [automation, security, dataQuality, apiUsage, codeQuality, userAdoption, unusedFields, techDebt] =
     await Promise.all([
-      collectAutomation(conn),
-      collectSecurity(conn),
-      collectDataQuality(conn),
-      collectApiUsage(conn),
-      collectCodeQuality(conn),
-      collectUserAdoption(conn),
-      collectUnusedFields(conn),
-      collectTechDebt(conn),
+      safeCollect("automation",   () => collectAutomation(conn),   partialModules),
+      safeCollect("security",     () => collectSecurity(conn),     partialModules),
+      safeCollect("dataQuality",  () => collectDataQuality(conn),  partialModules),
+      safeCollect("apiUsage",     () => collectApiUsage(conn),     partialModules),
+      safeCollect("codeQuality",  () => collectCodeQuality(conn),  partialModules),
+      safeCollect("userAdoption", () => collectUserAdoption(conn), partialModules),
+      safeCollect("unusedFields", () => collectUnusedFields(conn), partialModules),
+      safeCollect("techDebt",     () => collectTechDebt(conn),     partialModules),
     ]);
 
   return {
-    orgId:    orgInfo[0]?.Id    || "unknown",
-    orgName:  orgInfo[0]?.Name  || "unknown",
-    isSandbox: orgInfo[0]?.IsSandbox || false,
-    orgType:  orgInfo[0]?.OrganizationType || "unknown",
+    orgId:       orgInfo[0]?.Id    || "unknown",
+    orgName:     orgInfo[0]?.Name  || "unknown",
+    isSandbox:   orgInfo[0]?.IsSandbox || false,
+    orgType:     orgInfo[0]?.OrganizationType || "unknown",
     collectedAt: new Date().toISOString(),
+    confidence: {
+      overall:        partialModules.length === 0 ? "complete" : "partial",
+      partialModules,
+    },
     automation, security, dataQuality, apiUsage,
     codeQuality, userAdoption, unusedFields, techDebt,
   };

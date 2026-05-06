@@ -68,7 +68,8 @@ function actionRow(action, i) {
 }
 
 function generateHTML(healthScore, metadata = {}) {
-  const { overallScore, grade, categories, top5RecommendedActions, orgName, orgId, generatedAt } = healthScore;
+  const { overallScore, grade, categories, top5RecommendedActions, orgName, orgId, generatedAt,
+          orgProfile, isPartial, partialModules, benchmark } = healthScore;
   const arc = gaugeArc(overallScore);
   const color = scoreColor(overallScore);
   const gColor = gradeColor(grade);
@@ -115,9 +116,18 @@ function generateHTML(healthScore, metadata = {}) {
 
   <div class="container">
 
+    ${isPartial ? `
+    <div style="background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:14px;color:#713f12;">
+      <strong>⚠ Partial scan</strong> — some modules returned incomplete data. Score may be lower than actual.
+      Affected: ${(partialModules || []).map(m => `<strong>${m.module}</strong>`).join(", ")}.
+    </div>` : ""}
+
     <!-- Overall Score -->
     <div class="card">
-      <h2>Overall Health Score</h2>
+      <h2>Overall Health Score
+        <span style="font-size:12px;font-weight:500;color:#6b7280;margin-left:10px;background:#f3f4f6;padding:3px 10px;border-radius:99px;">${orgProfile?.label || "Standard"}</span>
+        ${isPartial ? `<span style="font-size:12px;font-weight:600;color:#92400e;margin-left:6px;background:#fef9c3;padding:3px 10px;border-radius:99px;">Partial</span>` : ""}
+      </h2>
       <div class="summary-grid">
         <div class="gauge-wrap">
           <svg width="140" height="100" viewBox="0 0 140 80">
@@ -131,6 +141,7 @@ function generateHTML(healthScore, metadata = {}) {
           <span class="gauge-score">${overallScore}</span>
           <span class="gauge-grade">${grade}</span>
           <div class="gauge-label">out of 100</div>
+          ${benchmark ? `<div style="font-size:11px;color:#6b7280;margin-top:6px;">Top ${100 - benchmark.percentile}%</div>` : ""}
         </div>
         <div>
           <div class="meta-grid">
@@ -159,6 +170,14 @@ function generateHTML(healthScore, metadata = {}) {
               <div class="lbl">VF Pages</div>
             </div>
           </div>
+          ${benchmark ? `
+          <div style="background:#eff6ff;border-radius:8px;padding:12px 16px;margin-top:16px;border:1px solid #bfdbfe;">
+            <div style="font-size:12px;font-weight:600;color:#1e40af;margin-bottom:6px;">Benchmark</div>
+            <div style="font-size:13px;color:#1e3a5f;">${benchmark.message}</div>
+            <div style="background:#dbeafe;border-radius:99px;height:8px;margin-top:8px;">
+              <div style="background:#2563eb;width:${benchmark.percentile}%;height:8px;border-radius:99px;"></div>
+            </div>
+          </div>` : ""}
         </div>
       </div>
     </div>

@@ -192,8 +192,9 @@
     </div>
 
     <div id="results" style="display:none">
+      <div id="partial-warning" style="display:none;background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:13px 16px;margin-bottom:16px;font-size:14px;color:#713f12;"></div>
       <div class="card">
-        <h2>Overall Health Score</h2>
+        <h2>Overall Health Score <span id="profile-badge" style="font-size:12px;font-weight:500;color:#6b7280;background:#f3f4f6;padding:3px 10px;border-radius:99px;margin-left:8px;"></span><span id="partial-badge" style="display:none;font-size:12px;font-weight:600;color:#92400e;background:#fef9c3;padding:3px 10px;border-radius:99px;margin-left:6px;">Partial</span></h2>
         <div class="score-hero">
           <div class="gauge-wrap">
             <svg width="140" height="90" viewBox="0 0 140 80">
@@ -204,8 +205,18 @@
             <div class="gauge-score" id="overall-score">—</div>
             <div class="gauge-grade" id="overall-grade">—</div>
             <div class="gauge-sub">out of 100</div>
+            <div id="benchmark-pct" style="font-size:11px;color:#6b7280;margin-top:4px;"></div>
           </div>
-          <div class="stats-grid" id="stats-grid"></div>
+          <div>
+            <div class="stats-grid" id="stats-grid"></div>
+            <div id="benchmark-bar" style="display:none;background:#eff6ff;border-radius:8px;padding:12px 14px;margin-top:12px;border:1px solid #bfdbfe;">
+              <div style="font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px;">Benchmark</div>
+              <div id="benchmark-msg" style="font-size:13px;color:#1e3a5f;"></div>
+              <div style="background:#dbeafe;border-radius:99px;height:7px;margin-top:8px;">
+                <div id="benchmark-fill" style="background:#2563eb;height:7px;border-radius:99px;width:0%"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="card">
@@ -393,13 +404,41 @@ async function pollJob(jobId) {
 }
 
 function renderAuditResults(data, jobId) {
-  const { overallScore, grade, categories, top5RecommendedActions } = data.report;
+  const { overallScore, grade, categories, top5RecommendedActions, orgProfile, isPartial, partialModules, benchmark } = data.report;
   const meta = data.report.metadata || {};
 
   document.getElementById("overall-score").textContent = overallScore;
   document.getElementById("overall-score").style.color = scoreColor(overallScore);
   document.getElementById("overall-grade").textContent = grade;
   document.getElementById("overall-grade").style.color = gradeColor(grade);
+
+  // Org profile badge
+  const profileBadge = document.getElementById("profile-badge");
+  if (orgProfile?.label) profileBadge.textContent = orgProfile.label;
+
+  // Partial scan warning
+  const partialWarn  = document.getElementById("partial-warning");
+  const partialBadge = document.getElementById("partial-badge");
+  if (isPartial && partialModules?.length) {
+    const names = partialModules.map(m => m.module).join(", ");
+    partialWarn.innerHTML = `<strong>⚠ Partial scan</strong> — some modules returned incomplete data. Score may be lower than actual. Affected: <strong>${names}</strong>.`;
+    partialWarn.style.display = "block";
+    partialBadge.style.display = "inline";
+  } else {
+    partialWarn.style.display  = "none";
+    partialBadge.style.display = "none";
+  }
+
+  // Benchmark
+  const benchBar = document.getElementById("benchmark-bar");
+  if (benchmark) {
+    document.getElementById("benchmark-pct").textContent   = `Top ${100 - benchmark.percentile}%`;
+    document.getElementById("benchmark-msg").textContent   = benchmark.message;
+    document.getElementById("benchmark-fill").style.width  = `${benchmark.percentile}%`;
+    benchBar.style.display = "block";
+  } else {
+    benchBar.style.display = "none";
+  }
 
   const arc    = document.getElementById("gauge-arc");
   const filled = (overallScore / 100) * 175;
