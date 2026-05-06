@@ -1,54 +1,63 @@
 /**
  * AI-Powered Remediation Advisor
- * Calls Salesforce Einstein AI (ConnectApi / einstein/llm) using the user's
- * existing OAuth access token — no separate API key needed.
  *
- * Endpoint: POST {instanceUrl}/services/data/vXX.0/einstein/prompt-templates/generation
- * Fallback:  POST {instanceUrl}/services/apexrest/EinsteinAI/generate  (if prompt-templates not available)
- * Final fallback: prompt via /services/data/vXX.0/connect/llm/generations
+ * Strategy (in order):
+ * 1. Salesforce Einstein AI  — uses the customer's own org token, no extra cost
+ * 2. Anthropic Claude API    — uses ANTHROPIC_API_KEY set on the server (operator pays)
+ * 3. Throws a clean "not configured" error that the UI handles gracefully
  */
 
 const https = require("https");
 const http  = require("http");
 
-const API_VERSION = "v62.0";
+const SF_API_VERSION = "v62.0";
+const CLAUDE_MODEL   = "claude-opus-4-7";
 
 const SYSTEM_PROMPT = `You are a senior Salesforce architect and certified consultant with 15+ years of experience.
 Generate a concise, actionable, step-by-step remediation guide for the Salesforce issue described.
 
 Always respond in this exact format:
+
 **Why this matters:** (1–2 sentences on business/technical risk)
 
 **Steps to fix:**
-1. Step with exact Salesforce menu path (e.g. Setup > Process Automation > Flows)
-2. Next step
+1. First step — include exact Salesforce menu path (e.g. Setup > Process Automation > Flows)
+2. Second step
 3. Continue until complete (max 8 steps)
 
 **Estimated effort:** X hours / X days / 1 sprint
 
-**Salesforce docs:** (one relevant Help or Trailhead URL as plain text)
+**Salesforce docs:** (one relevant Help or Trailhead URL as plain text — no markdown link syntax)
 
 Rules: be specific to Salesforce UI, mention retirement deadlines for deprecated features, never say "contact support".`;
 
-function httpsPost(instanceUrl, path, accessToken, body) {
+// ─── HTTP helper ──────────────────────────────────────────────────────────────
+
+function post(urlOrHostname, pathOrOptions, headersOrBody, bodyOrNull) {
+  // Overload: post(fullUrl, path, headers, body)  OR  post(options, body)
   return new Promise((resolve, reject) => {
-    const data    = JSON.stringify(body);
-    const parsed  = new URL(instanceUrl);
-    const isHttps = parsed.protocol === "https:";
-    const lib     = isHttps ? https : http;
+    let options, data;
 
-    const options = {
-      hostname: parsed.hostname,
-      port:     parsed.port || (isHttps ? 443 : 80),
-      path,
-      method:   "POST",
-      headers:  {
-        "Content-Type":   "application/json",
-        "Authorization":  `Bearer ${accessToken}`,
-        "Content-Length": Buffer.byteLength(data),
-      },
-    };
+    if (typeof urlOrHostname === "string" && typeof pathOrOptions === "string") {
+      const parsed  = new URL(urlOrHostname);
+      const isHttps = parsed.protocol === "https:";
+      data    = JSON.stringify(bodyOrNull);
+      options = {
+        hostname: parsed.hostname,
+        port:     parsed.port || (isHttps ? 443 : 80),
+        path:     pathOrOptions,
+        method:   "POST",
+        headers:  { ...headersOrBody, "Content-Length": Buffer.byteLength(data) },
+        _isHttps: isHttps,
+      };
+    } else {
+      options = urlOrHostname;
+      data    = JSON.stringify(pathOrOptions);
+      options.headers["Content-Length"] = Buffer.byteLength(data);
+      options._isHttps = true;
+    }
 
+    const lib = options._isHttps === false ? http : https;
     const req = lib.request(options, (res) => {
       let raw = "";
       res.on("data", c => raw += c);
@@ -63,86 +72,125 @@ function httpsPost(instanceUrl, path, accessToken, body) {
   });
 }
 
-// Strategy 1: Einstein /connect/llm/generations (available in orgs with Einstein generative AI)
-async function tryConnectLlm(instanceUrl, accessToken, prompt) {
-  const { status, body } = await httpsPost(
-    instanceUrl,
-    `/services/data/${API_VERSION}/connect/llm/generations`,
-    accessToken,
-    {
-      input: prompt,
-      parameters: { maxTokens: 1024, temperature: 0.3 },
-    }
-  );
-  if (status === 200 && body.generations?.[0]?.text) return body.generations[0].text;
-  throw new Error(body.message || body.error || `Einstein /connect/llm status ${status}`);
-}
+// ─── Strategy 1: Salesforce Einstein AI ──────────────────────────────────────
 
-// Strategy 2: Einstein Platform prompt API
-async function tryEinsteinPlatform(instanceUrl, accessToken, prompt) {
-  const { status, body } = await httpsPost(
-    instanceUrl,
-    `/services/data/${API_VERSION}/einstein/prompt-templates/generation`,
-    accessToken,
-    {
-      inputParams: { valueMap: { Input: { value: prompt } } },
-      additionalConfig: { applicationName: "SFHealthAdvisor", maxTokens: 1024 },
-    }
-  );
-  if (status === 200 && body.generations?.[0]?.text) return body.generations[0].text;
-  throw new Error(body.message || body.error || `Einstein platform status ${status}`);
-}
+async function tryEinstein(instanceUrl, accessToken, prompt) {
+  const parsed  = new URL(instanceUrl);
+  const isHttps = parsed.protocol === "https:";
+  const baseHeaders = {
+    "Content-Type":  "application/json",
+    "Authorization": `Bearer ${accessToken}`,
+  };
 
-// Strategy 3: Agentforce Actions API (Agentforce-enabled orgs)
-async function tryAgentforce(instanceUrl, accessToken, prompt) {
-  const { status, body } = await httpsPost(
-    instanceUrl,
-    `/services/data/${API_VERSION}/einstein/llm/generate`,
-    accessToken,
+  // Try the two most common Einstein LLM endpoints
+  const endpoints = [
     {
-      prompt,
-      model: "sfdc_ai__DefaultGPT4Omni",
-      maxTokens: 1024,
-      temperature: 0.3,
-    }
-  );
-  if (status === 200 && (body.text || body.generation || body.generations?.[0]?.text)) {
-    return body.text || body.generation || body.generations[0].text;
+      path: `/services/data/${SF_API_VERSION}/einstein/llm/prompt`,
+      body: { prompt, model: "sfdc_ai__DefaultGPT4Omni", parameters: { maxTokens: 1024, temperature: 0.3 } },
+      extract: b => b.generations?.[0]?.text || b.text || b.generation,
+    },
+    {
+      path: `/services/data/${SF_API_VERSION}/connect/llm/generations`,
+      body: { input: prompt, parameters: { maxTokens: 1024, temperature: 0.3 } },
+      extract: b => b.generations?.[0]?.text,
+    },
+  ];
+
+  for (const ep of endpoints) {
+    try {
+      const options = {
+        hostname: parsed.hostname,
+        port:     parsed.port || (isHttps ? 443 : 80),
+        path:     ep.path,
+        method:   "POST",
+        headers:  baseHeaders,
+        _isHttps: isHttps,
+      };
+      const { status, body } = await post(options, ep.body);
+      if (status === 200) {
+        const text = ep.extract(body);
+        if (text && text.trim().length > 30) return text;
+      }
+    } catch { /* try next */ }
   }
-  throw new Error(body.message || body.error || `Agentforce status ${status}`);
+
+  throw new Error("Einstein AI not available on this org.");
 }
+
+// ─── Strategy 2: Anthropic Claude API ────────────────────────────────────────
+
+async function tryAnthropic(prompt) {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured.");
+
+  const body = JSON.stringify({
+    model:      CLAUDE_MODEL,
+    max_tokens: 1024,
+    system:     SYSTEM_PROMPT,
+    messages:   [{ role: "user", content: prompt }],
+  });
+
+  const options = {
+    hostname: "api.anthropic.com",
+    path:     "/v1/messages",
+    method:   "POST",
+    headers:  {
+      "Content-Type":      "application/json",
+      "x-api-key":         apiKey,
+      "anthropic-version": "2023-06-01",
+      "Content-Length":    Buffer.byteLength(body),
+    },
+  };
+
+  const { status, body: parsed } = await new Promise((resolve, reject) => {
+    const req = https.request(options, (res) => {
+      let raw = "";
+      res.on("data", c => raw += c);
+      res.on("end", () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); }
+        catch { resolve({ status: res.statusCode, body: raw }); }
+      });
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+
+  if (status !== 200 || !parsed.content?.[0]?.text) {
+    throw new Error(parsed.error?.message || `Anthropic API status ${status}`);
+  }
+  return parsed.content[0].text;
+}
+
+// ─── Main entry point ─────────────────────────────────────────────────────────
 
 async function generateRemediationGuide({ action, category, priority, orgProfile, orgName, instanceUrl, accessToken }) {
-  if (!instanceUrl || !accessToken) {
-    throw new Error("No active Salesforce session. Please reconnect your org.");
-  }
-
   const profile = orgProfile?.label || "Standard";
-  const prompt  = `${SYSTEM_PROMPT}
+  const prompt  =
+    `Org: "${orgName || "Unknown"}" (${profile})\n` +
+    `Issue priority: ${priority}\n` +
+    `Category: ${category}\n` +
+    `Finding: ${action}\n\n` +
+    `Generate the remediation guide now.`;
 
-Org: "${orgName || "Unknown"}" (${profile})
-Issue priority: ${priority}
-Category: ${category}
-Finding: ${action}
-
-Generate the remediation guide now.`;
-
-  // Try each Einstein endpoint in order, fall through on failure
-  const strategies = [tryConnectLlm, tryEinsteinPlatform, tryAgentforce];
-  const errors = [];
-
-  for (const strategy of strategies) {
+  // 1 — Try Einstein with the org's own token
+  if (instanceUrl && accessToken) {
     try {
-      const text = await strategy(instanceUrl, accessToken, prompt);
-      if (text && text.trim().length > 50) return text;
-    } catch (err) {
-      errors.push(err.message);
-    }
+      return await tryEinstein(instanceUrl, accessToken, SYSTEM_PROMPT + "\n\n" + prompt);
+    } catch { /* fall through to Anthropic */ }
   }
 
-  throw new Error(
-    "Einstein AI is not enabled on this org. Enable Einstein Generative AI in Setup > Einstein Setup, or ask your Salesforce admin to activate it. " +
-    `(Details: ${errors.join(" | ")})`
+  // 2 — Fall back to Anthropic API (operator's key)
+  try {
+    return await tryAnthropic(prompt);
+  } catch (err) {
+    if (!err.message.includes("not configured")) throw err;
+  }
+
+  // 3 — Neither available
+  throw Object.assign(
+    new Error("AI_UNAVAILABLE"),
+    { isUnavailable: true }
   );
 }
 

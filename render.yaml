@@ -19,6 +19,8 @@ services:
         sync: false          # set manually in Render dashboard
       - key: SF_CLIENT_SECRET
         sync: false          # set manually in Render dashboard
+      - key: ANTHROPIC_API_KEY
+        sync: false          # optional — fallback AI when Einstein not on customer's org
       - key: PORT
         value: 3000
 

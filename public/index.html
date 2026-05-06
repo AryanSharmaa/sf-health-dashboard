@@ -721,6 +721,18 @@ async function fetchAiGuide(jobId, action, index) {
       body: JSON.stringify({ action: action.action, category: action.category, priority: action.priority }),
     });
     const data = await res.json();
+
+    if (data.unavailable) {
+      panel.innerHTML =
+        '<div style="color:#6b7280;font-size:13px;display:flex;align-items:center;gap:8px">' +
+        '<span style="font-size:16px">🤖</span>' +
+        '<span>AI guides require Einstein Generative AI on your org. Ask your Salesforce admin to enable it in <strong>Setup → Einstein Setup</strong>.</span>' +
+        '</div>';
+      btn.textContent = "✦ AI Fix Guide";
+      btn.disabled = false;
+      return;
+    }
+
     if (data.error) throw new Error(data.error);
     panel.innerHTML =
       '<div class="ai-badge">✦ Claude AI</div>' +

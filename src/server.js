@@ -198,6 +198,7 @@ app.post("/api/audit/:jobId/advise", aiLimiter, requireSession, async (req, res)
     const guide = await generateRemediationGuide({ action, category, priority, orgProfile, orgName, instanceUrl, accessToken });
     res.json({ guide });
   } catch (err) {
+    if (err.isUnavailable) return res.json({ unavailable: true });
     res.status(500).json({ error: err.message });
   }
 });
