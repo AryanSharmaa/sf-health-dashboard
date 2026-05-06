@@ -1,4 +1,4 @@
-const CACHE = "sfhealth-v1";
+const CACHE = "sfhealth-v3";
 const STATIC = ["/app", "/favicon.svg", "/manifest.json", "/icons/icon-192.svg", "/icons/icon-512.svg"];
 
 self.addEventListener("install", e => {
@@ -10,8 +10,12 @@ self.addEventListener("activate", e => {
 });
 
 self.addEventListener("fetch", e => {
-  const url = new URL(e.request.url);
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/")) {
+  const url = e.request.url;
+  // Only handle http/https — skip chrome-extension and other schemes
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return;
+
+  const path = new URL(url).pathname;
+  if (path.startsWith("/api/") || path.startsWith("/auth/")) {
     e.respondWith(fetch(e.request).catch(() => new Response(JSON.stringify({ error: "Offline" }), { headers: { "Content-Type": "application/json" } })));
     return;
   }
