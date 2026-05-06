@@ -254,143 +254,117 @@ async function collectDataExtensions(subdomain, token) {
 
 async function collectOperationalHealth(subdomain, token) {
 
-  function statusFromCount(count, warnAt, critAt) {
+  function s(count, warnAt, critAt) {
     return count >= critAt ? "critical" : count >= warnAt ? "warning" : "ok";
   }
 
-  // ── API, Data & Automations ──────────────────────────────────────────────────
+  async function safeSection(fn) {
+    try { return await fn(); } catch { return null; }
+  }
 
-  // Locked API users (blocked accounts)
-  const lockedUsers = await safeGet(subdomain, "/platform/v1/users?$filter=isLocked%20eq%20true&$pageSize=50", token, { items: [] });
-  const lockedUserCount = (lockedUsers?.items || []).length;
-
-  // Data Extension row counts — flag DEs over 5M rows as threshold breach
-  const deData = await safeGet(subdomain, "/data/v1/customobjects?$pageSize=200", token, { items: [] });
-  const des = deData?.items || [];
-  const largeDEs = des.filter(d => (d.rowCount || d.rowcount || 0) > 5000000);
-
-  // Automations detail
-  const autoData = await safeGet(subdomain, "/automation/v1/automations?$pageSize=200", token, { items: [] });
-  const automations = autoData?.items || autoData?.automation || [];
   const now = Date.now();
 
-  const autoErrored  = automations.filter(a => a.status === 3 || a.statusId === 3 || (a.lastRunStatus || "").toLowerCase().includes("error"));
-  const autoPaused   = automations.filter(a => a.status === 2 || a.statusId === 2 || a.isPaused === true);
-  const autoStopped  = automations.filter(a => a.status === 0 || a.statusId === 0);
-  const autoSkipped  = automations.filter(a => (a.lastRunStatus || "").toLowerCase().includes("skipped"));
-  const autoLongRun  = automations.filter(a => (a.avgRunTime || a.averageRunTime || 0) > 7200);
-  const autoOverdue  = automations.filter(a => {
-    const lastRun = new Date(a.lastRunTime || a.lastRunDate || 0).getTime();
-    return lastRun > 0 && (now - lastRun) > 2 * 24 * 60 * 60 * 1000;
+  // ── API, Data & Automations ──────────────────────────────────────────────────
+  const apiDataAutomations = await safeSection(async () => {
+    const [lockedUsersRes, deData, autoData] = await Promise.all([
+      safeGet(subdomain, "/platform/v1/users?$filter=isLocked%20eq%20true&$pageSize=50", token, { items: [] }),
+      safeGet(subdomain, "/data/v1/customobjects?$pageSize=200", token, { items: [] }),
+      safeGet(subdomain, "/automation/v1/automations?$pageSize=200", token, { items: [] }),
+    ]);
+    const lockedUserCount = (lockedUsersRes?.items || []).length;
+    const des = deData?.items || [];
+    const largeDEs = des.filter(d => (d.rowCount || d.rowcount || 0) > 5000000);
+    const automations = autoData?.items || autoData?.automation || [];
+    const autoErrored = automations.filter(a => a.status === 3 || a.statusId === 3 || (a.lastRunStatus || "").toLowerCase().includes("error"));
+    const autoPaused  = automations.filter(a => a.status === 2 || a.statusId === 2 || a.isPaused === true);
+    const autoStopped = automations.filter(a => a.status === 0 || a.statusId === 0);
+    const autoSkipped = automations.filter(a => (a.lastRunStatus || "").toLowerCase().includes("skipped"));
+    const autoLongRun = automations.filter(a => (a.avgRunTime || a.averageRunTime || 0) > 7200);
+    const autoOverdue = automations.filter(a => { const lr = new Date(a.lastRunTime || a.lastRunDate || 0).getTime(); return lr > 0 && (now - lr) > 2 * 86400000; });
+    const criticalSendAutos = automations.filter(a => (a.name || "").toLowerCase().includes("send") && (a.automationType === "scheduled" || a.scheduleTypeId === 1));
+    return {
+      lockedUsers:       { count: lockedUserCount,         status: s(lockedUserCount, 1, 5) },
+      largeDEs:          { count: largeDEs.length,         status: s(largeDEs.length, 1, 5), names: largeDEs.map(d => d.name).slice(0, 3) },
+      autoNotOnSchedule: { count: autoOverdue.length,      status: s(autoOverdue.length, 1, 5) },
+      autoLongRunning:   { count: autoLongRun.length,      status: s(autoLongRun.length, 1, 3) },
+      autoErrored:       { count: autoErrored.length,      status: s(autoErrored.length, 1, 5), names: autoErrored.map(a => a.name).slice(0, 3) },
+      autoSkipped:       { count: autoSkipped.length,      status: s(autoSkipped.length, 1, 5) },
+      autoStopped:       { count: autoStopped.length,      status: s(autoStopped.length, 3, 10) },
+      autoPaused:        { count: autoPaused.length,       status: s(autoPaused.length, 3, 10) },
+      criticalSendAutos: { count: criticalSendAutos.length, status: criticalSendAutos.some(a => a.status === 3) ? "critical" : "ok" },
+    };
   });
-
-  // Critical send automations (those with "send" in name and scheduled)
-  const criticalSendAutos = automations.filter(a =>
-    (a.name || "").toLowerCase().includes("send") &&
-    (a.automationType === "scheduled" || a.scheduleTypeId === 1)
-  );
-
-  const apiDataAutomations = {
-    lockedUsers:        { count: lockedUserCount,      status: statusFromCount(lockedUserCount, 1, 5) },
-    largeDEs:           { count: largeDEs.length,      status: statusFromCount(largeDEs.length, 1, 5), names: largeDEs.map(d => d.name).slice(0, 3) },
-    autoNotOnSchedule:  { count: autoOverdue.length,   status: statusFromCount(autoOverdue.length, 1, 5) },
-    autoLongRunning:    { count: autoLongRun.length,   status: statusFromCount(autoLongRun.length, 1, 3) },
-    autoErrored:        { count: autoErrored.length,   status: statusFromCount(autoErrored.length, 1, 5), names: autoErrored.map(a => a.name).slice(0, 3) },
-    autoSkipped:        { count: autoSkipped.length,   status: statusFromCount(autoSkipped.length, 1, 5) },
-    autoStopped:        { count: autoStopped.length,   status: statusFromCount(autoStopped.length, 3, 10) },
-    autoPaused:         { count: autoPaused.length,    status: statusFromCount(autoPaused.length, 3, 10) },
-    criticalSendAutos:  { count: criticalSendAutos.length, status: criticalSendAutos.some(a => a.status === 3) ? "critical" : "ok" },
-  };
 
   // ── Email ────────────────────────────────────────────────────────────────────
-
-  // Triggered send definitions — errors and queue age
-  const triggeredSends = await safeGet(subdomain, "/messaging/v1/email/definitions?$pageSize=200", token, { definitions: [] });
-  const tsDefs = triggeredSends?.definitions || triggeredSends?.items || [];
-  const tsErrored = tsDefs.filter(d => d.status === "error" || d.status === "inactive");
-
-  // High priority sends (priority = high)
-  const highPrioritySends = tsDefs.filter(d => (d.options?.priority || "").toLowerCase() === "high");
-
-  // Deliverability: check bounce/complaint categories from send summary
-  const sendSummary = await safeGet(subdomain, "/data/v1/async/dataextensions/key:ENT.TrackingSendSummary/rows?$pageSize=10", token, null);
-
-  // Send speed — check total definitions vs active (ratio signals backlog)
-  const totalDefs  = tsDefs.length;
-  const activeDefs = tsDefs.filter(d => d.status === "active").length;
-  const sendSpeedStatus = totalDefs > 0 && activeDefs / totalDefs < 0.5 ? "warning" : "ok";
-
-  // Threshold: flag if > 500 active triggered send definitions
-  const tsThresholdBreach = activeDefs > 500;
-
-  const email = {
-    sendSpeed:          { activeDefs, totalDefs, status: sendSpeedStatus },
-    highPrioritySends:  { count: highPrioritySends.length, status: "ok" },
-    triggeredErrored:   { count: tsErrored.length,         status: statusFromCount(tsErrored.length, 1, 10), names: tsErrored.map(d => d.name).slice(0, 3) },
-    triggeredThreshold: { count: activeDefs,               status: tsThresholdBreach ? "warning" : "ok", threshold: 500 },
-    deliverability:     { status: sendSummary ? "ok" : "warning", available: !!sendSummary },
-  };
-
-  // ── Mobile ───────────────────────────────────────────────────────────────────
-
-  const mobileDefs = await safeGet(subdomain, "/messaging/v1/push/definitions?$pageSize=200", token, { definitions: [] });
-  const mobileSends = mobileDefs?.definitions || mobileDefs?.items || [];
-  const mobileErrored = mobileSends.filter(d => d.status === "error" || d.status === "inactive");
-  const mobileActive  = mobileSends.filter(d => d.status === "active");
-  const mobileThresholdBreach = mobileActive.length > 200;
-
-  const mobile = {
-    sendsErrored:   { count: mobileErrored.length, status: statusFromCount(mobileErrored.length, 1, 5), names: mobileErrored.map(d => d.name).slice(0, 3) },
-    sendThreshold:  { count: mobileActive.length,  status: mobileThresholdBreach ? "warning" : "ok", threshold: 200 },
-    zeroSends:      { count: mobileSends.length === 0 ? 1 : 0, status: mobileSends.length === 0 ? "warning" : "ok" },
-  };
-
-  // ── Journey Builder ──────────────────────────────────────────────────────────
-
-  const jbData = await safeGet(subdomain, "/interaction/v1/interactions?$pageSize=200&extras=all", token, { items: [] });
-  const journeys = jbData?.items || jbData?.interactions || [];
-  const jbActive  = journeys.filter(j => j.status === "Running");
-  const jbErrored = journeys.filter(j => j.status === "SystemStopped" || j.status === "Error");
-
-  // JB email sends — check activities for email steps with errors
-  const jbEmailErrored = journeys.filter(j =>
-    (j.activities || []).some(a => a.type === "EMAILV2" && a.outcomes?.some(o => o.invalid > 0))
-  );
-
-  // Zero injection — active journeys with 0 contacts currently in journey
-  const zeroInjection = jbActive.filter(j => {
-    const pop = j.stats?.currentPopulation ?? j.statistics?.currentPopulation;
-    return pop !== undefined && pop === 0;
+  const email = await safeSection(async () => {
+    const [triggeredSends, sendSummary] = await Promise.all([
+      safeGet(subdomain, "/messaging/v1/email/definitions?$pageSize=200", token, { definitions: [] }),
+      safeGet(subdomain, "/data/v1/async/dataextensions/key:ENT.TrackingSendSummary/rows?$pageSize=10", token, null),
+    ]);
+    const tsDefs = triggeredSends?.definitions || triggeredSends?.items || [];
+    const tsErrored = tsDefs.filter(d => d.status === "error" || d.status === "inactive");
+    const highPrioritySends = tsDefs.filter(d => (d.options?.priority || "").toLowerCase() === "high");
+    const activeDefs = tsDefs.filter(d => d.status === "active").length;
+    const totalDefs  = tsDefs.length;
+    return {
+      sendSpeed:          { activeDefs, totalDefs, status: totalDefs > 0 && activeDefs / totalDefs < 0.5 ? "warning" : "ok" },
+      highPrioritySends:  { count: highPrioritySends.length, status: "ok" },
+      triggeredErrored:   { count: tsErrored.length, status: s(tsErrored.length, 1, 10), names: tsErrored.map(d => d.name).slice(0, 3) },
+      triggeredThreshold: { count: activeDefs, status: activeDefs > 500 ? "warning" : "ok", threshold: 500 },
+      deliverability:     { status: sendSummary ? "ok" : "warning", available: !!sendSummary },
+    };
   });
 
-  // JB threshold: flag if > 100 active journeys
-  const jbThresholdBreach = jbActive.length > 100;
+  // ── Mobile ───────────────────────────────────────────────────────────────────
+  const mobile = await safeSection(async () => {
+    const mobileDefs = await safeGet(subdomain, "/messaging/v1/push/definitions?$pageSize=200", token, { definitions: [] });
+    const mobileSends = mobileDefs?.definitions || mobileDefs?.items || [];
+    const mobileErrored = mobileSends.filter(d => d.status === "error" || d.status === "inactive");
+    const mobileActive  = mobileSends.filter(d => d.status === "active");
+    return {
+      sendsErrored:  { count: mobileErrored.length, status: s(mobileErrored.length, 1, 5), names: mobileErrored.map(d => d.name).slice(0, 3) },
+      sendThreshold: { count: mobileActive.length,  status: mobileActive.length > 200 ? "warning" : "ok", threshold: 200 },
+      zeroSends:     { count: mobileSends.length === 0 ? 1 : 0, status: mobileSends.length === 0 ? "warning" : "ok" },
+    };
+  });
 
-  const journeyBuilder = {
-    emailErrored:    { count: jbEmailErrored.length, status: statusFromCount(jbEmailErrored.length, 1, 5), names: jbEmailErrored.map(j => j.name).slice(0, 3) },
-    sendThreshold:   { count: jbActive.length,       status: jbThresholdBreach ? "warning" : "ok", threshold: 100 },
-    zeroInjection:   { count: zeroInjection.length,  status: statusFromCount(zeroInjection.length, 1, 5), names: zeroInjection.map(j => j.name).slice(0, 3) },
-    errored:         { count: jbErrored.length,      status: statusFromCount(jbErrored.length, 1, 5) },
-  };
+  // ── Journey Builder ──────────────────────────────────────────────────────────
+  const journeyBuilder = await safeSection(async () => {
+    const jbData = await safeGet(subdomain, "/interaction/v1/interactions?$pageSize=200&extras=all", token, { items: [] });
+    const journeys  = jbData?.items || jbData?.interactions || [];
+    const jbActive  = journeys.filter(j => j.status === "Running");
+    const jbErrored = journeys.filter(j => j.status === "SystemStopped" || j.status === "Error");
+    const jbEmailErrored = journeys.filter(j => (j.activities || []).some(a => a.type === "EMAILV2" && a.outcomes?.some(o => o.invalid > 0)));
+    const zeroInjection  = jbActive.filter(j => { const pop = j.stats?.currentPopulation ?? j.statistics?.currentPopulation; return pop !== undefined && pop === 0; });
+    return {
+      emailErrored:  { count: jbEmailErrored.length, status: s(jbEmailErrored.length, 1, 5), names: jbEmailErrored.map(j => j.name).slice(0, 3) },
+      sendThreshold: { count: jbActive.length,       status: jbActive.length > 100 ? "warning" : "ok", threshold: 100 },
+      zeroInjection: { count: zeroInjection.length,  status: s(zeroInjection.length, 1, 5), names: zeroInjection.map(j => j.name).slice(0, 3) },
+      errored:       { count: jbErrored.length,      status: s(jbErrored.length, 1, 5) },
+    };
+  });
 
   // ── MC Connector ─────────────────────────────────────────────────────────────
+  const connector = await safeSection(async () => {
+    const [syncSources, syncData, trackingData] = await Promise.all([
+      safeGet(subdomain, "/interaction/v1/interactions/status?$pageSize=50", token, null),
+      safeGet(subdomain, "/contacts/v1/datamodelschema?$pageSize=1", token, null),
+      safeGet(subdomain, "/data/v1/async/dataextensions/key:ENT.TRACKING_EXTRACT/rows?$pageSize=1", token, null),
+    ]);
+    return {
+      dataSyncDeferment: { status: syncSources  ? "ok" : "warning", available: !!syncSources },
+      syncStalled:       { status: syncData     ? "ok" : "warning", available: !!syncData },
+      trackingStalled:   { status: trackingData ? "ok" : "warning", available: !!trackingData },
+    };
+  });
 
-  // Synchronized Data Sources status
-  const syncSources = await safeGet(subdomain, "/interaction/v1/interactions/status?$pageSize=50", token, null);
-
-  // Check Contact Builder / Data Designer sync status
-  const syncData = await safeGet(subdomain, "/contacts/v1/datamodelschema?$pageSize=1", token, null);
-
-  // Tracking extract / data sync freshness — check if tracking DE has recent data
-  const trackingData = await safeGet(subdomain, "/data/v1/async/dataextensions/key:ENT.TRACKING_EXTRACT/rows?$pageSize=1", token, null);
-
-  const connector = {
-    dataSyncDeferment: { status: syncSources ? "ok" : "warning",  available: !!syncSources },
-    syncStalled:       { status: syncData    ? "ok" : "warning",  available: !!syncData },
-    trackingStalled:   { status: trackingData ? "ok" : "warning", available: !!trackingData },
+  return {
+    apiDataAutomations: apiDataAutomations || {},
+    email:              email              || {},
+    mobile:             mobile             || {},
+    journeyBuilder:     journeyBuilder     || {},
+    connector:          connector          || {},
   };
-
-  return { apiDataAutomations, email, mobile, journeyBuilder, connector };
 }
 
 // ─── Main collector ───────────────────────────────────────────────────────────
