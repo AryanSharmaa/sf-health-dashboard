@@ -58,6 +58,19 @@ router.get("/salesforce/callback", async (req, res) => {
   const { code, state, error, error_description } = req.query;
 
   if (error) {
+    const isCrossOrg = (error_description || error || "").toLowerCase().includes("cross");
+    const alreadyRetried = req.cookies?.sf_cross_org_retry === "1";
+    if (isCrossOrg && !alreadyRetried) {
+      // Automatically log out of SF and restart auth — no user action needed
+      const isSandbox = (req.cookies?.sf_env || "").includes("test.salesforce.com");
+      const loginUrl  = isSandbox ? "https://test.salesforce.com" : "https://login.salesforce.com";
+      const appUrl    = process.env.APP_URL || `${req.headers["x-forwarded-proto"] || req.protocol}://${req.get("host")}`;
+      const retryUrl  = `${appUrl}/auth/salesforce${isSandbox ? "?env=sandbox" : ""}`;
+      res.cookie("sf_cross_org_retry", "1", { httpOnly: true, maxAge: 2 * 60 * 1000, sameSite: "lax" });
+      return res.redirect(`${loginUrl}/secur/logout.jsp?retUrl=${encodeURIComponent(retryUrl)}`);
+    }
+    // Clear retry flag and show error if auto-retry also failed
+    res.clearCookie("sf_cross_org_retry");
     const isSandbox = (req.cookies?.sf_env || "").includes("test.salesforce.com");
     const envParam  = isSandbox ? "&env=sandbox" : "";
     return res.redirect(`/app?error=${encodeURIComponent(error_description || error)}${envParam}`);
@@ -108,6 +121,7 @@ router.get("/salesforce/callback", async (req, res) => {
 
     res.clearCookie("sf_state");
     res.clearCookie("sf_env");
+    res.clearCookie("sf_cross_org_retry");
     res.redirect("/app");
   } catch (err) {
     console.error("OAuth callback error:", err.message);
