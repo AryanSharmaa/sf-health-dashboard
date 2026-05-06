@@ -19,8 +19,10 @@ services:
         sync: false          # set manually in Render dashboard
       - key: SF_CLIENT_SECRET
         sync: false          # set manually in Render dashboard
+      - key: GEMINI_API_KEY
+        sync: false          # free AI — get key at aistudio.google.com (1M tokens/day free)
       - key: ANTHROPIC_API_KEY
-        sync: false          # optional — fallback AI when Einstein not on customer's org
+        sync: false          # optional paid fallback — only used if Gemini key not set
       - key: ADMIN_KEY
         sync: false          # secret key to access /api/admin/* endpoints
       # PORT is injected by Render at runtime — do not override it here

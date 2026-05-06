@@ -3,15 +3,17 @@
  *
  * Strategy (in order):
  * 1. Salesforce Einstein AI  — uses the customer's own org token, no extra cost
- * 2. Anthropic Claude API    — uses ANTHROPIC_API_KEY set on the server (operator pays)
- * 3. Throws a clean "not configured" error that the UI handles gracefully
+ * 2. Google Gemini Flash      — free tier, GEMINI_API_KEY env var (get free at aistudio.google.com)
+ * 3. Anthropic Claude API    — paid fallback, ANTHROPIC_API_KEY env var
+ * 4. Throws a clean "not configured" error that the UI handles gracefully
  */
 
 const https = require("https");
 const http  = require("http");
 
-const SF_API_VERSION = "v62.0";
-const CLAUDE_MODEL   = "claude-opus-4-7";
+const SF_API_VERSION  = "v62.0";
+const CLAUDE_MODEL    = "claude-opus-4-7";
+const GEMINI_MODEL    = "gemini-1.5-flash";
 
 const SYSTEM_PROMPT = `You are a senior Salesforce architect and certified consultant with 15+ years of experience.
 Generate a concise, actionable, step-by-step remediation guide for the Salesforce issue described.
@@ -117,7 +119,52 @@ async function tryEinstein(instanceUrl, accessToken, prompt) {
   throw new Error("Einstein AI not available on this org.");
 }
 
-// ─── Strategy 2: Anthropic Claude API ────────────────────────────────────────
+// ─── Strategy 2: Google Gemini Flash (free tier) ─────────────────────────────
+
+async function tryGemini(prompt) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY not configured.");
+
+  const body = JSON.stringify({
+    contents: [{
+      parts: [{ text: SYSTEM_PROMPT + "\n\n" + prompt }]
+    }],
+    generationConfig: { maxOutputTokens: 1024, temperature: 0.3 },
+  });
+
+  const path = `/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+
+  const { status, body: parsed } = await new Promise((resolve, reject) => {
+    const options = {
+      hostname: "generativelanguage.googleapis.com",
+      path,
+      method:  "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+    };
+    const req = https.request(options, (res) => {
+      let raw = "";
+      res.on("data", c => raw += c);
+      res.on("end", () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); }
+        catch { resolve({ status: res.statusCode, body: raw }); }
+      });
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+
+  if (status !== 200) {
+    const msg = parsed?.error?.message || `Gemini API status ${status}`;
+    throw new Error(msg);
+  }
+
+  const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Empty response from Gemini.");
+  return text;
+}
+
+// ─── Strategy 3: Anthropic Claude API (paid fallback) ────────────────────────
 
 async function tryAnthropic(prompt) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -177,10 +224,17 @@ async function generateRemediationGuide({ action, category, priority, orgProfile
   if (instanceUrl && accessToken) {
     try {
       return await tryEinstein(instanceUrl, accessToken, SYSTEM_PROMPT + "\n\n" + prompt);
-    } catch { /* fall through to Anthropic */ }
+    } catch { /* fall through */ }
   }
 
-  // 2 — Fall back to Anthropic API (operator's key)
+  // 2 — Try Gemini Flash (free tier)
+  try {
+    return await tryGemini(prompt);
+  } catch (err) {
+    if (!err.message.includes("not configured")) throw err;
+  }
+
+  // 3 — Fall back to Anthropic API (paid)
   try {
     return await tryAnthropic(prompt);
   } catch (err) {
