@@ -233,30 +233,20 @@ app.post("/api/audit/:jobId/advise", aiLimiter, requireSession, async (req, res)
 
 // ─── AI Remediation Advisor — streaming ──────────────────────────────────────
 
-app.get("/api/audit/:jobId/advise/stream", aiLimiter, requireSession, async (req, res) => {
-  const { action, category, priority } = req.query;
-  if (!action || !category || !priority) {
-    return res.status(400).json({ error: "action, category, and priority are required." });
-  }
-
-  const { accessToken, instanceUrl } = req.sfSession;
-  const job        = runningJobs.get(req.params.jobId);
-  const report     = job?.report || null;
-  const orgName    = report?.orgName || "Unknown";
-  const orgProfile = report?.orgProfile || null;
-  const profile    = orgProfile?.label || "Standard";
-  const prompt     =
+async function handleAdviseStream(res, { action, category, priority, orgProfile, orgName, instanceUrl, accessToken }) {
+  const profile = orgProfile?.label || "Standard";
+  const prompt  =
     `Org: "${orgName}" (${profile})\n` +
     `Issue priority: ${priority}\n` +
     `Category: ${category}\n` +
     `Finding: ${action}\n\n` +
     `Generate the remediation guide now.`;
 
-  // Try streaming via OpenRouter first
+  // Try streaming first — fast path
   const streamed = await streamOpenRouter(prompt, res);
   if (streamed) return;
 
-  // Fallback: non-streaming response wrapped as SSE
+  // Streaming failed — fall back to non-streaming wrapped as SSE
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("X-Accel-Buffering", "no");
@@ -271,41 +261,36 @@ app.get("/api/audit/:jobId/advise/stream", aiLimiter, requireSession, async (req
     else res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
   }
   res.end();
+}
+
+app.get("/api/audit/:jobId/advise/stream", aiLimiter, requireSession, async (req, res) => {
+  const { action, category, priority } = req.query;
+  if (!action || !category || !priority) return res.status(400).json({ error: "action, category, and priority are required." });
+  const { accessToken, instanceUrl } = req.sfSession;
+  const job      = runningJobs.get(req.params.jobId);
+  const report   = job?.report || null;
+  await handleAdviseStream(res, {
+    action, category, priority,
+    orgProfile: report?.orgProfile || null,
+    orgName:    report?.orgName    || "Unknown",
+    instanceUrl, accessToken,
+  });
 });
 
-// MC streaming advise
-app.get("/api/mc/audit/:jobId/advise/stream", aiLimiter, requireMcSession, async (req, res) => {
+// MC — no requireMcSession so server restarts don't block the AI call
+app.get("/api/mc/audit/:jobId/advise/stream", aiLimiter, async (req, res) => {
   const { action, category, priority } = req.query;
-  if (!action || !category || !priority) {
-    return res.status(400).json({ error: "action, category, and priority are required." });
-  }
-
-  const job     = mcJobs.get(req.params.jobId);
-  const orgName = job?.report?.orgName || req.mcSession.subdomain || "Marketing Cloud";
-  const prompt  =
-    `Org: "${orgName}" (Marketing Cloud)\n` +
-    `Issue priority: ${priority}\n` +
-    `Category: ${category}\n` +
-    `Finding: ${action}\n\n` +
-    `Generate the remediation guide now.`;
-
-  const streamed = await streamOpenRouter(prompt, res);
-  if (streamed) return;
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("X-Accel-Buffering", "no");
-  res.flushHeaders();
-
-  try {
-    const guide = await generateRemediationGuide({ action, category, priority, orgProfile: { label: "Marketing Cloud" }, orgName, instanceUrl: null, accessToken: null });
-    res.write(`data: ${JSON.stringify({ token: guide })}\n\n`);
-    res.write("data: [DONE]\n\n");
-  } catch (err) {
-    if (err.isUnavailable) res.write(`data: ${JSON.stringify({ unavailable: true })}\n\n`);
-    else res.write(`data: ${JSON.stringify({ error: err.message })}\n\n`);
-  }
-  res.end();
+  if (!action || !category || !priority) return res.status(400).json({ error: "action, category, and priority are required." });
+  const mcSession = getMcSession(req.cookies?.mc_session);
+  const job       = mcJobs.get(req.params.jobId);
+  const orgName   = job?.report?.orgName || mcSession?.subdomain || "Marketing Cloud";
+  await handleAdviseStream(res, {
+    action, category, priority,
+    orgProfile:  { label: "Marketing Cloud" },
+    orgName,
+    instanceUrl: null,
+    accessToken: null,
+  });
 });
 
 // ─── Share a report ───────────────────────────────────────────────────────────
