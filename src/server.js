@@ -203,6 +203,45 @@ app.post("/api/audit/:jobId/advise", aiLimiter, requireSession, async (req, res)
   }
 });
 
+// ─── Einstein probe (debug only) ─────────────────────────────────────────────
+
+app.get("/api/einstein-probe", requireSession, async (req, res) => {
+  const { accessToken, instanceUrl } = req.sfSession;
+  const https = require("https");
+  const paths = [
+    `/services/data/v62.0/connect/llm/generations`,
+    `/services/data/v62.0/einstein/llm/prompt`,
+    `/services/data/v62.0/einstein/llm/generate`,
+    `/services/data/v62.0/connect/einstein/llm/generations`,
+    `/services/data/v62.0/connect/ai/llm/generations`,
+  ];
+
+  const results = await Promise.all(paths.map(path =>
+    new Promise(resolve => {
+      const parsed = new URL(instanceUrl);
+      const opts = {
+        hostname: parsed.hostname,
+        path,
+        method:   "POST",
+        headers:  { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}`, "Content-Length": 2 },
+      };
+      const r = https.request(opts, resp => {
+        let raw = "";
+        resp.on("data", c => raw += c);
+        resp.on("end", () => {
+          try { resolve({ path, status: resp.statusCode, body: JSON.parse(raw) }); }
+          catch { resolve({ path, status: resp.statusCode, body: raw.slice(0, 200) }); }
+        });
+      });
+      r.on("error", e => resolve({ path, status: "error", body: e.message }));
+      r.write("{}");
+      r.end();
+    })
+  ));
+
+  res.json({ instanceUrl, results });
+});
+
 // ─── Orgs & history ───────────────────────────────────────────────────────────
 
 app.get("/api/orgs", readLimiter, async (_req, res) => {
