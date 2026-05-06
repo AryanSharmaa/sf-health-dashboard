@@ -1,4 +1,4 @@
-const CACHE = "sfhealth-v5";
+const CACHE = "sfhealth-v6";
 const STATIC = ["/app", "/favicon.svg", "/manifest.json", "/icons/icon-192.svg", "/icons/icon-512.svg"];
 
 self.addEventListener("install", e => {
@@ -13,6 +13,8 @@ self.addEventListener("fetch", e => {
   const url = e.request.url;
   // Only handle http/https — skip chrome-extension and other schemes
   if (!url.startsWith("http://") && !url.startsWith("https://")) return;
+  // Only handle requests to our own origin — let external URLs (e.g. SF logout) pass through untouched
+  if (new URL(url).origin !== self.location.origin) return;
 
   const path = new URL(url).pathname;
 
