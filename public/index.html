@@ -2080,9 +2080,6 @@ function renderMcResults(data) {
 
   // MC Operational Health
   const ohData = data.report?.metadata?.operationalHealth;
-  console.log("[MC-OH] keys in report:", Object.keys(data.report || {}));
-  console.log("[MC-OH] metadata keys:", Object.keys(data.report?.metadata || {}));
-  console.log("[MC-OH] operationalHealth:", JSON.stringify(ohData).slice(0, 300));
   renderMcOperationalHealth(ohData);
 
   document.getElementById("mc-results").style.display = "block";
