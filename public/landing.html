@@ -142,6 +142,47 @@
     .cta-buttons{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
 
     /* ── Footer ── */
+    /* ── FAB ── */
+    .fab{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+    .fab-main{background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:99px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,112,210,0.4);display:flex;align-items:center;gap:8px;transition:all 0.2s}
+    .fab-main:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,112,210,0.5)}
+    .fab-menu{display:none;flex-direction:column;gap:6px;align-items:flex-end}
+    .fab-menu.open{display:flex}
+    .fab-item{background:white;color:#1a202c;border:1px solid #e2e8f0;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.1);white-space:nowrap;transition:all 0.15s;display:flex;align-items:center;gap:8px}
+    .fab-item:hover{background:#f8fafc;transform:translateX(-2px)}
+    /* ── Modal ── */
+    .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;align-items:center;justify-content:center;padding:16px}
+    .modal-backdrop.open{display:flex}
+    .modal{background:white;border-radius:18px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+    .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+    .modal-title{font-size:18px;font-weight:800;color:#1a202c}
+    .modal-close{background:none;border:none;font-size:22px;color:#a0aec0;cursor:pointer;line-height:1;padding:2px 6px;border-radius:6px}
+    .modal-close:hover{background:#f3f4f6;color:#374151}
+    .tab-row{display:flex;gap:0;margin-bottom:22px;border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden}
+    .tab-btn{flex:1;padding:9px;font-size:13px;font-weight:600;border:none;background:white;cursor:pointer;transition:all 0.15s;color:#718096}
+    .tab-btn.active{background:#0070d2;color:white}
+    .form-group{margin-bottom:18px}
+    .form-label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px}
+    .form-input{width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;color:#1a202c;transition:border 0.15s;font-family:inherit}
+    .form-input:focus{outline:none;border-color:#0070d2}
+    .form-textarea{resize:vertical;min-height:90px}
+    .star{font-size:28px;cursor:pointer;transition:transform 0.1s;line-height:1;color:#e2e8f0}
+    .star.active{color:#f59e0b}
+    .star:hover{transform:scale(1.2)}
+    .star-row{display:flex;gap:6px}
+    .rating-label{font-size:12px;font-weight:600;color:#6b7280;margin-bottom:6px;display:block}
+    .rating-stars{display:flex;gap:4px}
+    .rating-star{font-size:20px;cursor:pointer;color:#e2e8f0;transition:color 0.1s}
+    .rating-star.active{color:#f59e0b}
+    .rating-group{margin-bottom:14px}
+    .btn-submit{width:100%;padding:12px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;margin-top:6px}
+    .btn-submit:hover{opacity:0.92;transform:translateY(-1px)}
+    .btn-submit:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+    .success-state{text-align:center;padding:24px 0}
+    .success-icon{font-size:48px;margin-bottom:12px}
+    .success-title{font-size:18px;font-weight:800;color:#1a202c;margin-bottom:6px}
+    .success-msg{font-size:14px;color:#718096}
+
     footer{background:#0f2444;padding:40px 32px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
     .footer-logo{font-size:18px;font-weight:900;color:white}
     .footer-logo span{color:#7dd3fc}
@@ -642,6 +683,211 @@
     Built by <strong style="color:rgba(255,255,255,0.5)">Aryan Sharma</strong> · © 2026
   </div>
 </footer>
+
+<!-- ══ FLOATING ACTION BUTTON ══ -->
+<div class="fab">
+  <div class="fab-menu" id="fab-menu">
+    <button class="fab-item" id="fab-feedback">⭐ Leave Feedback</button>
+    <button class="fab-item" id="fab-support">🎫 Support Ticket</button>
+  </div>
+  <button class="fab-main" id="fab-main">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+    Feedback
+  </button>
+</div>
+
+<!-- ══ FEEDBACK / SUPPORT MODAL ══ -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Feedback</div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="tab-row" id="modal-tabs">
+      <button class="tab-btn active" id="tab-feedback">⭐ Feedback</button>
+      <button class="tab-btn" id="tab-support">🎫 Support</button>
+    </div>
+
+    <!-- Feedback form -->
+    <div id="form-feedback">
+      <div class="form-group">
+        <label class="form-label">Overall rating</label>
+        <div class="star-row" id="stars-overall">
+          <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span>
+          <span class="star" data-v="3">★</span><span class="star" data-v="4">★</span>
+          <span class="star" data-v="5">★</span>
+        </div>
+      </div>
+      <div class="rating-group">
+        <span class="rating-label">Ease of use</span>
+        <div class="rating-stars" id="stars-ease">
+          <span class="rating-star" data-v="1">★</span><span class="rating-star" data-v="2">★</span>
+          <span class="rating-star" data-v="3">★</span><span class="rating-star" data-v="4">★</span>
+          <span class="rating-star" data-v="5">★</span>
+        </div>
+      </div>
+      <div class="rating-group">
+        <span class="rating-label">Usefulness of audit results</span>
+        <div class="rating-stars" id="stars-useful">
+          <span class="rating-star" data-v="1">★</span><span class="rating-star" data-v="2">★</span>
+          <span class="rating-star" data-v="3">★</span><span class="rating-star" data-v="4">★</span>
+          <span class="rating-star" data-v="5">★</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Would you recommend this to a colleague?</label>
+        <div style="display:flex;gap:10px">
+          <button class="fab-item" id="rec-yes" style="flex:1;justify-content:center">👍 Yes</button>
+          <button class="fab-item" id="rec-no"  style="flex:1;justify-content:center">👎 No</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Any other comments? <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
+        <textarea class="form-input form-textarea" id="fb-comment" placeholder="What could be better? What do you love?"></textarea>
+      </div>
+      <button class="btn-submit" id="btn-submit-feedback">Submit Feedback</button>
+    </div>
+
+    <!-- Support form -->
+    <div id="form-support" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input" id="ticket-category">
+          <option value="">Select a category…</option>
+          <option value="bug">🐛 Bug / Something broken</option>
+          <option value="question">❓ Question</option>
+          <option value="feature">💡 Feature request</option>
+          <option value="other">📋 Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Subject</label>
+        <input class="form-input" id="ticket-subject" type="text" placeholder="Brief summary" maxlength="200"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input form-textarea" id="ticket-desc" placeholder="Describe the issue in detail" style="min-height:120px"></textarea>
+      </div>
+      <button class="btn-submit" id="btn-submit-ticket">Submit Ticket</button>
+    </div>
+
+    <!-- Success state -->
+    <div id="modal-success" class="success-state" style="display:none">
+      <div class="success-icon" id="success-icon">✅</div>
+      <div class="success-title" id="success-title">Thank you!</div>
+      <div class="success-msg" id="success-msg">Your feedback has been recorded.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let fbRating = 0, fbEase = 0, fbUseful = 0, fbRecommend = null;
+
+function openModal(tab) {
+  document.getElementById("modal-backdrop").classList.add("open");
+  document.getElementById("modal-success").style.display = "none";
+  document.getElementById("modal-tabs").style.display    = "flex";
+  switchTab(tab || "feedback");
+  document.getElementById("fab-menu").classList.remove("open");
+}
+function closeModal() { document.getElementById("modal-backdrop").classList.remove("open"); }
+
+function switchTab(tab) {
+  document.getElementById("form-feedback").style.display = tab === "feedback" ? "block" : "none";
+  document.getElementById("form-support").style.display  = tab === "support"  ? "block" : "none";
+  document.getElementById("tab-feedback").classList.toggle("active", tab === "feedback");
+  document.getElementById("tab-support").classList.toggle("active",  tab === "support");
+}
+
+function setStars(id, val, cls) {
+  document.getElementById(id).querySelectorAll("." + cls).forEach(s => {
+    s.classList.toggle("active", parseInt(s.dataset.v) <= val);
+  });
+}
+
+function showSuccess(icon, title, msg) {
+  document.getElementById("form-feedback").style.display  = "none";
+  document.getElementById("form-support").style.display   = "none";
+  document.getElementById("modal-tabs").style.display     = "none";
+  document.getElementById("success-icon").textContent  = icon;
+  document.getElementById("success-title").textContent = title;
+  document.getElementById("success-msg").textContent   = msg;
+  document.getElementById("modal-success").style.display = "block";
+  setTimeout(closeModal, 2800);
+}
+
+document.getElementById("fab-main").addEventListener("click", () => {
+  document.getElementById("fab-menu").classList.toggle("open");
+});
+document.getElementById("fab-feedback").addEventListener("click", () => openModal("feedback"));
+document.getElementById("fab-support").addEventListener("click",  () => openModal("support"));
+document.getElementById("modal-close").addEventListener("click", closeModal);
+document.getElementById("modal-backdrop").addEventListener("click", e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+document.getElementById("tab-feedback").addEventListener("click", () => switchTab("feedback"));
+document.getElementById("tab-support").addEventListener("click",  () => switchTab("support"));
+
+document.getElementById("stars-overall").addEventListener("click", e => {
+  const s = e.target.closest(".star"); if (!s) return;
+  fbRating = parseInt(s.dataset.v); setStars("stars-overall", fbRating, "star");
+});
+document.getElementById("stars-ease").addEventListener("click", e => {
+  const s = e.target.closest(".rating-star"); if (!s) return;
+  fbEase = parseInt(s.dataset.v); setStars("stars-ease", fbEase, "rating-star");
+});
+document.getElementById("stars-useful").addEventListener("click", e => {
+  const s = e.target.closest(".rating-star"); if (!s) return;
+  fbUseful = parseInt(s.dataset.v); setStars("stars-useful", fbUseful, "rating-star");
+});
+document.getElementById("rec-yes").addEventListener("click", () => {
+  fbRecommend = 1;
+  document.getElementById("rec-yes").style.cssText = "flex:1;justify-content:center;background:#f0fdf4;border-color:#bbf7d0";
+  document.getElementById("rec-no").style.cssText  = "flex:1;justify-content:center";
+});
+document.getElementById("rec-no").addEventListener("click", () => {
+  fbRecommend = 0;
+  document.getElementById("rec-no").style.cssText  = "flex:1;justify-content:center;background:#fef2f2;border-color:#fecaca";
+  document.getElementById("rec-yes").style.cssText = "flex:1;justify-content:center";
+});
+
+document.getElementById("btn-submit-feedback").addEventListener("click", async () => {
+  if (!fbRating) { alert("Please select an overall rating."); return; }
+  const btn = document.getElementById("btn-submit-feedback");
+  btn.disabled = true; btn.textContent = "Submitting…";
+  try {
+    const res = await fetch("/api/feedback", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating: fbRating, easeOfUse: fbEase || null, usefulness: fbUseful || null, wouldRecommend: fbRecommend, comment: document.getElementById("fb-comment").value.trim() || null }),
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Submission failed"); }
+    showSuccess("✅", "Thank you!", "Your feedback has been recorded and will help improve this tool.");
+  } catch (err) { alert("Error: " + err.message); }
+  finally { btn.disabled = false; btn.textContent = "Submit Feedback"; }
+});
+
+document.getElementById("btn-submit-ticket").addEventListener("click", async () => {
+  const category    = document.getElementById("ticket-category").value;
+  const subject     = document.getElementById("ticket-subject").value.trim();
+  const description = document.getElementById("ticket-desc").value.trim();
+  if (!category)    { alert("Please select a category."); return; }
+  if (!subject)     { alert("Please enter a subject."); return; }
+  if (!description) { alert("Please describe the issue."); return; }
+  const btn = document.getElementById("btn-submit-ticket");
+  btn.disabled = true; btn.textContent = "Submitting…";
+  try {
+    const res = await fetch("/api/support", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ category, subject, description }),
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Submission failed"); }
+    showSuccess("🎫", "Ticket submitted!", "We'll review your request and get back to you shortly.");
+  } catch (err) { alert("Error: " + err.message); }
+  finally { btn.disabled = false; btn.textContent = "Submit Ticket"; }
+});
+</script>
 
 </body>
 </html>
