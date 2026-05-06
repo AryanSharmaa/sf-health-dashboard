@@ -447,6 +447,25 @@ app.post("/api/mc/audit", auditLimiter, requireMcSession, (req, res) => {
   res.status(202).json({ jobId, status: "running" });
 });
 
+// MC AI remediation guide
+app.post("/api/mc/audit/:jobId/advise", aiLimiter, requireMcSession, async (req, res) => {
+  const { action, category, priority } = req.body || {};
+  if (!action || !category || !priority) {
+    return res.status(400).json({ error: "action, category, and priority are required." });
+  }
+  const job     = mcJobs.get(req.params.jobId);
+  const orgName = job?.report?.orgName || req.mcSession.subdomain || "Marketing Cloud";
+
+  try {
+    // MC doesn't have Einstein on most orgs — go straight to Anthropic, Einstein not applicable
+    const guide = await generateRemediationGuide({ action, category, priority, orgProfile: { label: "Marketing Cloud" }, orgName, instanceUrl: null, accessToken: null });
+    res.json({ guide });
+  } catch (err) {
+    if (err.isUnavailable) return res.json({ unavailable: true });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Poll MC job
 app.get("/api/mc/audit/:jobId", readLimiter, (req, res) => {
   const job = mcJobs.get(req.params.jobId);

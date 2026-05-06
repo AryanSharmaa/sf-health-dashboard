@@ -1142,6 +1142,56 @@ async function fetchAiGuide(jobId, action, index) {
   }
 }
 
+// ─── MC AI Fix Guide ──────────────────────────────────────────────────────────
+
+async function fetchMcAiGuide(jobId, action, index) {
+  const btn   = document.getElementById("mc-ai-btn-"   + index);
+  const panel = document.getElementById("mc-ai-guide-" + index);
+
+  if (panel.classList.contains("visible")) {
+    panel.classList.remove("visible");
+    btn.textContent = "✦ AI Fix Guide";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "⏳ Generating…";
+  panel.classList.add("visible");
+  panel.innerHTML = '<div class="ai-guide-loading">Claude is generating your step-by-step fix guide…</div>';
+
+  try {
+    const res  = await fetch("/api/mc/audit/" + jobId + "/advise", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ action: action.action, category: action.category, priority: action.priority }),
+    });
+    const data = await res.json();
+
+    if (data.unavailable) {
+      panel.innerHTML =
+        '<div style="color:#6b7280;font-size:13px;display:flex;align-items:center;gap:8px">' +
+        '<span style="font-size:16px">🤖</span>' +
+        '<span>AI guides require an Anthropic API key configured on the server. Contact the site owner.</span>' +
+        '</div>';
+      btn.textContent = "✦ AI Fix Guide";
+      btn.disabled = false;
+      return;
+    }
+
+    if (data.error) throw new Error(data.error);
+    panel.innerHTML =
+      '<div class="ai-badge">✦ Claude AI</div>' +
+      '<div class="ai-steps">' + formatAiGuide(data.guide) + "</div>";
+    btn.textContent = "✦ Hide Guide";
+  } catch (err) {
+    panel.innerHTML = '<div class="ai-guide-error">Could not generate guide: ' + err.message + '</div>';
+    btn.textContent = "✦ AI Fix Guide";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ─── History ──────────────────────────────────────────────────────────────────
 
 async function loadOrgList() {
@@ -1444,7 +1494,10 @@ function setMcStatus(msg, type) {
   document.getElementById("mc-status-text").textContent = msg;
 }
 
+let mcJobId = null;
+
 function renderMcResults(data) {
+  mcJobId = data.jobId;
   const { overallScore, grade, categories, topRecommendedActions,
           isPartial, partialModules } = data.report;
 
@@ -1493,18 +1546,27 @@ function renderMcResults(data) {
     </div>`
   ).join("");
 
-  // Actions
+  // Actions with AI guide buttons
   document.getElementById("mc-actions").innerHTML = topRecommendedActions.length === 0
     ? '<p style="color:#16a34a;font-weight:600;padding:8px 0">No issues — this MC instance is in excellent health!</p>'
     : topRecommendedActions.map((a, i) =>
-        `<div class="action-item">
+        `<div class="action-item" id="mc-action-${i}">
           <div class="action-top">
             <div class="action-num">${i + 1}</div>
             <span class="badge ${priorityClass(a.priority)}">${a.priority}</span>
             <div style="font-size:13px;color:#2d3748;line-height:1.55">${a.action}</div>
+            <button class="btn-ai" id="mc-ai-btn-${i}" data-index="${i}">✦ AI Fix Guide</button>
           </div>
+          <div class="ai-guide" id="mc-ai-guide-${i}"></div>
         </div>`
       ).join("");
+
+  // Wire MC AI buttons
+  topRecommendedActions.forEach((a, i) => {
+    const btn = document.getElementById("mc-ai-btn-" + i);
+    if (!btn) return;
+    btn.addEventListener("click", () => fetchMcAiGuide(mcJobId, a, i));
+  });
 
   document.getElementById("mc-results").style.display = "block";
   document.getElementById("mc-results").scrollIntoView({ behavior: "smooth", block: "start" });
