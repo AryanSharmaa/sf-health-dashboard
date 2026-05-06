@@ -19,6 +19,8 @@ services:
         sync: false          # set manually in Render dashboard
       - key: SF_CLIENT_SECRET
         sync: false          # set manually in Render dashboard
+      - key: ANTHROPIC_API_KEY
+        sync: false          # set manually in Render dashboard
       - key: PORT
         value: 3000
 

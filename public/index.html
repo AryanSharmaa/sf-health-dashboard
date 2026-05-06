@@ -100,9 +100,21 @@
     .cat-score-val{font-size:14px;font-weight:700;text-align:right}
 
     /* ── Actions ── */
-    .action-item{display:grid;grid-template-columns:24px auto 1fr;gap:10px;align-items:start;padding:13px 0;border-bottom:1px solid #f7fafc}
+    .action-item{padding:14px 0;border-bottom:1px solid #f7fafc}
     .action-item:last-child{border-bottom:none}
+    .action-top{display:grid;grid-template-columns:24px auto 1fr auto;gap:10px;align-items:start}
     .action-num{font-size:12px;color:#cbd5e0;font-weight:700;padding-top:3px;text-align:center}
+    .btn-ai{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:4px 10px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+    .btn-ai:hover{background:#ede9fe;border-color:#c4b5fd}
+    .btn-ai:disabled{opacity:0.6;cursor:not-allowed}
+    .ai-guide{display:none;margin-top:12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:16px 18px;font-size:13px;line-height:1.7;color:#374151}
+    .ai-guide.visible{display:block}
+    .ai-guide strong{color:#1a202c}
+    .ai-guide-loading{color:#7c3aed;font-size:13px;font-style:italic}
+    .ai-guide-error{color:#991b1b;font-size:13px}
+    .ai-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#7c3aed;background:#f5f3ff;padding:2px 7px;border-radius:99px;border:1px solid #ddd6fe;margin-bottom:10px}
+    .ai-steps ol{margin:8px 0 8px 18px}
+    .ai-steps li{margin-bottom:6px}
     .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;white-space:nowrap}
     .bg-critical{background:#fef2f2;color:#dc2626}
     .bg-high{background:#fff7ed;color:#ea580c}
@@ -631,21 +643,95 @@ function renderAuditResults(data, jobId) {
     </div>`
   ).join("");
 
-  // Actions
+  // Actions with AI guide buttons
+  const aiEnabled = true;
   document.getElementById("actions").innerHTML = top5RecommendedActions.length === 0
     ? '<p style="color:#16a34a;font-weight:600;padding:8px 0">No issues — this org is in excellent health!</p>'
     : top5RecommendedActions.map((a,i) =>
-        `<div class="action-item">
-          <div class="action-num">${i+1}</div>
-          <span class="badge ${priorityClass(a.priority)}">${a.priority}</span>
-          <div style="font-size:13px;color:#2d3748;line-height:1.55">${a.action}</div>
+        `<div class="action-item" id="action-${i}">
+          <div class="action-top">
+            <div class="action-num">${i+1}</div>
+            <span class="badge ${priorityClass(a.priority)}">${a.priority}</span>
+            <div style="font-size:13px;color:#2d3748;line-height:1.55">${a.action}</div>
+            ${aiEnabled ? `<button class="btn-ai" id="ai-btn-${i}" data-index="${i}">✦ AI Fix Guide</button>` : ""}
+          </div>
+          <div class="ai-guide" id="ai-guide-${i}"></div>
         </div>`
       ).join("");
+
+  // Wire AI buttons
+  top5RecommendedActions.forEach((a, i) => {
+    const btn = document.getElementById("ai-btn-"+i);
+    if (!btn) return;
+    btn.addEventListener("click", () => fetchAiGuide(jobId, a, i));
+  });
 
   document.getElementById("dl-html").href = "/api/audit/"+jobId+"/report.html";
   document.getElementById("dl-json").href = "/api/audit/"+jobId+"/report.json";
   document.getElementById("results").style.display = "block";
   document.getElementById("results").scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+// ─── AI Fix Guide ─────────────────────────────────────────────────────────────
+
+function formatAiGuide(text) {
+  // Convert markdown bold to <strong>, preserve numbered lists, add section styles
+  let html = text
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/^(\d+)\.\s+/gm, "<li>")
+    .split("\n");
+
+  const lines = [];
+  let inList = false;
+  for (const line of html) {
+    if (line.startsWith("<li>")) {
+      if (!inList) { lines.push('<ol class="ai-steps">'); inList = true; }
+      lines.push(line + "</li>");
+    } else {
+      if (inList) { lines.push("</ol>"); inList = false; }
+      if (line.trim()) lines.push("<p style='margin-bottom:6px'>"+line+"</p>");
+    }
+  }
+  if (inList) lines.push("</ol>");
+  return lines.join("");
+}
+
+async function fetchAiGuide(jobId, action, index) {
+  const btn   = document.getElementById("ai-btn-"+index);
+  const panel = document.getElementById("ai-guide-"+index);
+
+  // Toggle off if already shown
+  if (panel.classList.contains("visible")) {
+    panel.classList.remove("visible");
+    btn.textContent = "✦ AI Fix Guide";
+    return;
+  }
+
+  // Show loading state
+  btn.disabled = true;
+  btn.textContent = "⏳ Generating…";
+  panel.classList.add("visible");
+  panel.innerHTML = '<div class="ai-guide-loading">Claude is generating your step-by-step fix guide…</div>';
+
+  try {
+    const res  = await fetch("/api/audit/"+jobId+"/advise", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ action: action.action, category: action.category, priority: action.priority }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    panel.innerHTML =
+      '<div class="ai-badge">✦ Claude AI</div>' +
+      '<div class="ai-steps">' + formatAiGuide(data.guide) + "</div>";
+    btn.textContent = "✦ Hide Guide";
+  } catch (err) {
+    panel.innerHTML = '<div class="ai-guide-error">Could not generate guide: '+err.message+'</div>';
+    btn.textContent = "✦ AI Fix Guide";
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ─── History ──────────────────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ const { generateHTML, generateJSON } = require("./reportGenerator");
 const repo       = require("./db/auditRepository");
 const authRoutes = require("./authRoutes");
 const { getSession } = require("./oauth");
+const { generateRemediationGuide } = require("./aiAdvisor");
 
 const app = express();
 
@@ -75,6 +76,12 @@ const auditLimiter = rateLimit({
 const readLimiter = rateLimit({
   windowMs: 60 * 1000, max: 60,
   standardHeaders: true, legacyHeaders: false,
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 20,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: "Too many AI requests. Please wait a minute." },
 });
 
 // ─── Auth middleware ──────────────────────────────────────────────────────────
@@ -171,6 +178,29 @@ app.get("/api/audit/:jobId/report.json", readLimiter, async (req, res) => {
   if (!dbAudit) return res.status(404).json({ error: "Report not ready." });
   res.setHeader("Content-Disposition", `attachment; filename="sf-health-${req.params.jobId}.json"`);
   res.json(dbAudit.rawScore);
+});
+
+// ─── AI Remediation Advisor ───────────────────────────────────────────────────
+
+app.post("/api/audit/:jobId/advise", aiLimiter, async (req, res) => {
+  const { action, category, priority } = req.body || {};
+  if (!action || !category || !priority) {
+    return res.status(400).json({ error: "action, category, and priority are required." });
+  }
+
+  // Pull org name + profile from the in-memory job if available
+  const job     = runningJobs.get(req.params.jobId);
+  const report  = job?.report || null;
+  const orgName = report?.orgName || "Unknown";
+  const orgProfile = report?.orgProfile || null;
+
+  try {
+    const guide = await generateRemediationGuide({ action, category, priority, orgProfile, orgName });
+    res.json({ guide });
+  } catch (err) {
+    const noKey = err.message.includes("ANTHROPIC_API_KEY");
+    res.status(noKey ? 503 : 500).json({ error: err.message });
+  }
 });
 
 // ─── Orgs & history ───────────────────────────────────────────────────────────
