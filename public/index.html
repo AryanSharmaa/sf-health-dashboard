@@ -1098,6 +1098,10 @@ async function pollJob(jobId) {
 }
 
 function renderAuditResults(data, jobId) {
+  // Reset cards before rendering fresh data
+  document.getElementById("proactive-card").style.display = "none";
+  document.getElementById("proactive-content").innerHTML = "";
+
   const { overallScore, grade, categories, top5RecommendedActions,
           orgProfile, isPartial, partialModules, benchmark } = data.report;
   const meta = data.report.metadata || {};
@@ -1907,11 +1911,24 @@ function showMcPage(subdomain, orgName, mid, eid) {
   if (mid) subParts.push("MID: " + mid);
   if (eid) subParts.push("EID: " + eid);
   document.getElementById("mc-banner-sub").textContent = subParts.join(" · ");
+
+  // Always reset results so stale data never shows automatically
+  document.getElementById("mc-results").style.display = "none";
+  document.getElementById("mc-operational-card").style.display = "none";
+  document.getElementById("mc-status-box").style.display = "none";
+  document.getElementById("mc-partial-warning").style.display = "none";
+
   // Add MC nav button if not already there
   if (!document.getElementById("btn-nav-mc")) {
     const btn = document.createElement("button");
     btn.className = "nav-link"; btn.id = "btn-nav-mc"; btn.textContent = "MC Audit";
-    btn.addEventListener("click", () => showPage("mc"));
+    btn.addEventListener("click", () => {
+      // Reset on nav click too
+      document.getElementById("mc-results").style.display = "none";
+      document.getElementById("mc-operational-card").style.display = "none";
+      document.getElementById("mc-status-box").style.display = "none";
+      showPage("mc");
+    });
     document.getElementById("btn-logout").before(btn);
   }
   showPage("mc");
@@ -1985,6 +2002,12 @@ let mcJobId = null;
 
 function renderMcResults(data) {
   mcJobId = data.jobId;
+
+  // Reset cards before rendering fresh data
+  document.getElementById("mc-operational-card").style.display = "none";
+  document.getElementById("mc-operational-content").innerHTML = "";
+  document.getElementById("mc-partial-warning").style.display = "none";
+
   const { overallScore, grade, categories, topRecommendedActions,
           isPartial, partialModules } = data.report;
 
