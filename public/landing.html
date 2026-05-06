@@ -6,6 +6,11 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <meta name="description" content="SF Health — Free automated health audit for Salesforce and Marketing Cloud. Get a scored report with prioritised fixes in under 2 minutes."/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#0070d2"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-title" content="SFHealth"/>
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg"/>
   <title>SF Health — Salesforce & Marketing Cloud Audit Tool</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -889,5 +894,6 @@ document.getElementById("btn-submit-ticket").addEventListener("click", async () 
 });
 </script>
 
+<script>if("serviceWorker"in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
 </body>
 </html>

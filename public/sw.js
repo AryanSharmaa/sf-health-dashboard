@@ -1,23 +1,30 @@
 const CACHE = "sfhealth-v1";
+const STATIC = ["/app", "/favicon.svg", "/manifest.json", "/icons/icon-192.svg", "/icons/icon-512.svg"];
 
-// On install — skip waiting so new SW activates immediately
-self.addEventListener("install", () => self.skipWaiting());
-
-// On activate — delete ALL old caches and take control of all open tabs
-self.addEventListener("activate", e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+self.addEventListener("install", e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)).then(() => self.skipWaiting()));
 });
 
-// On fetch — network-first for HTML navigation, cache-first for assets
+self.addEventListener("activate", e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+});
+
 self.addEventListener("fetch", e => {
-  if (e.request.mode === "navigate") {
-    // Always fetch HTML fresh from network; browser cache is bypassed
-    e.respondWith(
-      fetch(e.request, { cache: "no-store" }).catch(() => caches.match(e.request))
-    );
+  const url = new URL(e.request.url);
+  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/")) {
+    e.respondWith(fetch(e.request).catch(() => new Response(JSON.stringify({ error: "Offline" }), { headers: { "Content-Type": "application/json" } })));
+    return;
   }
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request).then(response => {
+        if (e.request.method === "GET" && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return response;
+      });
+    })
+  );
 });
