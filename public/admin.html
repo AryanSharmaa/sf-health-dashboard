@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <title>SF Health — Admin</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh}
+
+    /* ── Auth screen ── */
+    .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .auth-card{background:white;border-radius:18px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,0.12);text-align:center}
+    .auth-logo{font-size:22px;font-weight:900;color:#1e3a5f;margin-bottom:6px}
+    .auth-logo span{color:#0070d2}
+    .auth-badge{display:inline-block;background:#1e3a5f;color:white;font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:24px}
+    .auth-card h2{font-size:20px;font-weight:800;margin-bottom:8px}
+    .auth-card p{font-size:14px;color:#718096;margin-bottom:24px}
+    .auth-input{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:15px;color:#1a202c;transition:border 0.15s;font-family:inherit;letter-spacing:0.03em}
+    .auth-input:focus{outline:none;border-color:#0070d2}
+    .auth-btn{width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.2s}
+    .auth-btn:hover{opacity:0.9}
+    .auth-error{color:#dc2626;font-size:13px;margin-top:10px;display:none}
+
+    /* ── Nav ── */
+    nav{background:linear-gradient(135deg,#1e3a5f 0%,#0070d2 100%);padding:14px 32px;display:flex;align-items:center;gap:14px}
+    .nav-logo{color:white;font-size:18px;font-weight:900}
+    .nav-logo span{color:#7dd3fc}
+    .nav-badge{background:rgba(255,255,255,0.2);color:white;font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:0.08em;text-transform:uppercase}
+    .nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+    .btn-signout{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:white;padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer}
+    .btn-signout:hover{background:rgba(255,255,255,0.2)}
+    .last-refresh{font-size:12px;color:rgba(255,255,255,0.55)}
+
+    /* ── Layout ── */
+    .main{max-width:1100px;margin:32px auto;padding:0 24px}
+    .card{background:white;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07);padding:24px;margin-bottom:22px}
+    .card-title{font-size:15px;font-weight:700;color:#1a202c;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+
+    /* ── Stat cards ── */
+    .stat-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}
+    .stat{background:white;border-radius:12px;padding:18px 16px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid #0070d2}
+    .stat .val{font-size:28px;font-weight:900;color:#1a202c;line-height:1}
+    .stat .lbl{font-size:11px;color:#718096;margin-top:5px;font-weight:500}
+    .stat.green{border-left-color:#16a34a}
+    .stat.yellow{border-left-color:#ca8a04}
+    .stat.red{border-left-color:#dc2626}
+    .stat.purple{border-left-color:#7c3aed}
+
+    /* ── Tabs ── */
+    .tab-row{display:flex;gap:0;margin-bottom:22px;border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;width:fit-content}
+    .tab-btn{padding:9px 22px;font-size:13px;font-weight:600;border:none;background:white;cursor:pointer;transition:all 0.15s;color:#718096}
+    .tab-btn.active{background:#0070d2;color:white}
+
+    /* ── Stars display ── */
+    .stars{color:#f59e0b;font-size:14px;letter-spacing:1px}
+    .stars-gray{color:#e2e8f0}
+
+    /* ── Table ── */
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;padding:9px 12px;border-bottom:2px solid #f3f4f6;background:#fafafa}
+    td{padding:11px 12px;border-bottom:1px solid #f7fafc;color:#374151;vertical-align:top}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#fafbff}
+    .comment-cell{max-width:280px;font-size:12px;color:#6b7280;line-height:1.5}
+    .empty{text-align:center;color:#a0aec0;padding:48px 0;font-size:14px}
+
+    /* ── Chips ── */
+    .chip{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700}
+    .chip-open{background:#fef9c3;color:#92400e}
+    .chip-progress{background:#dbeafe;color:#1e40af}
+    .chip-resolved{background:#f0fdf4;color:#166534}
+    .chip-bug{background:#fef2f2;color:#dc2626}
+    .chip-question{background:#eff6ff;color:#1d4ed8}
+    .chip-feature{background:#f5f3ff;color:#6d28d9}
+    .chip-other{background:#f3f4f6;color:#6b7280}
+    .chip-yes{background:#f0fdf4;color:#166534}
+    .chip-no{background:#fef2f2;color:#dc2626}
+
+    /* ── Status select ── */
+    .status-select{border:1.5px solid #e2e8f0;border-radius:7px;padding:5px 8px;font-size:12px;font-weight:600;cursor:pointer;background:white;color:#374151}
+    .status-select:focus{outline:none;border-color:#0070d2}
+
+    /* ── Refresh btn ── */
+    .btn-refresh{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#374151;transition:all 0.15s}
+    .btn-refresh:hover{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+
+    /* ── Filter ── */
+    .filter-row{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+    .filter-select{border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:13px;color:#374151;background:white;cursor:pointer}
+    .filter-select:focus{outline:none;border-color:#0070d2}
+    .count-badge{background:#e0f2fe;color:#0369a1;font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px}
+
+    /* ── Ticket detail ── */
+    .ticket-desc{font-size:12px;color:#6b7280;margin-top:4px;line-height:1.5;max-width:360px}
+    .ticket-subject{font-weight:600;font-size:13px;color:#1a202c}
+
+    /* ── Loading ── */
+    .loading{text-align:center;padding:48px;color:#a0aec0;font-size:14px}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid #cbd5e0;border-top-color:#0070d2;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── Rating bar ── */
+    .rating-bar-wrap{display:flex;align-items:center;gap:8px;font-size:12px}
+    .rating-bar{flex:1;background:#e2e8f0;border-radius:99px;height:7px;max-width:160px}
+    .rating-bar-fill{height:7px;border-radius:99px;background:linear-gradient(90deg,#f59e0b,#ef4444)}
+    .rating-bar-fill.green{background:linear-gradient(90deg,#4ade80,#16a34a)}
+
+    @media(max-width:700px){
+      .stat-row{grid-template-columns:repeat(2,1fr)}
+      .main{padding:0 12px}
+      nav{padding:12px 16px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ AUTH SCREEN ══ -->
+<div class="auth-wrap" id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">SF<span>Health</span></div>
+    <div class="auth-badge">Admin Portal</div>
+    <h2>Sign in</h2>
+    <p>Enter your admin key to access feedback and support tickets.</p>
+    <input class="auth-input" id="key-input" type="password" placeholder="Admin key" autocomplete="current-password"/>
+    <button class="auth-btn" id="auth-btn">Access Dashboard</button>
+    <div class="auth-error" id="auth-error">Incorrect admin key. Please try again.</div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD ══ -->
+<div id="dashboard" style="display:none">
+
+  <nav>
+    <div class="nav-logo">SF<span>Health</span></div>
+    <span class="nav-badge">Admin</span>
+    <div class="nav-right">
+      <span class="last-refresh" id="last-refresh"></span>
+      <button class="btn-signout" id="btn-signout">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="main">
+
+    <!-- Stat cards -->
+    <div class="stat-row" id="stat-row">
+      <div class="stat"><div class="val" id="s-total-fb">—</div><div class="lbl">Total Feedback</div></div>
+      <div class="stat green"><div class="val" id="s-avg-rating">—</div><div class="lbl">Avg Rating</div></div>
+      <div class="stat yellow"><div class="val" id="s-recommend">—</div><div class="lbl">Would Recommend</div></div>
+      <div class="stat purple"><div class="val" id="s-tickets">—</div><div class="lbl">Total Tickets</div></div>
+      <div class="stat red"><div class="val" id="s-open">—</div><div class="lbl">Open Tickets</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-row">
+      <button class="tab-btn active" id="tab-fb">⭐ Feedback</button>
+      <button class="tab-btn" id="tab-tk">🎫 Support Tickets</button>
+    </div>
+
+    <!-- ── FEEDBACK PANEL ── -->
+    <div id="panel-fb">
+
+      <!-- Rating breakdown card -->
+      <div class="card" id="rating-breakdown" style="display:none">
+        <div class="card-title">📊 Rating Breakdown</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px" id="rating-details"></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div class="card-title" style="margin-bottom:0">All Feedback <span class="count-badge" id="fb-count">0</span></div>
+          <button class="btn-refresh" id="btn-refresh-fb">↻ Refresh</button>
+        </div>
+        <div id="fb-table-wrap"><div class="loading"><span class="spinner"></span>Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- ── TICKETS PANEL ── -->
+    <div id="panel-tk" style="display:none">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div class="card-title" style="margin-bottom:0">Support Tickets <span class="count-badge" id="tk-count">0</span></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select class="filter-select" id="tk-filter">
+              <option value="">All statuses</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
+            <button class="btn-refresh" id="btn-refresh-tk">↻ Refresh</button>
+          </div>
+        </div>
+        <div id="tk-table-wrap"><div class="loading"><span class="spinner"></span>Loading…</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let ADMIN_KEY = "";
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+async function tryAuth(key) {
+  const res = await fetch("/api/admin/feedback", {
+    headers: { "x-admin-key": key },
+  });
+  return res.ok;
+}
+
+document.getElementById("auth-btn").addEventListener("click", async () => {
+  const key = document.getElementById("key-input").value.trim();
+  if (!key) return;
+  const btn = document.getElementById("auth-btn");
+  btn.textContent = "Checking…"; btn.disabled = true;
+  const ok = await tryAuth(key);
+  if (ok) {
+    ADMIN_KEY = key;
+    sessionStorage.setItem("admin_key", key);
+    showDashboard();
+  } else {
+    document.getElementById("auth-error").style.display = "block";
+    btn.textContent = "Access Dashboard"; btn.disabled = false;
+  }
+});
+
+document.getElementById("key-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("auth-btn").click();
+});
+
+document.getElementById("btn-signout").addEventListener("click", () => {
+  sessionStorage.removeItem("admin_key");
+  ADMIN_KEY = "";
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("auth-screen").style.display = "flex";
+  document.getElementById("key-input").value = "";
+});
+
+function showDashboard() {
+  document.getElementById("auth-screen").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+  loadAll();
+}
+
+// Check stored key on load
+window.addEventListener("load", async () => {
+  const stored = sessionStorage.getItem("admin_key");
+  if (stored) {
+    const ok = await tryAuth(stored);
+    if (ok) { ADMIN_KEY = stored; showDashboard(); }
+    else sessionStorage.removeItem("admin_key");
+  }
+});
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+
+let activeTab = "fb";
+document.getElementById("tab-fb").addEventListener("click", () => switchTab("fb"));
+document.getElementById("tab-tk").addEventListener("click", () => switchTab("tk"));
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById("panel-fb").style.display = tab === "fb" ? "block" : "none";
+  document.getElementById("panel-tk").style.display = tab === "tk" ? "block" : "none";
+  document.getElementById("tab-fb").classList.toggle("active", tab === "fb");
+  document.getElementById("tab-tk").classList.toggle("active", tab === "tk");
+}
+
+// ─── Load all ─────────────────────────────────────────────────────────────────
+
+async function loadAll() {
+  await Promise.all([loadFeedback(), loadTickets()]);
+  document.getElementById("last-refresh").textContent =
+    "Last refreshed: " + new Date().toLocaleTimeString();
+}
+
+document.getElementById("btn-refresh-fb").addEventListener("click", loadFeedback);
+document.getElementById("btn-refresh-tk").addEventListener("click", loadTickets);
+document.getElementById("tk-filter").addEventListener("change", loadTickets);
+
+// ─── Feedback ─────────────────────────────────────────────────────────────────
+
+function stars(n, max = 5) {
+  n = Math.round(n || 0);
+  return "★".repeat(n) + '<span class="stars-gray">' + "★".repeat(max - n) + "</span>";
+}
+
+function fmtDate(d) {
+  return new Date(d).toLocaleString(undefined, { month:"short", day:"numeric", year:"numeric", hour:"2-digit", minute:"2-digit" });
+}
+
+async function loadFeedback() {
+  document.getElementById("fb-table-wrap").innerHTML =
+    '<div class="loading"><span class="spinner"></span>Loading…</div>';
+  try {
+    const res  = await fetch("/api/admin/feedback", { headers: { "x-admin-key": ADMIN_KEY } });
+    const data = await res.json();
+    const { stats, items } = data;
+
+    // Stat cards
+    document.getElementById("s-total-fb").textContent = stats.total || 0;
+    document.getElementById("s-avg-rating").textContent = stats.avg_rating ? stats.avg_rating + "★" : "—";
+    const recPct = stats.total > 0 ? Math.round((stats.would_recommend_count / stats.total) * 100) : 0;
+    document.getElementById("s-recommend").textContent = recPct + "%";
+    document.getElementById("fb-count").textContent = items.length;
+
+    // Rating breakdown card
+    if (stats.total > 0) {
+      document.getElementById("rating-breakdown").style.display = "block";
+      document.getElementById("rating-details").innerHTML = [
+        { label: "Overall Rating",   val: stats.avg_rating,    max: 5  },
+        { label: "Ease of Use",      val: stats.avg_ease,      max: 5  },
+        { label: "Usefulness",       val: stats.avg_usefulness, max: 5 },
+      ].map(({ label, val }) => `
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">${label}</div>
+          <div style="font-size:28px;font-weight:900;color:#f59e0b;line-height:1">${val || "—"}</div>
+          <div class="stars" style="margin-top:4px">${val ? stars(val) : ""}</div>
+        </div>`
+      ).join("");
+    }
+
+    // Table
+    if (!items.length) {
+      document.getElementById("fb-table-wrap").innerHTML = '<div class="empty">No feedback submitted yet.</div>';
+      return;
+    }
+    document.getElementById("fb-table-wrap").innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Rating</th>
+            <th>Ease</th>
+            <th>Usefulness</th>
+            <th>Recommend</th>
+            <th>Org / User</th>
+            <th>Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(f => `
+            <tr>
+              <td style="white-space:nowrap;color:#9ca3af;font-size:12px">${fmtDate(f.created_at)}</td>
+              <td><span class="stars">${stars(f.rating)}</span></td>
+              <td>${f.ease_of_use ? '<span class="stars">'+stars(f.ease_of_use)+"</span>" : '<span style="color:#d1d5db">—</span>'}</td>
+              <td>${f.usefulness ? '<span class="stars">'+stars(f.usefulness)+"</span>" : '<span style="color:#d1d5db">—</span>'}</td>
+              <td>${f.would_recommend === 1 ? '<span class="chip chip-yes">👍 Yes</span>' : f.would_recommend === 0 ? '<span class="chip chip-no">👎 No</span>' : '<span style="color:#d1d5db">—</span>'}</td>
+              <td style="font-size:12px;color:#6b7280">${f.username || f.org_id || '<span style="color:#d1d5db">Anonymous</span>'}</td>
+              <td class="comment-cell">${f.comment ? escHtml(f.comment) : '<span style="color:#d1d5db">—</span>'}</td>
+            </tr>`
+          ).join("")}
+        </tbody>
+      </table>`;
+  } catch (err) {
+    document.getElementById("fb-table-wrap").innerHTML =
+      `<div class="empty" style="color:#dc2626">Failed to load: ${err.message}</div>`;
+  }
+}
+
+// ─── Tickets ──────────────────────────────────────────────────────────────────
+
+const CATEGORY_CHIPS = {
+  bug:      '<span class="chip chip-bug">🐛 Bug</span>',
+  question: '<span class="chip chip-question">❓ Question</span>',
+  feature:  '<span class="chip chip-feature">💡 Feature</span>',
+  other:    '<span class="chip chip-other">📋 Other</span>',
+};
+
+const STATUS_CHIPS = {
+  open:        '<span class="chip chip-open">Open</span>',
+  in_progress: '<span class="chip chip-progress">In Progress</span>',
+  resolved:    '<span class="chip chip-resolved">Resolved</span>',
+};
+
+async function loadTickets() {
+  document.getElementById("tk-table-wrap").innerHTML =
+    '<div class="loading"><span class="spinner"></span>Loading…</div>';
+  const statusFilter = document.getElementById("tk-filter").value;
+  const url = "/api/admin/tickets" + (statusFilter ? "?status=" + statusFilter : "");
+  try {
+    const res     = await fetch(url, { headers: { "x-admin-key": ADMIN_KEY } });
+    const tickets = await res.json();
+
+    document.getElementById("tk-count").textContent = tickets.length;
+
+    // Update open count in stat card
+    const openCount = tickets.filter(t => t.status === "open").length;
+    if (!statusFilter) document.getElementById("s-open").textContent = openCount;
+
+    if (!tickets.length) {
+      document.getElementById("tk-table-wrap").innerHTML =
+        '<div class="empty">No tickets' + (statusFilter ? ' with status "' + statusFilter + '"' : "") + '.</div>';
+      return;
+    }
+    document.getElementById("tk-table-wrap").innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Subject &amp; Description</th>
+            <th>From</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="ticket-rows">
+          ${tickets.map(t => `
+            <tr id="trow-${t.id}">
+              <td style="color:#9ca3af;font-size:12px">#${t.id}</td>
+              <td style="white-space:nowrap;color:#9ca3af;font-size:12px">${fmtDate(t.created_at)}</td>
+              <td>${CATEGORY_CHIPS[t.category] || t.category}</td>
+              <td>
+                <div class="ticket-subject">${escHtml(t.subject)}</div>
+                <div class="ticket-desc">${escHtml(t.description)}</div>
+              </td>
+              <td style="font-size:12px;color:#6b7280">${t.username || t.org_id || '<span style="color:#d1d5db">Anonymous</span>'}</td>
+              <td>
+                <select class="status-select" data-id="${t.id}" onchange="updateTicketStatus(this)">
+                  <option value="open"        ${t.status==="open"        ?"selected":""}>Open</option>
+                  <option value="in_progress" ${t.status==="in_progress" ?"selected":""}>In Progress</option>
+                  <option value="resolved"    ${t.status==="resolved"    ?"selected":""}>Resolved</option>
+                </select>
+              </td>
+            </tr>`
+          ).join("")}
+        </tbody>
+      </table>`;
+
+    // Update total ticket count stat (only when no filter)
+    if (!statusFilter) document.getElementById("s-tickets").textContent = tickets.length;
+
+  } catch (err) {
+    document.getElementById("tk-table-wrap").innerHTML =
+      `<div class="empty" style="color:#dc2626">Failed to load: ${err.message}</div>`;
+  }
+}
+
+async function updateTicketStatus(select) {
+  const id     = select.dataset.id;
+  const status = select.value;
+  select.disabled = true;
+  try {
+    const res = await fetch("/api/admin/tickets/" + id, {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json", "x-admin-key": ADMIN_KEY },
+      body:    JSON.stringify({ status }),
+    });
+    if (!res.ok) throw new Error("Update failed");
+    // Flash row green briefly
+    const row = document.getElementById("trow-" + id);
+    if (row) {
+      row.style.background = "#f0fdf4";
+      setTimeout(() => { row.style.background = ""; }, 1200);
+    }
+    // Refresh open count
+    loadTickets();
+  } catch (err) {
+    alert("Failed to update: " + err.message);
+  } finally {
+    select.disabled = false;
+  }
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+</script>
+</body>
+</html>

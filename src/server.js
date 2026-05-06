@@ -354,6 +354,13 @@ app.get("/api/compare", readLimiter, async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── Admin page ───────────────────────────────────────────────────────────────
+
+app.get("/admin", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/admin.html"));
+});
+
 // ─── SPA fallback ─────────────────────────────────────────────────────────────
 
 app.get("*", (_req, res) => {
