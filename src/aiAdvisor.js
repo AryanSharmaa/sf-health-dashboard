@@ -3,9 +3,10 @@
  *
  * Strategy (in order):
  * 1. Salesforce Einstein AI  — uses the customer's own org token, no extra cost
- * 2. Google Gemini Flash      — free tier, GEMINI_API_KEY env var (get free at aistudio.google.com)
- * 3. Anthropic Claude API    — paid fallback, ANTHROPIC_API_KEY env var
- * 4. Throws a clean "not configured" error that the UI handles gracefully
+ * 2. Groq (Llama 3)          — free tier, GROQ_API_KEY env var (get free at console.groq.com)
+ * 3. Google Gemini Flash      — free tier fallback, GEMINI_API_KEY env var
+ * 4. Anthropic Claude API    — paid fallback, ANTHROPIC_API_KEY env var
+ * 5. Throws a clean "not configured" error that the UI handles gracefully
  */
 
 const https = require("https");
@@ -14,6 +15,7 @@ const http  = require("http");
 const SF_API_VERSION  = "v62.0";
 const CLAUDE_MODEL    = "claude-opus-4-7";
 const GEMINI_MODEL    = "gemini-2.0-flash";
+const GROQ_MODEL      = "llama-3.3-70b-versatile";
 
 const SYSTEM_PROMPT = `You are a senior Salesforce architect and certified consultant with 15+ years of experience.
 Generate a concise, actionable, step-by-step remediation guide for the Salesforce issue described.
@@ -119,7 +121,58 @@ async function tryEinstein(instanceUrl, accessToken, prompt) {
   throw new Error("Einstein AI not available on this org.");
 }
 
-// ─── Strategy 2: Google Gemini Flash (free tier) ─────────────────────────────
+// ─── Strategy 2: Groq (free tier, Llama 3) ───────────────────────────────────
+
+async function tryGroq(prompt) {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("GROQ_API_KEY not configured.");
+
+  const body = JSON.stringify({
+    model: GROQ_MODEL,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user",   content: prompt },
+    ],
+    max_tokens: 1024,
+    temperature: 0.3,
+  });
+
+  const options = {
+    hostname: "api.groq.com",
+    path:     "/openai/v1/chat/completions",
+    method:   "POST",
+    headers:  {
+      "Content-Type":  "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Length": Buffer.byteLength(body),
+    },
+  };
+
+  const { status, body: parsed } = await new Promise((resolve, reject) => {
+    const req = https.request(options, (res) => {
+      let raw = "";
+      res.on("data", c => raw += c);
+      res.on("end", () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); }
+        catch { resolve({ status: res.statusCode, body: raw }); }
+      });
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+
+  if (status !== 200) {
+    const msg = parsed?.error?.message || `Groq API status ${status}`;
+    throw new Error(msg);
+  }
+
+  const text = parsed?.choices?.[0]?.message?.content;
+  if (!text) throw new Error("Empty response from Groq.");
+  return text;
+}
+
+// ─── Strategy 3: Google Gemini Flash (free tier fallback) ────────────────────
 
 async function tryGemini(prompt) {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -227,17 +280,21 @@ async function generateRemediationGuide({ action, category, priority, orgProfile
     } catch { /* fall through */ }
   }
 
-  // 2 — Try Gemini Flash (free tier) — fall through on any failure
+  // 2 — Try Groq (free tier, Llama 3)
+  try {
+    return await tryGroq(prompt);
+  } catch (err) {
+    if (process.env.GROQ_API_KEY) console.warn("[aiAdvisor] Groq failed:", err.message);
+  }
+
+  // 3 — Try Gemini Flash (free tier fallback)
   try {
     return await tryGemini(prompt);
   } catch (err) {
-    if (process.env.GEMINI_API_KEY) {
-      console.warn("[aiAdvisor] Gemini failed, falling back to Anthropic:", err.message);
-    }
-    // fall through whether key is missing or API call failed
+    if (process.env.GEMINI_API_KEY) console.warn("[aiAdvisor] Gemini failed:", err.message);
   }
 
-  // 3 — Fall back to Anthropic API (paid)
+  // 4 — Fall back to Anthropic API (paid)
   try {
     return await tryAnthropic(prompt);
   } catch (err) {

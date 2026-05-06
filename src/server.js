@@ -385,6 +385,46 @@ app.patch("/api/admin/tickets/:id", requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── Groq probe (debug only) ─────────────────────────────────────────────────
+
+app.get("/api/groq-probe", async (req, res) => {
+  const https  = require("https");
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return res.json({ ok: false, error: "GROQ_API_KEY not set in environment." });
+
+  const body = JSON.stringify({
+    model: "llama-3.3-70b-versatile",
+    messages: [{ role: "user", content: "Say hello in one word." }],
+    max_tokens: 10,
+  });
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const opts = {
+        hostname: "api.groq.com",
+        path: "/openai/v1/chat/completions",
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}`, "Content-Length": Buffer.byteLength(body) },
+      };
+      const r = https.request(opts, resp => {
+        let raw = "";
+        resp.on("data", c => raw += c);
+        resp.on("end", () => {
+          try { resolve({ status: resp.statusCode, body: JSON.parse(raw) }); }
+          catch { resolve({ status: resp.statusCode, body: raw.slice(0, 500) }); }
+        });
+      });
+      r.on("error", reject);
+      r.write(body);
+      r.end();
+    });
+    const text = result.body?.choices?.[0]?.message?.content || null;
+    res.json({ ok: result.status === 200, status: result.status, text, error: result.body?.error?.message || null });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
 // ─── Gemini probe (debug only) ───────────────────────────────────────────────
 
 app.get("/api/gemini-probe", async (req, res) => {
