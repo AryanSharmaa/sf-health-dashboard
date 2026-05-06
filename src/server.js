@@ -182,24 +182,23 @@ app.get("/api/audit/:jobId/report.json", readLimiter, async (req, res) => {
 
 // ─── AI Remediation Advisor ───────────────────────────────────────────────────
 
-app.post("/api/audit/:jobId/advise", aiLimiter, async (req, res) => {
+app.post("/api/audit/:jobId/advise", aiLimiter, requireSession, async (req, res) => {
   const { action, category, priority } = req.body || {};
   if (!action || !category || !priority) {
     return res.status(400).json({ error: "action, category, and priority are required." });
   }
 
-  // Pull org name + profile from the in-memory job if available
-  const job     = runningJobs.get(req.params.jobId);
-  const report  = job?.report || null;
-  const orgName = report?.orgName || "Unknown";
+  const { accessToken, instanceUrl } = req.sfSession;
+  const job        = runningJobs.get(req.params.jobId);
+  const report     = job?.report || null;
+  const orgName    = report?.orgName || "Unknown";
   const orgProfile = report?.orgProfile || null;
 
   try {
-    const guide = await generateRemediationGuide({ action, category, priority, orgProfile, orgName });
+    const guide = await generateRemediationGuide({ action, category, priority, orgProfile, orgName, instanceUrl, accessToken });
     res.json({ guide });
   } catch (err) {
-    const noKey = err.message.includes("ANTHROPIC_API_KEY");
-    res.status(noKey ? 503 : 500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
