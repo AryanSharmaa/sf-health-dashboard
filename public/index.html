@@ -962,7 +962,7 @@ async function checkSession() {
       banner.textContent = `Connection failed: ${err}`;
       banner.style.display = "block";
     }
-    history.replaceState({}, "", "/");
+    history.replaceState({}, "", "/app");
   }
   const res     = await fetch("/auth/session", { credentials: "include" });
   const session = await res.json();
@@ -1359,7 +1359,7 @@ async function fetchAiGuide(jobId, action, index) {
 
     if (data.error) throw new Error(data.error);
     panel.innerHTML =
-      '<div class="ai-badge">✦ Gemini AI</div>' +
+      '<div class="ai-badge">✦ AI Fix Guide</div>' +
       '<div class="ai-steps">' + formatAiGuide(data.guide) + "</div>";
     btn.textContent = "✦ Hide Guide";
   } catch (err) {
@@ -1410,7 +1410,7 @@ async function fetchMcAiGuide(jobId, action, index) {
 
     if (data.error) throw new Error(data.error);
     panel.innerHTML =
-      '<div class="ai-badge">✦ Gemini AI</div>' +
+      '<div class="ai-badge">✦ AI Fix Guide</div>' +
       '<div class="ai-steps">' + formatAiGuide(data.guide) + "</div>";
     btn.textContent = "✦ Hide Guide";
   } catch (err) {

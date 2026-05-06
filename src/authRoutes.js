@@ -95,10 +95,10 @@ router.get("/salesforce/callback", async (req, res) => {
 
     res.clearCookie("sf_state");
     res.clearCookie("sf_env");
-    res.redirect("/");
+    res.redirect("/app");
   } catch (err) {
     console.error("OAuth callback error:", err.message);
-    res.redirect(`/?error=${encodeURIComponent(err.message)}`);
+    res.redirect(`/app?error=${encodeURIComponent(err.message)}`);
   }
 });
 

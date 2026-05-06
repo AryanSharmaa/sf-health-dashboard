@@ -338,21 +338,21 @@ async function generateRemediationGuide({ action, category, priority, orgProfile
   try {
     return await tryGroq(prompt);
   } catch (err) {
-    if (process.env.GROQ_API_KEY) console.warn("[aiAdvisor] Groq failed:", err.message);
+    console.warn("[aiAdvisor] Groq failed:", err.message);
   }
 
   // 3 — Try OpenRouter (free tier)
   try {
     return await tryOpenRouter(prompt);
   } catch (err) {
-    if (process.env.OPENROUTER_API_KEY) console.warn("[aiAdvisor] OpenRouter failed:", err.message);
+    console.warn("[aiAdvisor] OpenRouter failed:", err.message);
   }
 
   // 4 — Try Gemini Flash
   try {
     return await tryGemini(prompt);
   } catch (err) {
-    if (process.env.GEMINI_API_KEY) console.warn("[aiAdvisor] Gemini failed:", err.message);
+    console.warn("[aiAdvisor] Gemini failed:", err.message);
   }
 
   // 5 — Fall back to Anthropic API (paid)
