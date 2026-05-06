@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta name="description" content="SF Health — Free automated health audit for Salesforce and Marketing Cloud. Get a scored report with prioritised fixes in under 2 minutes."/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <title>SF Health — Salesforce & Marketing Cloud Audit Tool</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a202c;background:white;overflow-x:hidden}
+
+    /* ── Nav ── */
+    .nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0;padding:0 32px;height:60px;display:flex;align-items:center;gap:16px}
+    .nav-logo{font-size:20px;font-weight:900;color:#1e3a5f;text-decoration:none}
+    .nav-logo span{color:#0070d2}
+    .nav-links{display:flex;align-items:center;gap:6px;margin-left:auto}
+    .nav-link{color:#6b7280;font-size:14px;font-weight:500;text-decoration:none;padding:6px 12px;border-radius:7px;transition:all 0.15s}
+    .nav-link:hover{color:#1a202c;background:#f3f4f6}
+    .nav-cta{background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:8px;padding:8px 20px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;transition:opacity 0.2s}
+    .nav-cta:hover{opacity:0.88}
+    .nav-mobile-cta{display:none}
+    @media(max-width:600px){
+      .nav{padding:0 16px}
+      .nav-links .nav-link{display:none}
+      .nav-mobile-cta{display:block}
+    }
+
+    /* ── Hero ── */
+    .hero{background:linear-gradient(160deg,#0f2444 0%,#0d3a6e 45%,#0070d2 100%);padding:90px 24px 80px;text-align:center;position:relative;overflow:hidden}
+    .hero::before{content:"";position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
+    .hero-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.9);border-radius:99px;padding:6px 16px;font-size:12px;font-weight:600;margin-bottom:28px;letter-spacing:0.04em}
+    .hero-badge-dot{width:7px;height:7px;background:#4ade80;border-radius:50%;animation:pulse-dot 2s infinite}
+    @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(1.3)}}
+    .hero h1{font-size:52px;font-weight:900;color:white;line-height:1.1;letter-spacing:-1.5px;max-width:760px;margin:0 auto 20px}
+    .hero h1 span{background:linear-gradient(90deg,#7dd3fc,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero-sub{font-size:19px;color:rgba(255,255,255,0.72);max-width:560px;margin:0 auto 40px;line-height:1.6}
+    .hero-actions{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+    .btn-hero-primary{display:inline-flex;align-items:center;gap:10px;background:white;color:#0070d2;border:none;border-radius:12px;padding:16px 36px;font-size:16px;font-weight:800;cursor:pointer;text-decoration:none;transition:all 0.2s;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+    .btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,0.25)}
+    .btn-hero-secondary{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.12);border:1.5px solid rgba(255,255,255,0.3);color:white;border-radius:12px;padding:15px 28px;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;transition:all 0.2s}
+    .btn-hero-secondary:hover{background:rgba(255,255,255,0.2)}
+    .hero-note{margin-top:20px;font-size:13px;color:rgba(255,255,255,0.45)}
+    .hero-metrics{display:flex;justify-content:center;gap:40px;margin-top:64px;flex-wrap:wrap}
+    .hero-metric{text-align:center}
+    .hero-metric .num{font-size:36px;font-weight:900;color:white;letter-spacing:-1px}
+    .hero-metric .lbl{font-size:13px;color:rgba(255,255,255,0.55);margin-top:4px}
+    .hero-divider{width:1px;height:48px;background:rgba(255,255,255,0.15);align-self:center}
+
+    /* ── Section common ── */
+    section{padding:80px 24px}
+    .section-label{font-size:12px;font-weight:700;color:#0070d2;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px}
+    .section-title{font-size:36px;font-weight:900;color:#1a202c;line-height:1.2;letter-spacing:-0.5px;margin-bottom:16px}
+    .section-sub{font-size:17px;color:#6b7280;line-height:1.6;max-width:560px}
+    .section-center{text-align:center}
+    .section-center .section-sub{margin:0 auto}
+
+    /* ── Score preview card ── */
+    .preview-wrap{background:#f0f4f8;padding:80px 24px}
+    .preview-inner{max-width:960px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+    .preview-card{background:white;border-radius:20px;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,0.1)}
+    .preview-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .preview-card-title{font-size:14px;font-weight:700;color:#1a202c}
+    .preview-org-badge{background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;border:1px solid #bfdbfe}
+    .preview-score-row{display:flex;align-items:center;gap:20px;margin-bottom:20px}
+    .preview-score-num{font-size:64px;font-weight:900;color:#16a34a;line-height:1;letter-spacing:-2px}
+    .preview-score-meta{display:flex;flex-direction:column;gap:4px}
+    .preview-grade{font-size:28px;font-weight:800;color:#16a34a}
+    .preview-grade-lbl{font-size:12px;color:#a0aec0}
+    .preview-bar-row{display:grid;grid-template-columns:100px 1fr 32px;align-items:center;gap:10px;padding:6px 0}
+    .preview-bar-lbl{font-size:12px;color:#6b7280;font-weight:500}
+    .preview-bar-track{background:#e2e8f0;border-radius:99px;height:8px}
+    .preview-bar-fill{height:8px;border-radius:99px}
+    .preview-bar-val{font-size:12px;font-weight:700;text-align:right}
+    .preview-actions{margin-top:16px;border-top:1px solid #f3f4f6;padding-top:16px}
+    .preview-action-row{display:flex;align-items:start;gap:10px;padding:8px 0;border-bottom:1px solid #f9fafb}
+    .preview-action-row:last-child{border-bottom:none}
+    .preview-badge{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:700;text-transform:uppercase;white-space:nowrap}
+    .badge-critical{background:#fef2f2;color:#dc2626}
+    .badge-high{background:#fff7ed;color:#ea580c}
+    .badge-medium{background:#fefce8;color:#ca8a04}
+    .preview-action-text{font-size:12px;color:#374151;line-height:1.5}
+
+    /* ── Features grid ── */
+    .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:960px;margin:48px auto 0}
+    .feature-card{background:white;border:1.5px solid #e2e8f0;border-radius:16px;padding:28px 24px;transition:all 0.2s}
+    .feature-card:hover{border-color:#bfdbfe;box-shadow:0 4px 20px rgba(0,112,210,0.08);transform:translateY(-2px)}
+    .feature-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:16px}
+    .feature-title{font-size:16px;font-weight:700;color:#1a202c;margin-bottom:8px}
+    .feature-desc{font-size:14px;color:#6b7280;line-height:1.6}
+
+    /* ── How it works ── */
+    .how-wrap{background:linear-gradient(160deg,#0f2444,#0d3a6e);padding:80px 24px}
+    .how-inner{max-width:860px;margin:0 auto}
+    .how-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:48px;position:relative}
+    .how-steps::before{content:"";position:absolute;top:28px;left:12.5%;right:12.5%;height:2px;background:rgba(255,255,255,0.15)}
+    .how-step{text-align:center;padding:0 12px;position:relative}
+    .how-step-circle{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:22px;position:relative;z-index:1}
+    .how-step-num{position:absolute;top:-6px;right:-6px;width:20px;height:20px;background:#0070d2;border-radius:50%;font-size:11px;font-weight:800;color:white;display:flex;align-items:center;justify-content:center}
+    .how-step-title{font-size:14px;font-weight:700;color:white;margin-bottom:6px}
+    .how-step-desc{font-size:13px;color:rgba(255,255,255,0.55);line-height:1.5}
+
+    /* ── What we check ── */
+    .checks-inner{max-width:960px;margin:0 auto}
+    .checks-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:48px}
+    .check-card{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px}
+    .check-card-header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .check-icon{font-size:26px}
+    .check-card-title{font-size:15px;font-weight:800;color:#1a202c}
+    .check-card-sub{font-size:12px;color:#a0aec0;font-weight:500;margin-top:1px}
+    .check-items{display:flex;flex-direction:column;gap:6px}
+    .check-item{display:flex;align-items:center;gap:8px;font-size:13px;color:#374151}
+    .check-item::before{content:"✓";color:#16a34a;font-weight:800;font-size:12px;flex-shrink:0}
+
+    /* ── MC section ── */
+    .mc-section{background:linear-gradient(135deg,#fff7ed,#fef3c7);padding:80px 24px;border-top:1px solid #fed7aa;border-bottom:1px solid #fed7aa}
+    .mc-inner{max-width:860px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+    .mc-badge{display:inline-flex;align-items:center;gap:7px;background:#e8720c;color:white;border-radius:99px;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:0.06em;margin-bottom:16px}
+    .mc-features{display:flex;flex-direction:column;gap:12px;margin-top:24px}
+    .mc-feature{display:flex;align-items:start;gap:12px}
+    .mc-feature-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+    .mc-feature-title{font-size:14px;font-weight:700;color:#1a202c}
+    .mc-feature-desc{font-size:13px;color:#6b7280;margin-top:2px;line-height:1.5}
+    .mc-card{background:white;border-radius:18px;padding:24px;box-shadow:0 6px 30px rgba(232,114,12,0.12);border:1.5px solid #fed7aa}
+    .mc-score-row{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+    .mc-score-num{font-size:52px;font-weight:900;color:#e8720c;line-height:1;letter-spacing:-2px}
+    .mc-score-meta .grade{font-size:24px;font-weight:800;color:#e8720c}
+
+    /* ── Security ── */
+    .security-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;max-width:860px;margin:48px auto 0}
+    .security-item{text-align:center;padding:24px 16px}
+    .security-icon{font-size:32px;margin-bottom:12px}
+    .security-title{font-size:14px;font-weight:700;color:#1a202c;margin-bottom:6px}
+    .security-desc{font-size:13px;color:#6b7280;line-height:1.5}
+
+    /* ── CTA section ── */
+    .cta-section{background:linear-gradient(160deg,#0f2444,#0070d2);padding:90px 24px;text-align:center}
+    .cta-section h2{font-size:40px;font-weight:900;color:white;letter-spacing:-0.8px;margin-bottom:16px}
+    .cta-section p{font-size:18px;color:rgba(255,255,255,0.7);margin-bottom:40px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.6}
+    .cta-buttons{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+
+    /* ── Footer ── */
+    footer{background:#0f2444;padding:40px 32px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+    .footer-logo{font-size:18px;font-weight:900;color:white}
+    .footer-logo span{color:#7dd3fc}
+    .footer-links{display:flex;gap:20px}
+    .footer-link{color:rgba(255,255,255,0.45);font-size:13px;text-decoration:none;transition:color 0.15s}
+    .footer-link:hover{color:rgba(255,255,255,0.8)}
+    .footer-right{font-size:12px;color:rgba(255,255,255,0.3)}
+
+    /* ── Responsive ── */
+    @media(max-width:768px){
+      .hero h1{font-size:34px;letter-spacing:-0.5px}
+      .hero-sub{font-size:16px}
+      .hero-metrics{gap:24px}
+      .hero-divider{display:none}
+      .preview-inner{grid-template-columns:1fr}
+      .features-grid{grid-template-columns:1fr}
+      .how-steps{grid-template-columns:repeat(2,1fr);gap:28px}
+      .how-steps::before{display:none}
+      .checks-grid{grid-template-columns:1fr}
+      .mc-inner{grid-template-columns:1fr}
+      .security-grid{grid-template-columns:repeat(2,1fr)}
+      .section-title{font-size:28px}
+      section{padding:56px 18px}
+      footer{flex-direction:column;align-items:flex-start;gap:12px}
+      .footer-links{flex-wrap:wrap;gap:14px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ NAV ══ -->
+<nav class="nav">
+  <a href="/" class="nav-logo">SF<span>Health</span></a>
+  <div class="nav-links">
+    <a href="#features" class="nav-link">Features</a>
+    <a href="#how-it-works" class="nav-link">How it works</a>
+    <a href="#what-we-check" class="nav-link">What we check</a>
+    <a href="#security" class="nav-link">Security</a>
+    <a href="/app" class="nav-cta nav-mobile-cta">Get Started Free</a>
+    <a href="/app" class="nav-cta">Get Started Free →</a>
+  </div>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section class="hero">
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    Free · No credit card · Takes 2 minutes
+  </div>
+  <h1>Know exactly what's wrong<br/>with your <span>Salesforce org</span></h1>
+  <p class="hero-sub">Instant automated health audit for Salesforce CRM and Marketing Cloud. Get a scored report with prioritised fixes — no setup, no agents, no guesswork.</p>
+  <div class="hero-actions">
+    <a href="/app" class="btn-hero-primary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+      Run Free Audit Now
+    </a>
+    <a href="#how-it-works" class="btn-hero-secondary">
+      See how it works ↓
+    </a>
+  </div>
+  <p class="hero-note">Works with Production, Sandbox, and Marketing Cloud instances</p>
+  <div class="hero-metrics">
+    <div class="hero-metric">
+      <div class="num">6</div>
+      <div class="lbl">Audit categories</div>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-metric">
+      <div class="num">&lt; 2min</div>
+      <div class="lbl">Full scan time</div>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-metric">
+      <div class="num">0–100</div>
+      <div class="lbl">Health score</div>
+    </div>
+    <div class="hero-divider"></div>
+    <div class="hero-metric">
+      <div class="num">Free</div>
+      <div class="lbl">Always</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SCORE PREVIEW ══ -->
+<div class="preview-wrap">
+  <div class="preview-inner">
+    <div>
+      <div class="section-label">Sample Report</div>
+      <h2 class="section-title">A complete picture in one score</h2>
+      <p style="font-size:16px;color:#6b7280;line-height:1.7;margin-top:8px">
+        Every audit produces a 0–100 health score, a letter grade, and a ranked list of actions. No jargon — just clear findings with the exact steps to fix them.
+      </p>
+      <div style="margin-top:28px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#374151">
+          <span style="color:#16a34a;font-size:18px">✓</span> Weighted score across 6 categories
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#374151">
+          <span style="color:#16a34a;font-size:18px">✓</span> Benchmarked against similar orgs
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#374151">
+          <span style="color:#16a34a;font-size:18px">✓</span> AI-powered step-by-step fix guides
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:14px;color:#374151">
+          <span style="color:#16a34a;font-size:18px">✓</span> Downloadable HTML + JSON reports
+        </div>
+      </div>
+    </div>
+    <!-- Mock report card -->
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <div class="preview-card-title">Health Report</div>
+        <div class="preview-org-badge">Acme Corp · Production</div>
+      </div>
+      <div class="preview-score-row">
+        <div class="preview-score-num">78</div>
+        <div class="preview-score-meta">
+          <div class="preview-grade">C</div>
+          <div class="preview-grade-lbl">out of 100</div>
+          <div style="font-size:11px;color:#0070d2;background:#eff6ff;padding:2px 8px;border-radius:99px;margin-top:4px;font-weight:700">Top 35%</div>
+        </div>
+      </div>
+      <div>
+        <div class="preview-bar-row">
+          <div class="preview-bar-lbl">Security</div>
+          <div class="preview-bar-track"><div class="preview-bar-fill" style="width:88%;background:#16a34a"></div></div>
+          <div class="preview-bar-val" style="color:#16a34a">88</div>
+        </div>
+        <div class="preview-bar-row">
+          <div class="preview-bar-lbl">Automation</div>
+          <div class="preview-bar-track"><div class="preview-bar-fill" style="width:74%;background:#ca8a04"></div></div>
+          <div class="preview-bar-val" style="color:#ca8a04">74</div>
+        </div>
+        <div class="preview-bar-row">
+          <div class="preview-bar-lbl">Code Quality</div>
+          <div class="preview-bar-track"><div class="preview-bar-fill" style="width:62%;background:#ca8a04"></div></div>
+          <div class="preview-bar-val" style="color:#ca8a04">62</div>
+        </div>
+        <div class="preview-bar-row">
+          <div class="preview-bar-lbl">Data Quality</div>
+          <div class="preview-bar-track"><div class="preview-bar-fill" style="width:45%;background:#dc2626"></div></div>
+          <div class="preview-bar-val" style="color:#dc2626">45</div>
+        </div>
+      </div>
+      <div class="preview-actions">
+        <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Top Actions</div>
+        <div class="preview-action-row">
+          <span class="preview-badge badge-critical">Critical</span>
+          <div class="preview-action-text">Enable Multi-Factor Authentication for all active users</div>
+        </div>
+        <div class="preview-action-row">
+          <span class="preview-badge badge-high">High</span>
+          <div class="preview-action-text">47 Apex classes using API version below 50.0 — update to current</div>
+        </div>
+        <div class="preview-action-row">
+          <span class="preview-badge badge-medium">Medium</span>
+          <div class="preview-action-text">142 unused custom fields detected across 8 objects</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FEATURES ══ -->
+<section id="features">
+  <div class="section-center" style="max-width:960px;margin:0 auto">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything a Salesforce admin needs</h2>
+    <p class="section-sub">Built by a Salesforce professional, for Salesforce professionals. Every check is based on real-world issues found in production orgs.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#eff6ff">📊</div>
+      <div class="feature-title">0–100 Health Score</div>
+      <div class="feature-desc">Weighted score across 6 categories — Security, Automation, Code Quality, Data Quality, API Usage, and User Adoption. Benchmarked against similar orgs.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#f0fdf4">🔍</div>
+      <div class="feature-title">Deep Org Scan</div>
+      <div class="feature-desc">Checks Apex classes, Flows, Workflow Rules, Process Builders, security settings, permission sets, inactive users, unused fields, governor limit usage and more.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#f5f3ff">✦</div>
+      <div class="feature-title">AI Fix Guides</div>
+      <div class="feature-desc">Each finding comes with an AI-generated step-by-step remediation guide — exact Salesforce menu paths, estimated effort, and links to relevant documentation.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#fff7ed">📈</div>
+      <div class="feature-title">Audit History & Trends</div>
+      <div class="feature-desc">Run audits over time and track your score improving. See category trends, spot recurring issues, and compare any two audits side by side.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#fef9c3">📥</div>
+      <div class="feature-title">Downloadable Reports</div>
+      <div class="feature-desc">Export your full audit as a branded HTML report to share with stakeholders, or as structured JSON to integrate with your own tooling.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background:#fef2f2">🔐</div>
+      <div class="feature-title">Secure OAuth Login</div>
+      <div class="feature-desc">Connect via Salesforce's official OAuth flow. We never see or store your password — only a temporary access token that expires after 8 hours.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ HOW IT WORKS ══ -->
+<div class="how-wrap" id="how-it-works">
+  <div class="how-inner">
+    <div class="section-center">
+      <div class="section-label" style="color:#7dd3fc">How it works</div>
+      <h2 class="section-title" style="color:white">From login to report in under 2 minutes</h2>
+    </div>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="how-step-circle">
+          🔐
+          <div class="how-step-num">1</div>
+        </div>
+        <div class="how-step-title">Connect your org</div>
+        <div class="how-step-desc">Click Connect and log in via Salesforce's official OAuth page. We never see your password.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-step-circle">
+          🔍
+          <div class="how-step-num">2</div>
+        </div>
+        <div class="how-step-title">We scan everything</div>
+        <div class="how-step-desc">Our engine checks 6 categories — automation, security, code, data, APIs, and adoption.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-step-circle">
+          📊
+          <div class="how-step-num">3</div>
+        </div>
+        <div class="how-step-title">Get your score</div>
+        <div class="how-step-desc">A 0–100 health score with per-category breakdown and a prioritised action list.</div>
+      </div>
+      <div class="how-step">
+        <div class="how-step-circle">
+          ✦
+          <div class="how-step-num">4</div>
+        </div>
+        <div class="how-step-title">Fix with AI guidance</div>
+        <div class="how-step-desc">Each finding has an AI-generated step-by-step fix guide with exact Salesforce paths.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WHAT WE CHECK ══ -->
+<section id="what-we-check">
+  <div class="checks-inner">
+    <div class="section-center">
+      <div class="section-label">What we check</div>
+      <h2 class="section-title">Every corner of your Salesforce org</h2>
+      <p class="section-sub">38+ individual checks across 6 weighted categories, tuned to your org type — ISV, Enterprise, SMB, or Nonprofit.</p>
+    </div>
+    <div class="checks-grid">
+      <div class="check-card">
+        <div class="check-card-header">
+          <div class="check-icon">🔒</div>
+          <div>
+            <div class="check-card-title">Security</div>
+            <div class="check-card-sub">Weight: 20–25%</div>
+          </div>
+        </div>
+        <div class="check-items">
+          <div class="check-item">MFA enforcement across all users</div>
+          <div class="check-item">Permission set & profile hygiene</div>
+          <div class="check-item">Guest user access review</div>
+          <div class="check-item">Password policy strength</div>
+          <div class="check-item">Session security settings</div>
+          <div class="check-item">Field-level security gaps</div>
+        </div>
+      </div>
+      <div class="check-card">
+        <div class="check-card-header">
+          <div class="check-icon">⚡</div>
+          <div>
+            <div class="check-card-title">Automation</div>
+            <div class="check-card-sub">Weight: 15–20%</div>
+          </div>
+        </div>
+        <div class="check-items">
+          <div class="check-item">Inactive & deprecated Flows</div>
+          <div class="check-item">Workflow Rules vs Flow migration</div>
+          <div class="check-item">Process Builder retirement risk</div>
+          <div class="check-item">Duplicate automation conflicts</div>
+          <div class="check-item">Before/after save flow patterns</div>
+          <div class="check-item">Scheduled flow health</div>
+        </div>
+      </div>
+      <div class="check-card">
+        <div class="check-card-header">
+          <div class="check-icon">💻</div>
+          <div>
+            <div class="check-card-title">Code Quality</div>
+            <div class="check-card-sub">Weight: 10–30%</div>
+          </div>
+        </div>
+        <div class="check-items">
+          <div class="check-item">Stale API version Apex classes</div>
+          <div class="check-item">Test coverage thresholds</div>
+          <div class="check-item">Visualforce page count & age</div>
+          <div class="check-item">Lightning Web Component health</div>
+          <div class="check-item">Deprecated API usage</div>
+          <div class="check-item">Tech debt scoring</div>
+        </div>
+      </div>
+      <div class="check-card">
+        <div class="check-card-header">
+          <div class="check-icon">🗄️</div>
+          <div>
+            <div class="check-card-title">Data Quality</div>
+            <div class="check-card-sub">Weight: 15–25%</div>
+          </div>
+        </div>
+        <div class="check-items">
+          <div class="check-item">Unused custom fields detection</div>
+          <div class="check-item">Duplicate rule configuration</div>
+          <div class="check-item">Validation rule coverage</div>
+          <div class="check-item">Record type hygiene</div>
+          <div class="check-item">Object relationship complexity</div>
+          <div class="check-item">Data skew risk indicators</div>
+        </div>
+      </div>
+      <div class="check-card">
+        <div class="check-card-header">
+          <div class="check-icon">🌐</div>
+          <div>
+            <div class="check-card-title">API & Limits</div>
+            <div class="check-card-sub">Weight: 5–20%</div>
+          </div>
+        </div>
+        <div class="check-items">
+          <div class="check-item">Daily API request usage %</div>
+          <div class="check-item">Bulk API utilisation</div>
+          <div class="check-item">Governor limit headroom</div>
+          <div class="check-item">Async Apex queue depth</div>
+          <div class="check-item">Connected app inventory</div>
+          <div class="check-item">Integration user hygiene</div>
+        </div>
+      </div>
+      <div class="check-card">
+        <div class="check-card-header">
+          <div class="check-icon">👥</div>
+          <div>
+            <div class="check-card-title">User Adoption</div>
+            <div class="check-card-sub">Weight: 10–25%</div>
+          </div>
+        </div>
+        <div class="check-items">
+          <div class="check-item">Inactive licensed users</div>
+          <div class="check-item">Login frequency analysis</div>
+          <div class="check-item">Mobile app adoption</div>
+          <div class="check-item">Chatter / collaboration usage</div>
+          <div class="check-item">Report & dashboard usage</div>
+          <div class="check-item">Training completion signals</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ MARKETING CLOUD ══ -->
+<div class="mc-section">
+  <div class="mc-inner">
+    <div>
+      <div class="mc-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+        Marketing Cloud
+      </div>
+      <h2 class="section-title">Audit Marketing Cloud too</h2>
+      <p style="font-size:16px;color:#6b7280;line-height:1.7;margin-top:8px">The only tool that audits both your CRM and Marketing Cloud in one place. Separate health score, same level of depth.</p>
+      <div class="mc-features">
+        <div class="mc-feature">
+          <div class="mc-feature-icon">✉️</div>
+          <div>
+            <div class="mc-feature-title">Email Studio</div>
+            <div class="mc-feature-desc">Sender authentication, domain verification, send classifications, inactive sender profiles</div>
+          </div>
+        </div>
+        <div class="mc-feature">
+          <div class="mc-feature-icon">🗺️</div>
+          <div>
+            <div class="mc-feature-title">Journey Builder</div>
+            <div class="mc-feature-desc">Errored journeys, zombie journeys with 0 contacts, missing exit criteria, abandoned drafts</div>
+          </div>
+        </div>
+        <div class="mc-feature">
+          <div class="mc-feature-icon">⚙️</div>
+          <div>
+            <div class="mc-feature-title">Automation Studio</div>
+            <div class="mc-feature-desc">Failed automations, overdue schedules, missing error notifications, long-running jobs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- MC mock score card -->
+    <div class="mc-card">
+      <div style="font-size:13px;font-weight:700;color:#1a202c;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+        MC Health Report
+        <span style="background:#fff7ed;color:#e8720c;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;border:1px solid #fed7aa">Marketing Cloud</span>
+      </div>
+      <div class="mc-score-row">
+        <div class="mc-score-num">71</div>
+        <div class="mc-score-meta">
+          <div class="grade">C</div>
+          <div style="font-size:12px;color:#a0aec0">out of 100</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="preview-bar-row">
+          <div class="preview-bar-lbl" style="font-size:11px">Deliverability</div>
+          <div class="preview-bar-track"><div class="preview-bar-fill" style="width:82%;background:#16a34a"></div></div>
+          <div class="preview-bar-val" style="color:#16a34a;font-size:11px">82</div>
+        </div>
+        <div class="preview-bar-row">
+          <div class="preview-bar-lbl" style="font-size:11px">Journey Health</div>
+          <div class="preview-bar-track"><div class="preview-bar-fill" style="width:58%;background:#dc2626"></div></div>
+          <div class="preview-bar-val" style="color:#dc2626;font-size:11px">58</div>
+        </div>
+        <div class="preview-bar-row">
+          <div class="preview-bar-lbl" style="font-size:11px">Automation</div>
+          <div class="preview-bar-track"><div class="preview-bar-fill" style="width:74%;background:#ca8a04"></div></div>
+          <div class="preview-bar-val" style="color:#ca8a04;font-size:11px">74</div>
+        </div>
+        <div class="preview-bar-row">
+          <div class="preview-bar-lbl" style="font-size:11px">Sender Auth</div>
+          <div class="preview-bar-track"><div class="preview-bar-fill" style="width:65%;background:#ca8a04"></div></div>
+          <div class="preview-bar-val" style="color:#ca8a04;font-size:11px">65</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:10px 12px;background:#fff7ed;border-radius:9px;border:1px solid #fed7aa;font-size:12px;color:#92400e">
+        <strong>⚠ 2 journeys in error state</strong> — immediate attention required
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SECURITY ══ -->
+<section id="security">
+  <div class="section-center" style="max-width:860px;margin:0 auto">
+    <div class="section-label">Security & Privacy</div>
+    <h2 class="section-title">Your data never leaves Salesforce</h2>
+    <p class="section-sub">We use Salesforce's official OAuth 2.0 flow with PKCE. We read metadata to score your org — we never write anything, never store your data, never see your password.</p>
+  </div>
+  <div class="security-grid">
+    <div class="security-item">
+      <div class="security-icon">🔐</div>
+      <div class="security-title">OAuth 2.0 + PKCE</div>
+      <div class="security-desc">Industry-standard OAuth with Proof Key for Code Exchange. No passwords ever transmitted to our servers.</div>
+    </div>
+    <div class="security-item">
+      <div class="security-icon">👁️</div>
+      <div class="security-title">Read-only access</div>
+      <div class="security-desc">We only read metadata — Apex classes, Flows, settings. We never create, update, or delete anything in your org.</div>
+    </div>
+    <div class="security-item">
+      <div class="security-icon">⏱️</div>
+      <div class="security-title">8-hour sessions</div>
+      <div class="security-desc">Access tokens expire automatically after 8 hours. You can revoke access instantly at any time from Salesforce Setup.</div>
+    </div>
+    <div class="security-item">
+      <div class="security-icon">🗑️</div>
+      <div class="security-title">No data retention</div>
+      <div class="security-desc">Only your audit scores and recommended actions are stored — never raw org data, never customer records.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CTA ══ -->
+<div class="cta-section">
+  <h2>Ready to audit your org?</h2>
+  <p>Free, instant, no credit card. Connect your Salesforce org or Marketing Cloud and get your health score in under 2 minutes.</p>
+  <div class="cta-buttons">
+    <a href="/app" class="btn-hero-primary">
+      Run Free Audit Now →
+    </a>
+    <a href="/app#mc" class="btn-hero-secondary">
+      Audit Marketing Cloud
+    </a>
+  </div>
+</div>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div>
+    <div class="footer-logo">SF<span>Health</span></div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:4px">Automated Salesforce & Marketing Cloud Audit</div>
+  </div>
+  <div class="footer-links">
+    <a href="#features" class="footer-link">Features</a>
+    <a href="#what-we-check" class="footer-link">What we check</a>
+    <a href="#security" class="footer-link">Security</a>
+    <a href="/app" class="footer-link">Launch App</a>
+  </div>
+  <div class="footer-right">
+    Built by <strong style="color:rgba(255,255,255,0.5)">Aryan Sharma</strong> · © 2026
+  </div>
+</footer>
+
+</body>
+</html>

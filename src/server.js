@@ -61,8 +61,12 @@ app.use((req, _res, next) => {
   next();
 });
 
-// index.html must never be cached so deploys are always served fresh
+// Landing page at root, app at /app — never cached
 app.get("/", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/landing.html"));
+});
+app.get("/app", (_req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/index.html"));
 });
@@ -462,9 +466,11 @@ app.get("/admin", (_req, res) => {
 
 // ─── SPA fallback ─────────────────────────────────────────────────────────────
 
-app.get("*", (_req, res) => {
+app.get("*", (req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  res.sendFile(path.join(__dirname, "../public/index.html"));
+  // Auth callbacks and app routes serve the app; everything else serves landing
+  const isAppRoute = req.path.startsWith("/auth") || req.path.startsWith("/app");
+  res.sendFile(path.join(__dirname, isAppRoute ? "../public/index.html" : "../public/landing.html"));
 });
 
 app.use((err, _req, res, _next) => {
