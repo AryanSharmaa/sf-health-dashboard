@@ -64,24 +64,6 @@ app.use((req, _res, next) => {
   next();
 });
 
-// ─── Shared report (public, no auth) ─────────────────────────────────────────
-
-app.get("/share/:token", async (req, res) => {
-  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  res.sendFile(path.join(__dirname, "../public/share.html"));
-});
-
-app.get("/api/share/:token", readLimiter, async (req, res) => {
-  const share = await repo.getShare(req.params.token).catch(() => null);
-  if (!share) return res.status(404).json({ error: "Report not found or link expired." });
-  if (new Date(share.expires_at) < new Date()) {
-    return res.status(410).json({ error: "This share link has expired." });
-  }
-  const audit = await repo.getAudit(share.audit_id).catch(() => null);
-  if (!audit) return res.status(404).json({ error: "Audit not found." });
-  res.json({ share, report: audit.rawScore, metadata: audit.rawMetadata });
-});
-
 // Landing page at root, app at /app — never cached
 app.get("/", (_req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
@@ -127,6 +109,24 @@ const runningJobs = new Map();
 // ─── Auth routes ──────────────────────────────────────────────────────────────
 
 app.use("/auth", authRoutes);
+
+// ─── Shared report (public, no auth) ─────────────────────────────────────────
+
+app.get("/share/:token", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/share.html"));
+});
+
+app.get("/api/share/:token", readLimiter, async (req, res) => {
+  const share = await repo.getShare(req.params.token).catch(() => null);
+  if (!share) return res.status(404).json({ error: "Report not found or link expired." });
+  if (new Date(share.expires_at) < new Date()) {
+    return res.status(410).json({ error: "This share link has expired." });
+  }
+  const audit = await repo.getAudit(share.audit_id).catch(() => null);
+  if (!audit) return res.status(404).json({ error: "Audit not found." });
+  res.json({ share, report: audit.rawScore, metadata: audit.rawMetadata });
+});
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 
