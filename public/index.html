@@ -43,7 +43,8 @@
     .btn-connect-sandbox{background:white;color:#0070d2;border:2px solid #0070d2;box-shadow:none}
     .btn-connect-sandbox:hover{background:#eff6ff}
     .connect-note{font-size:12px;color:#a0aec0;margin-top:18px;line-height:1.6}
-    .error-banner{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:9px;font-size:14px;margin-bottom:20px;display:none}
+    .error-banner{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:9px;font-size:14px;margin-bottom:20px;display:none;line-height:1.7}
+    .error-banner code{background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px;font-size:12px}
 
     /* ── How it works cards ── */
     .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:8px}
@@ -865,8 +866,20 @@ async function checkSession() {
   const err = params.get("error");
   if (err) {
     const banner = document.getElementById("error-banner");
-    banner.textContent = `Connection failed: ${err}`;
-    banner.style.display = "block";
+    const isCrossOrg = err.toLowerCase().includes("cross-org") || err.toLowerCase().includes("cross_org");
+    if (isCrossOrg) {
+      banner.innerHTML =
+        "<strong>Salesforce session conflict detected.</strong> Your browser has an active Salesforce session " +
+        "from a different org. To fix this:<br/>" +
+        "<strong>1.</strong> Log out of Salesforce in this browser completely.<br/>" +
+        "<strong>2.</strong> Clear cookies for <code>salesforce.com</code> and <code>force.com</code> " +
+        "(Browser Settings → Privacy → Clear browsing data → Cookies → add those sites).<br/>" +
+        "<strong>3.</strong> Try connecting again in a private/incognito window if the issue persists.";
+      banner.style.cssText = "display:block;background:#fef9c3;border:1px solid #fde047;color:#713f12;padding:14px 16px;border-radius:9px;font-size:13px;margin-bottom:20px;line-height:1.7";
+    } else {
+      banner.textContent = `Connection failed: ${err}`;
+      banner.style.display = "block";
+    }
     history.replaceState({}, "", "/");
   }
   const res     = await fetch("/auth/session", { credentials: "include" });

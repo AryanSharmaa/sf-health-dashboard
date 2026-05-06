@@ -23,6 +23,9 @@ router.get("/salesforce", (req, res) => {
   const clientId = process.env.SF_CLIENT_ID;
   if (!clientId) return res.status(500).send("SF_CLIENT_ID is not configured.");
 
+  // Never cache the auth initiation — a stale redirect causes cross-org errors
+  res.setHeader("Cache-Control", "no-store");
+
   const codeVerifier  = generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
   const state         = generateState(codeVerifier);
