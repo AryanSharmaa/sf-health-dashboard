@@ -226,6 +226,84 @@ async function tryOpenRouter(prompt) {
   return text;
 }
 
+// ─── Streaming: OpenRouter SSE → pipes chunks to Express response ────────────
+
+function streamOpenRouter(prompt, res) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return false;
+
+  const body = JSON.stringify({
+    model: OPENROUTER_MODEL,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user",   content: prompt },
+    ],
+    max_tokens: 1024,
+    temperature: 0.3,
+    stream: true,
+  });
+
+  return new Promise((resolve) => {
+    const options = {
+      hostname: "openrouter.ai",
+      path:     "/api/v1/chat/completions",
+      method:   "POST",
+      headers:  {
+        "Content-Type":   "application/json",
+        "Authorization":  `Bearer ${apiKey}`,
+        "HTTP-Referer":   process.env.APP_URL || "https://sf-health-dashboard.onrender.com",
+        "X-Title":        "SF Health Dashboard",
+        "Content-Length": Buffer.byteLength(body),
+      },
+    };
+
+    const req = https.request(options, (upstream) => {
+      if (upstream.statusCode !== 200) {
+        // Non-200 — fall back to non-streaming path
+        upstream.resume();
+        return resolve(false);
+      }
+
+      // Start SSE response
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("X-Accel-Buffering", "no");
+      res.flushHeaders();
+
+      let buf = "";
+      upstream.on("data", (chunk) => {
+        buf += chunk.toString();
+        const lines = buf.split("\n");
+        buf = lines.pop(); // keep incomplete line
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6).trim();
+          if (payload === "[DONE]") { res.write("data: [DONE]\n\n"); continue; }
+          try {
+            const parsed = JSON.parse(payload);
+            const token  = parsed.choices?.[0]?.delta?.content;
+            if (token) res.write(`data: ${JSON.stringify({ token })}\n\n`);
+          } catch { /* skip malformed */ }
+        }
+      });
+
+      upstream.on("end", () => {
+        res.write("data: [DONE]\n\n");
+        res.end();
+        resolve(true);
+      });
+
+      upstream.on("error", () => resolve(false));
+    });
+
+    req.on("error", () => resolve(false));
+    req.write(body);
+    req.end();
+  });
+}
+
+module.exports.streamOpenRouter = streamOpenRouter;
+
 // ─── Strategy 4: Google Gemini Flash (free tier fallback) ────────────────────
 
 async function tryGemini(prompt) {
@@ -372,4 +450,4 @@ async function generateRemediationGuide({ action, category, priority, orgProfile
   );
 }
 
-module.exports = { generateRemediationGuide };
+module.exports = { generateRemediationGuide, streamOpenRouter };

@@ -1323,44 +1323,69 @@ async function fetchAiGuide(jobId, action, index) {
   const btn   = document.getElementById("ai-btn-"+index);
   const panel = document.getElementById("ai-guide-"+index);
 
-  // Toggle off if already shown
   if (panel.classList.contains("visible")) {
     panel.classList.remove("visible");
     btn.textContent = "✦ AI Fix Guide";
     return;
   }
 
-  // Show loading state
   btn.disabled = true;
   btn.textContent = "⏳ Generating…";
   panel.classList.add("visible");
-  panel.innerHTML = '<div class="ai-guide-loading">Claude is generating your step-by-step fix guide…</div>';
+  panel.innerHTML = '<div class="ai-guide-loading"><span class="spinner" style="width:11px;height:11px;border-width:2px;margin-right:6px"></span>Generating fix guide…</div>';
+
+  const params = new URLSearchParams({ action: action.action, category: action.category, priority: action.priority });
+  const url    = `/api/audit/${jobId}/advise/stream?${params}`;
 
   try {
-    const res  = await fetch("/api/audit/"+jobId+"/advise", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ action: action.action, category: action.category, priority: action.priority }),
-    });
-    const data = await res.json();
+    const response = await fetch(url, { credentials: "include" });
+    if (!response.ok) throw new Error("Request failed: " + response.status);
 
-    if (data.unavailable) {
-      panel.innerHTML =
-        '<div style="color:#6b7280;font-size:13px;line-height:1.6">' +
-        '<strong style="color:#1a202c">AI not configured</strong><br>' +
-        'Add an <strong>OPENROUTER_API_KEY</strong> in your Render dashboard for free AI guides.<br>' +
-        '<span style="font-size:12px">Get a free key at <strong>openrouter.ai</strong> → Keys (free models available, no billing needed).</span>' +
-        '</div>';
-      btn.textContent = "✦ AI Fix Guide";
-      btn.disabled = false;
-      return;
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let   raw     = "";
+    let   started = false;
+
+    panel.innerHTML = '<div class="ai-badge">✦ AI Fix Guide</div><div class="ai-stream-text" id="ai-stream-'+index+'"></div>';
+    const streamEl = document.getElementById("ai-stream-"+index);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      raw += decoder.decode(value, { stream: true });
+      const lines = raw.split("\n");
+      raw = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (payload === "[DONE]") break;
+        try {
+          const data = JSON.parse(payload);
+          if (data.unavailable) {
+            panel.innerHTML =
+              '<div style="color:#6b7280;font-size:13px;line-height:1.6">' +
+              '<strong style="color:#1a202c">AI not configured</strong><br>' +
+              'Add an <strong>OPENROUTER_API_KEY</strong> in your Render dashboard for free AI guides.<br>' +
+              '<span style="font-size:12px">Get a free key at <strong>openrouter.ai</strong> → Keys (free models available, no billing needed).</span>' +
+              '</div>';
+            btn.textContent = "✦ AI Fix Guide";
+            btn.disabled = false;
+            return;
+          }
+          if (data.error) throw new Error(data.error);
+          if (data.token) {
+            if (!started) { streamEl.textContent = ""; started = true; }
+            streamEl.textContent += data.token;
+            // Re-render formatted once done — for now show plain text while streaming
+          }
+        } catch(e) { if(e.message !== "Unexpected end of JSON") throw e; }
+      }
     }
 
-    if (data.error) throw new Error(data.error);
-    panel.innerHTML =
-      '<div class="ai-badge">✦ AI Fix Guide</div>' +
-      '<div class="ai-steps">' + formatAiGuide(data.guide) + "</div>";
+    // Final render — format the complete text
+    panel.innerHTML = '<div class="ai-badge">✦ AI Fix Guide</div><div class="ai-steps">' + formatAiGuide(streamEl?.textContent || "") + "</div>";
     btn.textContent = "✦ Hide Guide";
   } catch (err) {
     panel.innerHTML = '<div class="ai-guide-error">Could not generate guide: '+err.message+'</div>';
@@ -1385,33 +1410,51 @@ async function fetchMcAiGuide(jobId, action, index) {
   btn.disabled = true;
   btn.textContent = "⏳ Generating…";
   panel.classList.add("visible");
-  panel.innerHTML = '<div class="ai-guide-loading">Claude is generating your step-by-step fix guide…</div>';
+  panel.innerHTML = '<div class="ai-guide-loading"><span class="spinner" style="width:11px;height:11px;border-width:2px;margin-right:6px"></span>Generating fix guide…</div>';
+
+  const params = new URLSearchParams({ action: action.action, category: action.category, priority: action.priority });
+  const url    = `/api/mc/audit/${jobId}/advise/stream?${params}`;
 
   try {
-    const res  = await fetch("/api/mc/audit/" + jobId + "/advise", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ action: action.action, category: action.category, priority: action.priority }),
-    });
-    const data = await res.json();
+    const response = await fetch(url, { credentials: "include" });
+    if (!response.ok) throw new Error("Request failed: " + response.status);
 
-    if (data.unavailable) {
-      panel.innerHTML =
-        '<div style="color:#6b7280;font-size:13px;line-height:1.6">' +
-        '<strong style="color:#1a202c">AI not configured</strong><br>' +
-        'Add a <strong>GEMINI_API_KEY</strong> in your Render dashboard for free AI guides.<br>' +
-        '<span style="font-size:12px">Get a free key at <strong>aistudio.google.com</strong> (1M tokens/day free).</span>' +
-        '</div>';
-      btn.textContent = "✦ AI Fix Guide";
-      btn.disabled = false;
-      return;
+    const reader  = response.body.getReader();
+    const decoder = new TextDecoder();
+    let   raw     = "";
+    let   started = false;
+
+    panel.innerHTML = '<div class="ai-badge">✦ AI Fix Guide</div><div class="ai-stream-text" id="mc-ai-stream-'+index+'"></div>';
+    const streamEl = document.getElementById("mc-ai-stream-"+index);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      raw += decoder.decode(value, { stream: true });
+      const lines = raw.split("\n");
+      raw = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (payload === "[DONE]") break;
+        try {
+          const data = JSON.parse(payload);
+          if (data.unavailable) {
+            panel.innerHTML =
+              '<div style="color:#6b7280;font-size:13px;line-height:1.6">' +
+              '<strong style="color:#1a202c">AI not configured</strong><br>' +
+              'Add an <strong>OPENROUTER_API_KEY</strong> in your Render dashboard for free AI guides.<br>' +
+              '<span style="font-size:12px">Get a free key at <strong>openrouter.ai</strong> → Keys (free models available, no billing needed).</span>' +
+              '</div>';
+            btn.textContent = "✦ AI Fix Guide"; btn.disabled = false; return;
+          }
+          if (data.error) throw new Error(data.error);
+          if (data.token) { if (!started) { streamEl.textContent = ""; started = true; } streamEl.textContent += data.token; }
+        } catch(e) { if(e.message !== "Unexpected end of JSON") throw e; }
+      }
     }
 
-    if (data.error) throw new Error(data.error);
-    panel.innerHTML =
-      '<div class="ai-badge">✦ AI Fix Guide</div>' +
-      '<div class="ai-steps">' + formatAiGuide(data.guide) + "</div>";
+    panel.innerHTML = '<div class="ai-badge">✦ AI Fix Guide</div><div class="ai-steps">' + formatAiGuide(streamEl?.textContent || "") + "</div>";
     btn.textContent = "✦ Hide Guide";
   } catch (err) {
     panel.innerHTML = '<div class="ai-guide-error">Could not generate guide: ' + err.message + '</div>';
