@@ -1294,7 +1294,7 @@ function renderProactiveMonitoring(pm) {
 // ─── MC Operational Health ────────────────────────────────────────────────────
 
 function renderMcOperationalHealth(oh) {
-  if (!oh || typeof oh !== "object") return;
+  if (!oh) oh = {}; // always show the card, even if data is empty
 
   const card    = document.getElementById("mc-operational-card");
   const content = document.getElementById("mc-operational-content");
@@ -1368,7 +1368,7 @@ function renderMcOperationalHealth(oh) {
   ].filter(Boolean);
   if (connItems.length) html += `<div class="pm-section"><div class="pm-section-title">Marketing Cloud Connector</div><div class="pm-grid">${connItems.join("")}</div></div>`;
 
-  content.innerHTML = html || '<div style="font-size:13px;color:#a0aec0">No operational health data available.</div>';
+  content.innerHTML = html || '<div style="font-size:13px;color:#a0aec0;padding:8px 0">Operational health data could not be retrieved for this org. Some APIs may require additional permissions.</div>';
   card.style.display = "block";
 }
 
