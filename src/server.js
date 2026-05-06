@@ -385,6 +385,44 @@ app.patch("/api/admin/tickets/:id", requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── Gemini probe (debug only) ───────────────────────────────────────────────
+
+app.get("/api/gemini-probe", requireSession, async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.json({ ok: false, error: "GEMINI_API_KEY not set in environment." });
+
+  const body = JSON.stringify({
+    contents: [{ parts: [{ text: "Say hello in one word." }] }],
+    generationConfig: { maxOutputTokens: 10 },
+  });
+
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const opts = {
+        hostname: "generativelanguage.googleapis.com",
+        path: `/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+      };
+      const r = https.request(opts, resp => {
+        let raw = "";
+        resp.on("data", c => raw += c);
+        resp.on("end", () => {
+          try { resolve({ status: resp.statusCode, body: JSON.parse(raw) }); }
+          catch { resolve({ status: resp.statusCode, body: raw.slice(0, 500) }); }
+        });
+      });
+      r.on("error", reject);
+      r.write(body);
+      r.end();
+    });
+    const text = result.body?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    res.json({ ok: result.status === 200, status: result.status, text, raw: result.body });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+
 // ─── Einstein probe (debug only) ─────────────────────────────────────────────
 
 app.get("/api/einstein-probe", requireSession, async (req, res) => {
