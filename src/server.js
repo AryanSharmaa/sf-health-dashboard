@@ -39,7 +39,7 @@ app.use(helmet({
       scriptSrc:     ["'self'", "'unsafe-inline'"],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc:      ["'self'", "'unsafe-inline'"],
-      imgSrc:        ["'self'", "data:"],
+      imgSrc:        ["'self'", "data:", "https://login.salesforce.com", "https://test.salesforce.com"],
       connectSrc:    ["'self'"],
     },
   },

@@ -128,21 +128,48 @@ router.get("/salesforce/clear-session", (req, res) => {
   const isSandbox = req.query.env === "sandbox";
   const loginUrl  = isSandbox ? "https://test.salesforce.com" : "https://login.salesforce.com";
 
-  // Clear our own session cookie
-  res.clearCookie("sf_session", {
-    httpOnly: true,
-    secure:   process.env.NODE_ENV === "production",
-    sameSite: "lax",
-  });
+  res.clearCookie("sf_session", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" });
   res.clearCookie("sf_state");
   res.clearCookie("sf_env");
   res.clearCookie("sf_pkce");
 
-  // After SF logs the user out it will redirect to retUrl — which is our fresh auth start
   const appUrl      = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
   const authRestart = `${appUrl}/auth/salesforce?force=1${isSandbox ? "&env=sandbox" : ""}`;
-  const retUrl      = encodeURIComponent(authRestart);
-  res.redirect(`${loginUrl}/secur/logout.jsp?retUrl=${retUrl}`);
+
+  // logout.jsp does NOT redirect to external retUrl domains — it ignores it and
+  // dumps the user on the SF homepage. Instead: serve a page that fires a hidden
+  // iframe to logout.jsp (clears the SF browser session), then immediately
+  // redirects the top-level window to our fresh OAuth start.
+  res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Signing out…</title>
+  <style>
+    body { font-family: -apple-system, sans-serif; display: flex; align-items: center;
+           justify-content: center; height: 100vh; margin: 0; background: #f8fafc; }
+    .msg { text-align: center; color: #4a5568; font-size: 15px; }
+    .spinner { width: 32px; height: 32px; border: 3px solid #e2e8f0;
+               border-top-color: #0070d2; border-radius: 50%;
+               animation: spin 0.7s linear infinite; margin: 0 auto 16px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="msg">
+    <div class="spinner"></div>
+    Signing out of Salesforce…
+  </div>
+  <img src="${loginUrl}/secur/logout.jsp" style="display:none" onerror="void(0)" onload="void(0)">
+  <script>
+    // Give the img tag ~1.5s to fire the SF logout request, then redirect to fresh OAuth.
+    // img bypasses X-Frame-Options so it works even on orgs that block iframes.
+    setTimeout(function() {
+      window.location.href = ${JSON.stringify(authRestart)};
+    }, 1500);
+  </script>
+</body>
+</html>`);
 });
 
 // ─── Session info ─────────────────────────────────────────────────────────────
