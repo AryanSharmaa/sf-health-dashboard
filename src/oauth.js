@@ -58,7 +58,7 @@ function validateState(state, storedState) {
 
 // ─── OAuth URL builder (with PKCE) ───────────────────────────────────────────
 
-function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge, forceLogin = false }) {
+function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge }) {
   const base   = loginUrl || "https://login.salesforce.com";
   const params = new URLSearchParams({
     response_type:         "code",
@@ -69,10 +69,12 @@ function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChall
     code_challenge:        codeChallenge,
     code_challenge_method: "S256",
     display:               "page",
+    // prompt=select_account prevents cross-org conflicts by always showing the
+    // account picker, so users can choose the right org even if another SF
+    // session is active in their browser. This is the only reliable solution —
+    // trying to clear the SF session from outside login.salesforce.com does not work.
+    prompt:                "select_account",
   });
-  // Only force re-login when we explicitly want a fresh SF session (e.g. cross-org recovery).
-  // Using prompt=login on every connect forces a password prompt even for already-logged-in users.
-  if (forceLogin) params.set("prompt", "login");
   return `${base}/services/oauth2/authorize?${params.toString()}`;
 }
 

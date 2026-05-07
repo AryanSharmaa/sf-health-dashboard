@@ -995,20 +995,8 @@ async function checkSession() {
   const err = params.get("error");
   if (err) {
     const banner = document.getElementById("error-banner");
-    const isCrossOrg = err.toLowerCase().includes("cross-org") || err.toLowerCase().includes("cross_org");
-    if (isCrossOrg) {
-      const env = params.get("env") || "production";
-      banner.innerHTML =
-        "<strong>Salesforce session conflict.</strong> Your browser has an active Salesforce session from a different org. " +
-        "Click below to sign out of Salesforce and reconnect automatically — no manual cookie clearing needed.<br/><br/>" +
-        `<a href="/auth/salesforce/clear-session${env === "sandbox" ? "?env=sandbox" : ""}" ` +
-        `style="display:inline-block;padding:8px 18px;background:#0070d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px">` +
-        "Sign out of Salesforce &amp; Retry</a>";
-      banner.style.cssText = "display:block;background:#fef9c3;border:1px solid #fde047;color:#713f12;padding:14px 16px;border-radius:9px;font-size:13px;margin-bottom:20px;line-height:1.7";
-    } else {
-      banner.textContent = `Connection failed: ${err}`;
-      banner.style.display = "block";
-    }
+    banner.textContent = `Connection failed: ${err}`;
+    banner.style.display = "block";
     history.replaceState({}, "", "/app");
   }
   const res     = await fetch("/auth/session", { credentials: "include" });

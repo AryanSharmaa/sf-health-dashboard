@@ -34,8 +34,7 @@ router.get("/salesforce", (req, res) => {
     ? "https://test.salesforce.com"
     : "https://login.salesforce.com";
   const redirectUri   = getRedirectUri(req);
-  const forceLogin    = req.query.force === "1";
-  const authUrl       = getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge, forceLogin });
+  const authUrl       = getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge });
 
   const cookieOpts = { httpOnly: true, maxAge: 10 * 60 * 1000, sameSite: "lax", secure: process.env.NODE_ENV === "production" };
   res.cookie("sf_env",   loginUrl,     cookieOpts);
@@ -51,16 +50,9 @@ router.get("/salesforce/callback", async (req, res) => {
   const { code, state, error, error_description } = req.query;
 
   if (error) {
-    const isSandbox = (req.cookies?.sf_env || "").includes("test.salesforce.com");
     res.clearCookie("sf_state");
     res.clearCookie("sf_env");
     res.clearCookie("sf_pkce");
-    const isCrossOrg = error.includes("cross") ||
-      (error === "access_denied" && (error_description || "").toLowerCase().includes("cross"));
-    if (isCrossOrg) {
-      const envParam = isSandbox ? "&env=sandbox" : "";
-      return res.redirect(`/app?error=cross-org-conflict${envParam}`);
-    }
     return res.redirect(`/app?error=${encodeURIComponent(error_description || error)}`);
   }
 
@@ -116,60 +108,6 @@ router.get("/salesforce/callback", async (req, res) => {
     console.error("OAuth callback error:", err.message);
     res.redirect(`/app?error=${encodeURIComponent(err.message)}`);
   }
-});
-
-// ─── Clear session + re-auth (cross-org recovery) ────────────────────────────
-// The user has an active SF session from a different org in their browser.
-// We clear our app session and send them to SF logout first, then back to /auth/salesforce.
-// SF's own logout clears the browser session on login.salesforce.com so the next
-// authorize call gets a fresh login screen instead of inheriting the wrong org.
-
-router.get("/salesforce/clear-session", (req, res) => {
-  const isSandbox = req.query.env === "sandbox";
-  const loginUrl  = isSandbox ? "https://test.salesforce.com" : "https://login.salesforce.com";
-
-  res.clearCookie("sf_session", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" });
-  res.clearCookie("sf_state");
-  res.clearCookie("sf_env");
-  res.clearCookie("sf_pkce");
-
-  const appUrl      = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
-  const authRestart = `${appUrl}/auth/salesforce?force=1${isSandbox ? "&env=sandbox" : ""}`;
-
-  // logout.jsp does NOT redirect to external retUrl domains — it ignores it and
-  // dumps the user on the SF homepage. Instead: serve a page that fires a hidden
-  // iframe to logout.jsp (clears the SF browser session), then immediately
-  // redirects the top-level window to our fresh OAuth start.
-  res.send(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Signing out…</title>
-  <style>
-    body { font-family: -apple-system, sans-serif; display: flex; align-items: center;
-           justify-content: center; height: 100vh; margin: 0; background: #f8fafc; }
-    .msg { text-align: center; color: #4a5568; font-size: 15px; }
-    .spinner { width: 32px; height: 32px; border: 3px solid #e2e8f0;
-               border-top-color: #0070d2; border-radius: 50%;
-               animation: spin 0.7s linear infinite; margin: 0 auto 16px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
-</head>
-<body>
-  <div class="msg">
-    <div class="spinner"></div>
-    Signing out of Salesforce…
-  </div>
-  <img src="${loginUrl}/secur/logout.jsp" style="display:none" onerror="void(0)" onload="void(0)">
-  <script>
-    // Give the img tag ~1.5s to fire the SF logout request, then redirect to fresh OAuth.
-    // img bypasses X-Frame-Options so it works even on orgs that block iframes.
-    setTimeout(function() {
-      window.location.href = ${JSON.stringify(authRestart)};
-    }, 1500);
-  </script>
-</body>
-</html>`);
 });
 
 // ─── Session info ─────────────────────────────────────────────────────────────
