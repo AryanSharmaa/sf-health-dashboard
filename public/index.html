@@ -124,9 +124,13 @@
     .btn-run{padding:11px 28px;background:linear-gradient(135deg,#0070d2,#0058a9);color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 6px rgba(0,112,210,0.25);white-space:nowrap}
     .btn-run:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,112,210,0.4)}
     .btn-run:disabled{background:#93c5fd;cursor:not-allowed;transform:none;box-shadow:none}
-    .status{display:none;padding:13px 16px;border-radius:9px;font-size:14px;font-weight:500;margin-top:14px}
-    .status.running{display:block;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+    .status{display:none;padding:14px 16px;border-radius:10px;font-size:14px;font-weight:500;margin-top:14px;line-height:1.5}
+    .status.running{display:block;background:linear-gradient(135deg,#eff6ff,#dbeafe);color:#1d4ed8;border:1px solid #bfdbfe}
     .status.error{display:block;background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+    .status-steps{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .step-pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:#bfdbfe;color:#1d4ed8;opacity:.45;transition:opacity .3s}
+    .step-pill.done{opacity:1;background:#1d4ed8;color:white}
+    .step-pill.active{opacity:1;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
     .spinner{display:inline-block;width:13px;height:13px;border:2px solid #93c5fd;border-top-color:#1d4ed8;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;vertical-align:middle}
     @keyframes spin{to{transform:rotate(360deg)}}
 
@@ -340,6 +344,46 @@
     .footer-name{font-size:13px;font-weight:700;color:#1a202c}
     .footer-badge{background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;letter-spacing:0.04em;text-transform:uppercase}
 
+    /* ── Improved action items — severity left border ── */
+    .action-item { border-left: 3px solid transparent; margin-left: -3px; padding-left: 3px; }
+    .action-item[data-priority="critical"] { border-left-color: #dc2626; }
+    .action-item[data-priority="high"]     { border-left-color: #ea580c; }
+    .action-item[data-priority="medium"]   { border-left-color: #ca8a04; }
+    .action-item[data-priority="low"]      { border-left-color: #16a34a; }
+
+    /* ── Stat box hover ── */
+    .stat-box { transition: all .18s; cursor: default; }
+    .stat-box:hover { background: #f0f9ff; border-color: #bae6fd; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,112,210,.07); }
+
+    /* ── Gauge & score entrance animations ── */
+    @keyframes gaugeIn { from { stroke-dasharray: 0 188 } }
+    #gauge-arc, #mc-gauge-arc { animation: gaugeIn 1.2s ease-out }
+    @keyframes scoreIn { from { opacity:0; transform: scale(.85) } to { opacity:1; transform: scale(1) } }
+    .gauge-score { animation: scoreIn .5s ease-out }
+    @keyframes cardIn { from { opacity:0; transform: translateY(10px) } to { opacity:1; transform: translateY(0) } }
+    #results .card { animation: cardIn .35s ease-out both }
+    #results .card:nth-child(2) { animation-delay: .05s }
+    #results .card:nth-child(3) { animation-delay: .10s }
+    #results .card:nth-child(4) { animation-delay: .15s }
+    #results .card:nth-child(5) { animation-delay: .20s }
+
+    /* ── History: improved org cards ── */
+    .hist-org-card { display:flex;align-items:center;gap:14px;padding:16px 18px;background:white;border:1.5px solid #e2e8f0;border-radius:14px;cursor:pointer;transition:all .18s;margin-bottom:10px }
+    .hist-org-card:hover { border-color:#0070d2;box-shadow:0 4px 20px rgba(0,112,210,.09);transform:translateY(-1px) }
+    .hist-org-card:hover .hist-org-name { color:#0070d2 }
+    .hist-org-avatar { width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#0a1628,#0070d2);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;color:white;flex-shrink:0 }
+    .hist-org-name { font-size:15px;font-weight:700;color:#0f172a;transition:color .15s }
+    .hist-org-meta { font-size:12px;color:#94a3b8;margin-top:2px }
+    .hist-org-score-wrap { margin-left:auto;text-align:right;flex-shrink:0 }
+    .hist-org-score { font-size:26px;font-weight:900;line-height:1 }
+    .hist-org-grade { font-size:12px;font-weight:700;opacity:.7 }
+    .hist-org-arrow { font-size:16px;color:#cbd5e0;margin-left:8px;transition:transform .15s,color .15s;flex-shrink:0 }
+    .hist-org-card:hover .hist-org-arrow { transform:translateX(4px);color:#0070d2 }
+
+    /* ── Category trend cards ── */
+    .cat-trend-card { background:#f9fafb;border-radius:12px;padding:16px;border:1px solid #e8edf2;transition:all .18s }
+    .cat-trend-card:hover { border-color:#bfdbfe;background:#f0f7ff }
+
     /* ── Mobile ── */
     @media(max-width:640px){
       nav{padding:12px 16px;gap:8px}
@@ -509,8 +553,11 @@
         <button class="btn-run" id="run-btn">Run Health Audit</button>
       </div>
       <div class="status" id="status-box">
-        <span class="spinner"></span>
-        <span id="status-text">Connecting...</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="spinner"></span>
+          <span id="status-text">Connecting...</span>
+        </div>
+        <div class="status-steps" id="status-steps"></div>
       </div>
     </div>
 
@@ -634,16 +681,22 @@
       <div id="compare-result" style="display:none;margin-top:20px"></div>
     </div>
     <div id="org-detail" style="display:none">
-      <div class="card">
-        <h2 id="detail-org-name"></h2>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <div id="detail-delta" style="font-size:22px;font-weight:800"></div>
-          <div id="detail-meta" style="font-size:13px;color:#718096"></div>
+      <div class="card" style="padding:20px 24px">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div id="detail-org-avatar" style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#0a1628,#0070d2);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:white;flex-shrink:0">?</div>
+          <div style="flex:1;min-width:0">
+            <h2 id="detail-org-name" style="font-size:18px;margin-bottom:3px;font-weight:800;color:#0f172a"></h2>
+            <div id="detail-meta" style="font-size:13px;color:#94a3b8"></div>
+          </div>
+          <div id="detail-score-wrap" style="text-align:right;flex-shrink:0">
+            <div id="detail-score-val" style="font-size:40px;font-weight:900;line-height:1"></div>
+            <div id="detail-delta" style="font-size:14px;font-weight:700;margin-top:2px"></div>
+          </div>
         </div>
       </div>
       <div class="card">
         <h2>Score Over Time</h2>
-        <div class="trend-chart" id="trend-chart"></div>
+        <div class="trend-chart" id="trend-chart" style="height:180px"></div>
       </div>
       <div class="card">
         <h2>Category Trends</h2>
@@ -1473,11 +1526,34 @@ function goHome() {
 
 // ─── Audit ────────────────────────────────────────────────────────────────────
 
-function setStatus(msg, type) {
+const STEP_LABELS = ["Automation","Security","Data Quality","API Limits","Code Quality","User Adoption","Unused Fields","Tech Debt","Score"];
+
+let _stepIndex = 0;
+
+function initStatusSteps() {
+  const el = document.getElementById("status-steps");
+  el.innerHTML = STEP_LABELS.map((l,i) =>
+    `<span class="step-pill" id="spill-${i}">${l}</span>`
+  ).join("");
+  _stepIndex = 0;
+}
+
+function setStatus(msg, type, stepIdx) {
   const box = document.getElementById("status-box");
   box.className = "status " + (type || "running");
   box.style.display = "block";
   document.getElementById("status-text").textContent = msg;
+  if (type === "error") return;
+  const idx = stepIdx !== undefined ? stepIdx : _stepIndex;
+  // Mark previous as done, current as active
+  STEP_LABELS.forEach((_, i) => {
+    const pill = document.getElementById("spill-"+i);
+    if (!pill) return;
+    if (i < idx) { pill.className = "step-pill done"; }
+    else if (i === idx) { pill.className = "step-pill active"; }
+    else { pill.className = "step-pill"; }
+  });
+  _stepIndex = idx;
 }
 
 const STEPS = [
@@ -1490,7 +1566,8 @@ const STEPS = [
 async function startAudit() {
   document.getElementById("run-btn").disabled = true;
   document.getElementById("results").style.display = "none";
-  setStatus(STEPS[0]);
+  initStatusSteps();
+  setStatus(STEPS[0], "running", 0);
   try {
     const res = await fetch("/api/audit", { method:"POST", headers:{"Content-Type":"application/json"}, body:"{}", credentials:"include" });
     if (res.status === 401) {
@@ -1509,14 +1586,18 @@ async function startAudit() {
 
 async function pollJob(jobId) {
   let step = 1;
-  const iv = setInterval(() => { if (step < STEPS.length) setStatus(STEPS[step++]); }, 5000);
+  const iv = setInterval(() => {
+    if (step < STEPS.length) { setStatus(STEPS[step], "running", step); step++; }
+  }, 5000);
   while (true) {
     await new Promise(r => setTimeout(r, 3000));
     const res  = await fetch("/api/audit/"+jobId, { credentials:"include" });
     const data = await res.json();
     if (data.status === "complete") {
       clearInterval(iv);
-      document.getElementById("status-box").style.display = "none";
+      // All steps done
+      STEP_LABELS.forEach((_,i) => { const p = document.getElementById("spill-"+i); if(p) p.className="step-pill done"; });
+      setTimeout(() => { document.getElementById("status-box").style.display = "none"; }, 400);
       document.getElementById("run-btn").disabled = false;
       renderAuditResults(data, jobId);
       return;
@@ -1685,7 +1766,7 @@ function renderAuditResults(data, jobId) {
       const drillHtml = drill
         ? `<button class="class-names-toggle" onclick="document.getElementById('${drillId}').classList.toggle('open');this.textContent=document.getElementById('${drillId}').classList.contains('open')?'▲ Hide ${drill.label}':'▼ ${drill.label} (${drill.classes.length})'">▼ ${drill.label} (${drill.classes.length})</button>${classChips(drill.classes)}`
         : "";
-      return `<div class="action-item" id="action-${i}" data-key="${escHtml(key)}">
+      return `<div class="action-item" id="action-${i}" data-key="${escHtml(key)}" data-priority="${escHtml(a.priority)}">
         <div class="action-top">
           <div class="action-num">${i+1}</div>
           <span class="badge ${priorityClass(a.priority)}">${a.priority}</span>
@@ -2287,19 +2368,25 @@ async function loadOrgList() {
     document.getElementById("compare-card").style.display = "none";
     return;
   }
-  el.innerHTML = orgs.map(org =>
-    `<div class="org-item" data-orgid="${org.id}">
+  el.innerHTML = orgs.map(org => {
+    const sc = org.latest_score;
+    const color = sc != null ? scoreColor(sc) : "#94a3b8";
+    const grade = sc != null ? (sc>=90?"A":sc>=80?"B":sc>=70?"C":sc>=60?"D":"F") : "–";
+    const initial = (org.name||"?")[0].toUpperCase();
+    return `<div class="hist-org-card" data-orgid="${escHtml(org.id)}">
+      <div class="hist-org-avatar">${initial}</div>
       <div>
-        <div class="org-name">${org.name}</div>
-        <div class="org-meta">${org.id} · ${org.total_audits} audit${org.total_audits!==1?"s":""} · Last: ${org.last_audit_at?fmtDate(org.last_audit_at):"—"}</div>
+        <div class="hist-org-name">${escHtml(org.name)}</div>
+        <div class="hist-org-meta">${org.total_audits} audit${org.total_audits!==1?"s":""} · Last: ${org.last_audit_at?fmtDate(org.last_audit_at):"—"}</div>
       </div>
-      <div style="text-align:right">
-        <div style="font-size:22px;font-weight:800;color:${scoreColor(org.latest_score||0)}">${org.latest_score||"—"}</div>
-        <div style="font-size:11px;color:#a0aec0">latest score</div>
+      <div class="hist-org-score-wrap">
+        <div class="hist-org-score" style="color:${color}">${sc ?? "—"}</div>
+        ${sc != null ? `<div class="hist-org-grade" style="color:${color}">${grade}</div>` : ""}
       </div>
-    </div>`
-  ).join("");
-  el.querySelectorAll(".org-item").forEach(item => {
+      <span class="hist-org-arrow">→</span>
+    </div>`;
+  }).join("");
+  el.querySelectorAll(".hist-org-card").forEach(item => {
     item.addEventListener("click", () => loadOrgDetail(item.dataset.orgid));
   });
 
@@ -2319,13 +2406,26 @@ async function loadOrgDetail(orgId) {
   _orgAudits = audits;
 
   // Show org name from allOrgs or from the id
-  const orgName = _allOrgs.find(o => o.id === orgId)?.name || orgId;
+  const orgObj  = _allOrgs.find(o => o.id === orgId);
+  const orgName = orgObj?.name || orgId;
   document.getElementById("detail-org-name").textContent = orgName;
+  document.getElementById("detail-org-avatar").textContent = (orgName||"?")[0].toUpperCase();
+
+  const latestScore = audits[0]?.overall_score;
+  const scoreEl = document.getElementById("detail-score-val");
+  if (latestScore != null) {
+    scoreEl.textContent = latestScore;
+    scoreEl.style.color = scoreColor(latestScore);
+    document.getElementById("detail-score-wrap").style.display = "block";
+  } else {
+    document.getElementById("detail-score-wrap").style.display = "none";
+  }
+
   const delta = trend.delta;
-  document.getElementById("detail-delta").innerHTML =
-    delta?.delta !== null && delta?.delta !== undefined
-      ? fmtDelta(delta.delta)+" from previous audit"
-      : "No previous audit to compare";
+  const deltaEl = document.getElementById("detail-delta");
+  deltaEl.innerHTML = delta?.delta !== null && delta?.delta !== undefined
+    ? fmtDelta(delta.delta)+" from previous"
+    : "";
   document.getElementById("detail-meta").textContent =
     audits.length+" audit"+(audits.length!==1?"s":"")+" · Latest: "+(audits[0]?fmtDate(audits[0].created_at):"—");
 
@@ -2458,24 +2558,53 @@ function renderTrendChart(points) {
     el.innerHTML = '<div class="trend-empty">Run more audits to see trends.</div>';
     return;
   }
-  const W=800, H=160, PAD={t:10,r:10,b:30,l:34};
+  if (points.length === 1) {
+    const sc = points[0].overall_score;
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:12px;padding:20px 0">
+      <div style="font-size:40px;font-weight:900;color:${scoreColor(sc)}">${sc}</div>
+      <div style="font-size:13px;color:#94a3b8">Only one audit so far — run another to see a trend line.</div>
+    </div>`;
+    return;
+  }
+  const W=800, H=180, PAD={t:14,r:16,b:38,l:38};
   const scores = points.map(p => p.overall_score);
-  const minS   = Math.max(0, Math.min(...scores)-5);
-  const maxS   = Math.min(100, Math.max(...scores)+5);
+  const minS   = Math.max(0, Math.min(...scores)-8);
+  const maxS   = Math.min(100, Math.max(...scores)+8);
   const xScale = i => PAD.l+(i/(points.length-1||1))*(W-PAD.l-PAD.r);
   const yScale = s => H-PAD.b-((s-minS)/(maxS-minS||1))*(H-PAD.t-PAD.b);
   const pts    = points.map((p,i) => xScale(i).toFixed(1)+","+yScale(p.overall_score).toFixed(1)).join(" ");
   const area   = xScale(0)+","+(H-PAD.b)+" "+pts+" "+xScale(points.length-1)+","+(H-PAD.b);
+  // Horizontal grid lines at 25, 50, 75, 100 (within range)
+  const gridVals = [25,50,75,100].filter(v => v >= minS && v <= maxS);
+  const gridLines = gridVals.map(v =>
+    `<line x1="${PAD.l}" y1="${yScale(v).toFixed(1)}" x2="${W-PAD.r}" y2="${yScale(v).toFixed(1)}" stroke="#f1f5f9" stroke-width="1"/>`
+  ).join("");
   const dots   = points.map((p,i) =>
-    `<circle cx="${xScale(i).toFixed(1)}" cy="${yScale(p.overall_score).toFixed(1)}" r="4" fill="${scoreColor(p.overall_score)}" stroke="white" stroke-width="2"><title>${fmtDate(p.created_at)}: ${p.overall_score}</title></circle>`
+    `<circle cx="${xScale(i).toFixed(1)}" cy="${yScale(p.overall_score).toFixed(1)}" r="5" fill="${scoreColor(p.overall_score)}" stroke="white" stroke-width="2.5"><title>${fmtDate(p.created_at)}: ${p.overall_score}</title></circle>`
   ).join("");
-  const yLbls  = [minS, Math.round((minS+maxS)/2), maxS].map(v =>
-    `<text x="${PAD.l-4}" y="${yScale(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#a0aec0">${v}</text>`
+  const yLbls  = gridVals.map(v =>
+    `<text x="${PAD.l-6}" y="${yScale(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#cbd5e0">${v}</text>`
   ).join("");
+  // Date labels — show first, last, and middle points
+  const xLblIdxs = points.length <= 5
+    ? points.map((_,i) => i)
+    : [0, Math.floor((points.length-1)/2), points.length-1];
+  const xLbls = xLblIdxs.map(i => {
+    const d = new Date(points[i].created_at);
+    const lbl = d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+    return `<text x="${xScale(i).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="10" fill="#94a3b8">${lbl}</text>`;
+  }).join("");
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
-    <polygon points="${area}" fill="#0070d214"/>
+    <defs>
+      <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#0070d2" stop-opacity="0.12"/>
+        <stop offset="100%" stop-color="#0070d2" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    ${gridLines}
+    <polygon points="${area}" fill="url(#areaGrad)"/>
     <polyline points="${pts}" fill="none" stroke="#0070d2" stroke-width="2.5" stroke-linejoin="round"/>
-    ${dots}${yLbls}
+    ${dots}${yLbls}${xLbls}
     <line x1="${PAD.l}" y1="${H-PAD.b}" x2="${W-PAD.r}" y2="${H-PAD.b}" stroke="#e2e8f0" stroke-width="1"/>
   </svg>`;
 }
@@ -2490,11 +2619,24 @@ function renderCategoryTrends(catTrends) {
     const last  = pts[pts.length-1]?.score || 0;
     const first = pts[0]?.score || 0;
     const color = scoreColor(last);
-    return `<div style="background:#f9fafb;border-radius:10px;padding:14px;border:1px solid #e8edf2">
-      <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em">${CAT_LABELS[cat]||cat}</div>
-      <div style="font-size:26px;font-weight:800;color:${color};margin:6px 0">${last}</div>
-      <div style="font-size:12px">${fmtDelta(last-first)} over period</div>
-      <div class="bar-track" style="margin-top:8px"><div class="bar-fill" style="width:${last}%;background:${color}"></div></div>
+    // Mini sparkline for each category
+    const sparkline = (() => {
+      if (pts.length < 2) return "";
+      const W=80, H=28, scores=pts.map(p=>p.score||0);
+      const mn=Math.max(0,Math.min(...scores)-5), mx=Math.min(100,Math.max(...scores)+5);
+      const xS=i=>((i/(scores.length-1))*W).toFixed(1);
+      const yS=s=>(H-((s-mn)/(mx-mn||1))*H).toFixed(1);
+      const pLine=scores.map((s,i)=>xS(i)+","+yS(s)).join(" ");
+      return `<svg viewBox="0 0 ${W} ${H}" style="width:80px;height:28px;opacity:.7"><polyline points="${pLine}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/></svg>`;
+    })();
+    return `<div class="cat-trend-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em">${CAT_LABELS[cat]||cat}</div>
+        ${sparkline}
+      </div>
+      <div style="font-size:28px;font-weight:900;color:${color};margin:6px 0;line-height:1">${last}</div>
+      <div style="font-size:12px;color:#64748b">${fmtDelta(last-first)} over period</div>
+      <div class="bar-track" style="margin-top:10px"><div class="bar-fill" style="width:${last}%;background:${color}"></div></div>
     </div>`;
   }).join("");
 }
