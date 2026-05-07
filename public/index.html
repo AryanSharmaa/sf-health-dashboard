@@ -1318,13 +1318,15 @@ async function checkSession() {
   // Check app account (login/signup)
   const appRes  = await fetch("/user/me", { credentials: "include" });
   const appData = await appRes.json();
+  _isLoggedIn = !!appData.loggedIn;
   renderAppUserNav(appData.loggedIn ? appData.user : null);
 
   // Always show connect page first — user must explicitly choose an org
   showPage("connect");
 
-  // Load previously audited orgs for quick reconnect
-  loadPrevOrgs();
+  // Only show saved orgs for logged-in users — guest sessions get a clean slate
+  // to prevent one user seeing another user's org history on a shared machine
+  if (appData.loggedIn) loadPrevOrgs();
 
   // Check if there's a live SF session (came back from OAuth callback)
   const res     = await fetch("/auth/session", { credentials: "include" });
@@ -1360,17 +1362,18 @@ function showContinueAsBanner(session) {
     </div>`;
   errBanner.after(banner);
   window._liveSession = session;
-  // Save this org to the browser's own history (localStorage — never shared)
-  savePrevOrg({
-    id:        session.orgId,
-    name:      session.orgName || session.orgId,
-    isSandbox: session.isSandbox || false,
-    env:       session.isSandbox ? "sandbox" : "production",
-    lastScore: null,
-    lastAudit: new Date().toISOString(),
-  });
-  // Refresh prev-orgs list with the freshly connected org
-  loadPrevOrgs();
+  // Only persist org history for logged-in users — never for guest sessions
+  if (_isLoggedIn) {
+    savePrevOrg({
+      id:        session.orgId,
+      name:      session.orgName || session.orgId,
+      isSandbox: session.isSandbox || false,
+      env:       session.isSandbox ? "sandbox" : "production",
+      lastScore: null,
+      lastAudit: new Date().toISOString(),
+    });
+    loadPrevOrgs();
+  }
 }
 
 function proceedToAudit() {
@@ -1655,6 +1658,7 @@ function getApexDrilldown(category, actionText, meta) {
 
 let _dismissedKeys = new Set();
 let _currentOrgId  = null;
+let _isLoggedIn    = false;
 let _pendingDismiss = null;
 
 async function loadDismissed(orgId) {
