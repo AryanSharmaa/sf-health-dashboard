@@ -18,18 +18,42 @@
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a202c;background:white;overflow-x:hidden}
 
     /* ── Nav ── */
-    .nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0;padding:0 32px;height:60px;display:flex;align-items:center;gap:16px}
-    .nav-logo{font-size:20px;font-weight:900;color:#1e3a5f;text-decoration:none}
+    .nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid #e2e8f0;padding:0 32px;height:64px;display:flex;align-items:center;gap:16px;transition:box-shadow 0.2s}
+    .nav.scrolled{box-shadow:0 2px 16px rgba(0,0,0,0.08)}
+    .nav-logo{font-size:20px;font-weight:900;color:#1e3a5f;text-decoration:none;letter-spacing:-0.3px}
     .nav-logo span{color:#0070d2}
-    .nav-links{display:flex;align-items:center;gap:6px;margin-left:auto}
+    .nav-links{display:flex;align-items:center;gap:4px;margin-left:auto}
     .nav-link{color:#6b7280;font-size:14px;font-weight:500;text-decoration:none;padding:6px 12px;border-radius:7px;transition:all 0.15s}
     .nav-link:hover{color:#1a202c;background:#f3f4f6}
-    .nav-cta{background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:8px;padding:8px 20px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;transition:opacity 0.2s}
-    .nav-cta:hover{opacity:0.88}
+    .nav-divider{width:1px;height:20px;background:#e2e8f0;margin:0 6px}
+    .nav-cta{background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:8px;padding:8px 20px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;transition:all 0.2s;white-space:nowrap}
+    .nav-cta:hover{opacity:0.88;transform:translateY(-1px)}
     .nav-mobile-cta{display:none}
+
+    /* ── Nav profile (logged-in) ── */
+    .nav-profile-wrap{position:relative;display:none}
+    .nav-profile-btn{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1.5px solid #e2e8f0;padding:5px 12px 5px 6px;border-radius:99px;cursor:pointer;transition:all 0.2s;color:#1a202c;font-size:13px;font-weight:600;white-space:nowrap}
+    .nav-profile-btn:hover{border-color:#bfdbfe;background:#eff6ff}
+    .nav-profile-btn .np-avatar{width:28px;height:28px;background:linear-gradient(135deg,#1e3a5f,#0070d2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white;flex-shrink:0}
+    .nav-profile-btn .np-name{max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .nav-profile-btn .np-caret{font-size:9px;color:#a0aec0;margin-left:2px;transition:transform 0.2s}
+    .nav-profile-btn.open .np-caret{transform:rotate(180deg)}
+    .nav-profile-drop{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:200px;background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.14);border:1px solid #e2e8f0;overflow:hidden;z-index:500}
+    .nav-profile-drop.open{display:block}
+    .npd-header{padding:14px 16px 10px;border-bottom:1px solid #f3f4f6}
+    .npd-name{font-size:14px;font-weight:700;color:#1a202c}
+    .npd-email{font-size:12px;color:#718096;margin-top:1px}
+    .npd-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;transition:background 0.15s;border:none;background:none;width:100%;text-align:left;text-decoration:none}
+    .npd-item:hover{background:#f8fafc;color:#0070d2}
+    .npd-item .npd-icon{font-size:15px;width:20px;text-align:center}
+    .npd-divider{height:1px;background:#f3f4f6;margin:4px 0}
+    .npd-item.danger{color:#dc2626}
+    .npd-item.danger:hover{background:#fef2f2;color:#dc2626}
+
     @media(max-width:600px){
-      .nav{padding:0 16px}
+      .nav{padding:0 16px;height:56px}
       .nav-links .nav-link{display:none}
+      .nav-divider{display:none}
       .nav-mobile-cta{display:block}
     }
 
@@ -219,16 +243,37 @@
 <body>
 
 <!-- ══ NAV ══ -->
-<nav class="nav">
+<nav class="nav" id="main-nav">
   <a href="/" class="nav-logo">SF<span>Health</span></a>
   <div class="nav-links">
     <a href="#features" class="nav-link">Features</a>
     <a href="#how-it-works" class="nav-link">How it works</a>
     <a href="#what-we-check" class="nav-link">What we check</a>
     <a href="#security" class="nav-link">Security</a>
+    <div class="nav-divider"></div>
+
+    <!-- Shown when logged OUT -->
     <a href="/login" class="nav-link" id="nav-login-link">Log In</a>
     <a href="/app" class="nav-cta nav-mobile-cta">Get Started Free</a>
     <a href="/signup" class="nav-cta" id="nav-signup-link">Sign Up Free →</a>
+
+    <!-- Shown when logged IN -->
+    <div class="nav-profile-wrap" id="nav-profile-wrap">
+      <button class="nav-profile-btn" id="nav-profile-btn">
+        <div class="np-avatar" id="nav-p-avatar">?</div>
+        <span class="np-name" id="nav-p-name"></span>
+        <span class="np-caret">▼</span>
+      </button>
+      <div class="nav-profile-drop" id="nav-profile-drop">
+        <div class="npd-header">
+          <div class="npd-name" id="npd-name"></div>
+          <div class="npd-email" id="npd-email"></div>
+        </div>
+        <a href="/app" class="npd-item"><span class="npd-icon">📊</span>Go to Dashboard</a>
+        <div class="npd-divider"></div>
+        <button class="npd-item danger" id="npd-signout"><span class="npd-icon">🚪</span>Sign Out</button>
+      </div>
+    </div>
   </div>
 </nav>
 
@@ -678,7 +723,7 @@
     <div id="auth-signup-form">
       <div style="margin-bottom:14px">
         <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px">Name <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
-        <input id="auth-name" type="text" placeholder="Aryan Sharma" autocomplete="name"
+        <input id="auth-name" type="text" placeholder="Jane Smith" autocomplete="name"
           style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;color:#1a202c;box-sizing:border-box"/>
       </div>
       <div style="margin-bottom:14px">
@@ -740,7 +785,7 @@
     <a href="/app" class="footer-link">Launch App</a>
   </div>
   <div class="footer-right">
-    Built by <strong style="color:rgba(255,255,255,0.5)">Aryan Sharma</strong> · © 2026
+    Built by <strong style="color:rgba(255,255,255,0.5)">SFHealth Team</strong> · © 2026
   </div>
 </footer>
 
@@ -1012,26 +1057,71 @@ async function doAuthLogin() {
   finally { btn.disabled = false; btn.textContent = "Log In →"; }
 }
 
-// If user is already logged in, swap nav CTA to "Go to Dashboard"
+// ── Session-aware nav + CTA + profile dropdown ──────────────────────────────
 (async () => {
   try {
     const r = await fetch("/user/me", { credentials: "include" });
     const d = await r.json();
+
     if (d.loggedIn) {
-      const loginLink  = document.getElementById("nav-login-link");
-      const signupLink = document.getElementById("nav-signup-link");
-      if (loginLink)  loginLink.style.display  = "none";
-      if (signupLink) { signupLink.textContent = "Go to Dashboard →"; signupLink.href = "/app"; }
-      // Swap auth card to a welcome message
+      const u = d.user;
+      const initials    = (u.name || u.email || "?")[0].toUpperCase();
+      const displayName = u.name || u.email;
+
+      // Hide log-in / sign-up links; show profile button
+      document.getElementById("nav-login-link").style.display  = "none";
+      document.getElementById("nav-signup-link").style.display = "none";
+      const wrap = document.getElementById("nav-profile-wrap");
+      wrap.style.display = "flex";
+      document.getElementById("nav-p-avatar").textContent = initials;
+      document.getElementById("nav-p-name").textContent   = displayName;
+      document.getElementById("npd-name").textContent     = displayName;
+      document.getElementById("npd-email").textContent    = u.email || "";
+
+      // Profile dropdown toggle
+      const btn  = document.getElementById("nav-profile-btn");
+      const drop = document.getElementById("nav-profile-drop");
+      btn.addEventListener("click", e => {
+        e.stopPropagation();
+        const isOpen = drop.classList.contains("open");
+        drop.classList.toggle("open", !isOpen);
+        btn.classList.toggle("open", !isOpen);
+      });
+      document.addEventListener("click", e => {
+        if (!btn.contains(e.target) && !drop.contains(e.target)) {
+          drop.classList.remove("open"); btn.classList.remove("open");
+        }
+      });
+      document.addEventListener("keydown", e => {
+        if (e.key === "Escape") { drop.classList.remove("open"); btn.classList.remove("open"); }
+      });
+
+      // Sign-out from dropdown
+      document.getElementById("npd-signout").addEventListener("click", async () => {
+        await Promise.all([
+          fetch("/auth/logout", { method: "POST", credentials: "include" }),
+          fetch("/user/logout", { method: "POST", credentials: "include" }),
+        ]);
+        window.location.href = "/?t=" + Date.now();
+      });
+
+      // Swap CTA auth card to welcome panel
       document.getElementById("auth-card").innerHTML =
-        `<div style="text-align:center;padding:12px 0">
-          <div style="font-size:32px;margin-bottom:12px">👋</div>
-          <div style="font-size:17px;font-weight:800;color:#1a202c;margin-bottom:6px">Welcome back, ${d.user.name || d.user.email}!</div>
-          <a href="/app" style="display:inline-block;margin-top:14px;padding:12px 28px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border-radius:9px;font-size:15px;font-weight:700;text-decoration:none">Open Dashboard →</a>
+        `<div style="text-align:center;padding:16px 0 8px">
+          <div style="width:56px;height:56px;background:linear-gradient(135deg,#1e3a5f,#0070d2);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:white;margin-bottom:14px">${initials}</div>
+          <div style="font-size:18px;font-weight:800;color:#1a202c;margin-bottom:4px">Welcome back!</div>
+          <div style="font-size:14px;color:#718096;margin-bottom:20px">${displayName}</div>
+          <a href="/app" style="display:block;padding:12px 28px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border-radius:9px;font-size:15px;font-weight:700;text-decoration:none;margin-bottom:10px">Open Dashboard →</a>
+          <button onclick="(async()=>{await Promise.all([fetch('/auth/logout',{method:'POST',credentials:'include'}),fetch('/user/logout',{method:'POST',credentials:'include'})]);window.location.href='/?t='+Date.now()})()" style="width:100%;padding:10px;background:white;color:#dc2626;border:1.5px solid #fecaca;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer">Sign Out</button>
         </div>`;
     }
   } catch {}
 })();
+
+// ── Sticky nav shadow on scroll ──────────────────────────────────────────────
+window.addEventListener("scroll", () => {
+  document.getElementById("main-nav").classList.toggle("scrolled", window.scrollY > 10);
+}, { passive: true });
 </script>
 <script>if("serviceWorker"in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
 </body>
