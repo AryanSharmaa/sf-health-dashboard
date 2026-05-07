@@ -33,15 +33,14 @@ function decrypt(stored) {
 
 // ─── Save or update MC org credentials ───────────────────────────────────────
 
-async function saveMcOrg({ subdomain, mid, eid, orgName, clientId, clientSecret }) {
+async function saveMcOrg({ subdomain, mid, eid, orgName, clientId, clientSecret, sfOrgId }) {
   const db   = await getDb();
   const now  = new Date().toISOString();
 
-  // Upsert keyed on subdomain + mid (or eid if no mid) so re-saving the same
-  // org just refreshes the credentials rather than creating a duplicate row.
+  // Upsert keyed on sf_org_id + subdomain + mid so each SF org has its own set
   const { rows: existing } = await db.query(
-    `SELECT id FROM mc_orgs WHERE subdomain = ? AND (mid = ? OR (mid IS NULL AND ? IS NULL))`,
-    [subdomain, mid || null, mid || null]
+    `SELECT id FROM mc_orgs WHERE sf_org_id = ? AND subdomain = ? AND (mid = ? OR (mid IS NULL AND ? IS NULL))`,
+    [sfOrgId || null, subdomain, mid || null, mid || null]
   );
 
   const clientIdEnc     = encrypt(clientId);
@@ -58,9 +57,9 @@ async function saveMcOrg({ subdomain, mid, eid, orgName, clientId, clientSecret 
 
   const id = uuidv4();
   await db.query(
-    `INSERT INTO mc_orgs (id, subdomain, mid, eid, org_name, client_id_enc, client_secret_enc, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, subdomain, mid || null, eid || null, orgName || subdomain,
+    `INSERT INTO mc_orgs (id, sf_org_id, subdomain, mid, eid, org_name, client_id_enc, client_secret_enc, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, sfOrgId || null, subdomain, mid || null, eid || null, orgName || subdomain,
      clientIdEnc, clientSecretEnc, now, now]
   );
   return id;
@@ -68,31 +67,34 @@ async function saveMcOrg({ subdomain, mid, eid, orgName, clientId, clientSecret 
 
 // ─── Look up credentials by MID or EID ───────────────────────────────────────
 
-async function getMcOrgByMid(mid) {
+async function getMcOrgByMid(mid, sfOrgId) {
   if (!mid) return null;
   const db = await getDb();
   const { rows } = await db.query(
-    `SELECT * FROM mc_orgs WHERE mid = ? ORDER BY updated_at DESC LIMIT 1`, [mid]
+    `SELECT * FROM mc_orgs WHERE mid = ? AND sf_org_id = ? ORDER BY updated_at DESC LIMIT 1`,
+    [mid, sfOrgId || null]
   );
   return rows[0] ? decryptRow(rows[0]) : null;
 }
 
-async function getMcOrgByEid(eid) {
+async function getMcOrgByEid(eid, sfOrgId) {
   if (!eid) return null;
   const db = await getDb();
   const { rows } = await db.query(
-    `SELECT * FROM mc_orgs WHERE eid = ? ORDER BY updated_at DESC LIMIT 1`, [eid]
+    `SELECT * FROM mc_orgs WHERE eid = ? AND sf_org_id = ? ORDER BY updated_at DESC LIMIT 1`,
+    [eid, sfOrgId || null]
   );
   return rows[0] ? decryptRow(rows[0]) : null;
 }
 
 // ─── List saved orgs (no secrets returned) ───────────────────────────────────
 
-async function listMcOrgs() {
+async function listMcOrgs(sfOrgId) {
   const db = await getDb();
   const { rows } = await db.query(
     `SELECT id, subdomain, mid, eid, org_name, last_used_at, created_at
-     FROM mc_orgs ORDER BY COALESCE(last_used_at, created_at) DESC`
+     FROM mc_orgs WHERE sf_org_id = ? ORDER BY COALESCE(last_used_at, created_at) DESC`,
+    [sfOrgId || null]
   );
   return rows;
 }

@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS scheduled_audits (
 -- client_id and client_secret are AES-256-GCM encrypted with MC_CRED_SECRET.
 CREATE TABLE IF NOT EXISTS mc_orgs (
   id                TEXT  PRIMARY KEY,
+  sf_org_id         TEXT,                          -- owning Salesforce org (scopes visibility)
   subdomain         TEXT  NOT NULL,
   mid               TEXT,
   eid               TEXT,

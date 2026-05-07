@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS scheduled_audits (
 
 CREATE TABLE IF NOT EXISTS mc_orgs (
   id                TEXT        PRIMARY KEY,
+  sf_org_id         TEXT,
   subdomain         TEXT        NOT NULL,
   mid               TEXT,
   eid               TEXT,

@@ -767,10 +767,10 @@ function requireMcSession(req, res, next) {
   next();
 }
 
-// List saved MC orgs (no secrets)
-app.get("/api/mc/orgs", readLimiter, requireSession, async (_req, res) => {
+// List saved MC orgs (no secrets) — scoped to current SF org
+app.get("/api/mc/orgs", readLimiter, requireSession, async (req, res) => {
   try {
-    const orgs = await listMcOrgs();
+    const orgs = await listMcOrgs(req.sfSession.orgId);
     res.json({ orgs });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -795,7 +795,7 @@ app.post("/api/mc/connect", auditLimiter, requireSession, async (req, res) => {
     if (!mid && !eid) {
       return res.status(400).json({ error: "Provide clientId + clientSecret for a new org, or a saved MID / EID to reconnect." });
     }
-    const saved = mid ? await getMcOrgByMid(mid) : await getMcOrgByEid(eid);
+    const saved = mid ? await getMcOrgByMid(mid, req.sfSession.orgId) : await getMcOrgByEid(eid, req.sfSession.orgId);
     if (!saved) {
       return res.status(404).json({ error: "No saved credentials found for that MID/EID. Connect with full credentials first." });
     }
@@ -830,6 +830,7 @@ app.post("/api/mc/connect", auditLimiter, requireSession, async (req, res) => {
         orgName:      resolvedSubdomain,
         clientId:     resolvedClientId,
         clientSecret: resolvedSecret,
+        sfOrgId:      req.sfSession.orgId,
       });
     } else if (savedOrgId) {
       await touchMcOrg(savedOrgId);

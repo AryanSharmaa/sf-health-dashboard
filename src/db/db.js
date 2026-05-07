@@ -40,6 +40,10 @@ async function initSQLite() {
 
   const schemaSQL = fs.readFileSync(path.resolve(__dirname, "schema.sql"), "utf8");
   db.run(schemaSQL);
+
+  // Migrations — safe to run repeatedly
+  try { db.run("ALTER TABLE mc_orgs ADD COLUMN sf_org_id TEXT"); } catch {}
+
   persist();
 
   return {
@@ -76,6 +80,9 @@ async function initPostgres() {
 
   const sql = fs.readFileSync(path.resolve(__dirname, "schema.pg.sql"), "utf8");
   await pool.query(sql);
+
+  // Migrations — safe to run repeatedly
+  await pool.query(`ALTER TABLE mc_orgs ADD COLUMN IF NOT EXISTS sf_org_id TEXT`).catch(() => {});
 
   return {
     query: async (sql, params = []) => {
