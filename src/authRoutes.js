@@ -77,7 +77,7 @@ router.get("/salesforce/callback", async (req, res) => {
     const tokens   = await exchangeCodeForToken({
       loginUrl, clientId, clientSecret, redirectUri, code, codeVerifier,
     });
-    const userInfo = await getUserInfo(tokens.instanceUrl, tokens.accessToken);
+    const userInfo = await getUserInfo(tokens.instanceUrl, tokens.accessToken, tokens.idUrl);
 
     const sessionId = createSession({
       accessToken:  tokens.accessToken,
@@ -87,10 +87,10 @@ router.get("/salesforce/callback", async (req, res) => {
       clientId,
       clientSecret,
       userId:      userInfo.user_id,
-      username:    userInfo.preferred_username || userInfo.email,
-      displayName: userInfo.name,
-      orgId:       userInfo.organization_id,
-      orgName:     userInfo.organization_name || userInfo.organization_id,
+      username:    userInfo.username || userInfo.preferred_username || userInfo.email || "unknown",
+      displayName: userInfo.display_name || userInfo.name || userInfo.username || "User",
+      orgId:       userInfo.organization_id || tokens.idUrl?.split("/")[4] || "unknown",
+      orgName:     userInfo.organization_name || userInfo.organization_id || "Salesforce Org",
     });
 
     res.cookie("sf_session", sessionId, {

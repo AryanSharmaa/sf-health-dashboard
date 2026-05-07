@@ -65,10 +65,9 @@ function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChall
     client_id:             clientId,
     redirect_uri:          redirectUri,
     state:                 state || "",
-    scope:                 "api refresh_token openid",
+    scope:                 "api",
     code_challenge:        codeChallenge,
     code_challenge_method: "S256",
-    display:               "page",
   });
   return `${base}/services/oauth2/authorize?${params.toString()}`;
 }
@@ -132,12 +131,16 @@ async function exchangeCodeForToken({ loginUrl, clientId, clientSecret, redirect
   };
 }
 
-async function getUserInfo(instanceUrl, accessToken) {
-  return new Promise((resolve, reject) => {
-    const parsed  = new URL(`${instanceUrl}/services/oauth2/userinfo`);
+// Uses the Salesforce Identity URL (returned in token response as body.id).
+// This endpoint works with just `api` scope — no `openid` needed.
+async function getUserInfo(instanceUrl, accessToken, idUrl) {
+  const targetUrl = idUrl || `${instanceUrl}/services/oauth2/userinfo`;
+  return new Promise((resolve) => {
+    const parsed  = new URL(targetUrl);
     const options = {
       hostname: parsed.hostname,
-      path:     parsed.pathname,
+      port:     parsed.port || 443,
+      path:     parsed.pathname + parsed.search,
       method:   "GET",
       headers:  { Authorization: `Bearer ${accessToken}` },
     };
@@ -149,7 +152,7 @@ async function getUserInfo(instanceUrl, accessToken) {
         catch { resolve({}); }
       });
     });
-    req.on("error", reject);
+    req.on("error", () => resolve({}));
     req.end();
   });
 }
