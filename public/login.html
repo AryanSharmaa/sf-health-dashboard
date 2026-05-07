@@ -5,50 +5,113 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-  <title>Log In — SF Health Dashboard</title>
+  <title>Log In — SFHealth</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f8;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-    .card{background:white;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.09);padding:40px 36px;width:100%;max-width:420px}
-    .logo{font-size:22px;font-weight:800;color:#1e3a5f;margin-bottom:6px;text-decoration:none;display:inline-block}
-    .logo span{color:#0070d2}
-    h1{font-size:24px;font-weight:800;color:#1a202c;margin-bottom:6px}
-    .sub{font-size:14px;color:#718096;margin-bottom:28px}
-    .form-group{margin-bottom:18px}
+    html{-webkit-font-smoothing:antialiased}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;min-height:100vh;display:grid;grid-template-columns:1fr 1fr}
+
+    /* left panel */
+    .panel-left{background:linear-gradient(160deg,#0a1628 0%,#0d3a6e 60%,#0a4a9e 100%);padding:48px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+    .panel-left::before{content:"";position:absolute;top:-120px;right:-120px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(0,112,210,.35),transparent 70%)}
+    .panel-left::after{content:"";position:absolute;bottom:-80px;left:-60px;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(125,211,252,.12),transparent 70%)}
+    .pl-logo{font-size:22px;font-weight:900;color:white;text-decoration:none;letter-spacing:-.4px;position:relative}
+    .pl-logo span{color:#7dd3fc}
+    .pl-content{margin-top:auto;margin-bottom:auto;position:relative}
+    .pl-eyebrow{font-size:11px;font-weight:700;color:#7dd3fc;text-transform:uppercase;letter-spacing:.12em;margin-bottom:16px}
+    .pl-title{font-size:clamp(28px,3vw,38px);font-weight:900;color:white;line-height:1.15;letter-spacing:-.8px;margin-bottom:16px}
+    .pl-sub{font-size:15px;color:rgba(255,255,255,.55);line-height:1.65;max-width:340px}
+    .pl-features{margin-top:36px;display:flex;flex-direction:column;gap:14px}
+    .pl-feat{display:flex;align-items:flex-start;gap:12px}
+    .pl-feat-icon{width:36px;height:36px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+    .pl-feat-title{font-size:13px;font-weight:700;color:white;margin-bottom:2px}
+    .pl-feat-desc{font-size:12px;color:rgba(255,255,255,.45);line-height:1.5}
+    .pl-footer{position:relative;margin-top:auto;font-size:12px;color:rgba(255,255,255,.25)}
+
+    /* right panel */
+    .panel-right{display:flex;align-items:center;justify-content:center;padding:48px 40px;background:#fff}
+    .form-wrap{width:100%;max-width:400px}
+    .form-logo{display:none;font-size:20px;font-weight:900;color:#0f172a;text-decoration:none;letter-spacing:-.4px;margin-bottom:32px}
+    .form-logo span{color:#0070d2}
+    h1{font-size:28px;font-weight:900;color:#0f172a;letter-spacing:-.5px;margin-bottom:6px}
+    .form-sub{font-size:15px;color:#64748b;margin-bottom:32px;line-height:1.5}
+    .form-group{margin-bottom:16px}
     label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px}
-    input{width:100%;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;color:#1a202c;font-family:inherit;transition:border 0.15s;background:white}
-    input:focus{outline:none;border-color:#0070d2}
-    .btn{width:100%;padding:13px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.2s;margin-top:4px}
-    .btn:hover{opacity:0.9}
-    .btn:disabled{opacity:0.6;cursor:not-allowed}
-    .error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:18px;display:none}
-    .switch{text-align:center;margin-top:22px;font-size:13px;color:#718096}
-    .switch a{color:#0070d2;font-weight:600;text-decoration:none}
-    .switch a:hover{text-decoration:underline}
-    .divider{border:none;border-top:1px solid #f3f4f6;margin:22px 0}
+    .input-wrap{position:relative}
+    input[type="email"],input[type="password"],input[type="text"]{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;color:#0f172a;font-family:inherit;transition:border .15s,box-shadow .15s;background:white}
+    input:focus{outline:none;border-color:#0070d2;box-shadow:0 0 0 3px rgba(0,112,210,.1)}
+    .btn-primary{width:100%;padding:13px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:11px;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;margin-top:6px;letter-spacing:-.1px}
+    .btn-primary:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,112,210,.3)}
+    .btn-primary:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+    .error-box{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 14px;border-radius:9px;font-size:13px;margin-bottom:16px;display:none;line-height:1.5}
+    .divider{display:flex;align-items:center;gap:12px;margin:22px 0;color:#94a3b8;font-size:12px}
+    .divider::before,.divider::after{content:"";flex:1;height:1px;background:#e2e8f0}
+    .switch-row{text-align:center;font-size:13px;color:#64748b;margin-top:6px}
+    .switch-row a{color:#0070d2;font-weight:600;text-decoration:none}
+    .switch-row a:hover{text-decoration:underline}
+    .btn-ghost-full{width:100%;padding:11px;border:1.5px solid #e2e8f0;border-radius:11px;font-size:14px;font-weight:600;color:#475569;background:white;cursor:pointer;transition:all .15s;text-align:center;text-decoration:none;display:block}
+    .btn-ghost-full:hover{border-color:#bfdbfe;background:#eff6ff;color:#0070d2}
+
+    @media(max-width:768px){
+      body{grid-template-columns:1fr}
+      .panel-left{display:none}
+      .panel-right{padding:32px 24px}
+      .form-logo{display:block}
+    }
   </style>
 </head>
 <body>
-<div class="card">
-  <a href="/" class="logo">SF<span>Health</span></a>
-  <h1>Welcome back</h1>
-  <p class="sub">Log in to your account to run and track audits.</p>
 
-  <div class="error" id="error-msg"></div>
-
-  <div class="form-group">
-    <label for="email">Email</label>
-    <input type="email" id="email" placeholder="you@company.com" autocomplete="email"/>
+<!-- Left: brand panel -->
+<div class="panel-left">
+  <a href="/" class="pl-logo">SF<span>Health</span></a>
+  <div class="pl-content">
+    <div class="pl-eyebrow">Salesforce Org Audit</div>
+    <div class="pl-title">Your org, scored.<br/>Your issues, fixed.</div>
+    <p class="pl-sub">Connect your Salesforce org and get an instant health score with prioritised recommendations — in under 2 minutes.</p>
+    <div class="pl-features">
+      <div class="pl-feat">
+        <div class="pl-feat-icon">📊</div>
+        <div><div class="pl-feat-title">0–100 Health Score</div><div class="pl-feat-desc">Weighted across 6 categories, benchmarked against similar orgs</div></div>
+      </div>
+      <div class="pl-feat">
+        <div class="pl-feat-icon">✦</div>
+        <div><div class="pl-feat-title">AI Fix Guides</div><div class="pl-feat-desc">Step-by-step remediation with exact Salesforce Setup paths</div></div>
+      </div>
+      <div class="pl-feat">
+        <div class="pl-feat-icon">📈</div>
+        <div><div class="pl-feat-title">Audit History & Trends</div><div class="pl-feat-desc">Track improvement over time with side-by-side comparisons</div></div>
+      </div>
+    </div>
   </div>
-  <div class="form-group">
-    <label for="password">Password</label>
-    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
-  </div>
-  <button class="btn" id="btn-login">Log In</button>
+  <div class="pl-footer">© 2026 SFHealth · Free forever</div>
+</div>
 
-  <hr class="divider"/>
-  <div class="switch">Don't have an account? <a href="/signup">Sign up free</a></div>
-  <div class="switch" style="margin-top:10px"><a href="/app">Continue without account →</a></div>
+<!-- Right: form -->
+<div class="panel-right">
+  <div class="form-wrap">
+    <a href="/" class="form-logo">SF<span>Health</span></a>
+    <h1>Welcome back</h1>
+    <p class="form-sub">Log in to your account to run and track audits.</p>
+
+    <div class="error-box" id="error-msg"></div>
+
+    <div class="form-group">
+      <label for="email">Email address</label>
+      <input type="email" id="email" placeholder="you@company.com" autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-primary" id="btn-login">Log In →</button>
+
+    <div class="divider">or</div>
+    <a href="/app" class="btn-ghost-full">Continue without account</a>
+
+    <div class="divider" style="margin-bottom:0"></div>
+    <div class="switch-row" style="margin-top:18px">Don't have an account? <a href="/signup">Sign up free</a></div>
+  </div>
 </div>
 
 <script>
@@ -57,46 +120,29 @@
   const btn     = document.getElementById('btn-login');
   const errEl   = document.getElementById('error-msg');
 
-  function showError(msg) {
-    errEl.textContent = msg;
-    errEl.style.display = 'block';
-  }
+  function showError(msg){ errEl.textContent=msg; errEl.style.display='block'; }
 
   async function doLogin() {
-    const email    = emailEl.value.trim();
-    const password = passEl.value;
-    if (!email || !password) return showError('Please enter your email and password.');
-    btn.disabled = true;
-    btn.textContent = 'Logging in…';
-    errEl.style.display = 'none';
+    const email=emailEl.value.trim(), password=passEl.value;
+    if (!email||!password) return showError('Please enter your email and password.');
+    btn.disabled=true; btn.textContent='Logging in…'; errEl.style.display='none';
     try {
-      const r = await fetch('/user/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await r.json();
-      if (!r.ok) { showError(data.error || 'Login failed.'); btn.disabled = false; btn.textContent = 'Log In'; return; }
-      window.location.href = '/app';
+      const r=await fetch('/user/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({email,password})});
+      const data=await r.json();
+      if (!r.ok){showError(data.error||'Login failed.');btn.disabled=false;btn.textContent='Log In →';return;}
+      window.location.href='/app';
     } catch {
       showError('Network error. Please try again.');
-      btn.disabled = false;
-      btn.textContent = 'Log In';
+      btn.disabled=false; btn.textContent='Log In →';
     }
   }
 
   btn.addEventListener('click', doLogin);
-  passEl.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
-  emailEl.addEventListener('keydown', e => { if (e.key === 'Enter') passEl.focus(); });
+  passEl.addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+  emailEl.addEventListener('keydown', e=>{ if(e.key==='Enter') passEl.focus(); });
 
-  // Redirect away if already logged in
-  (async () => {
-    try {
-      const r = await fetch('/user/me', { credentials: 'include' });
-      const d = await r.json();
-      if (d.loggedIn) window.location.replace('/app');
-    } catch {}
+  (async()=>{
+    try{ const r=await fetch('/user/me',{credentials:'include'}); const d=await r.json(); if(d.loggedIn) window.location.replace('/app'); }catch{}
   })();
 </script>
 </body>
