@@ -221,6 +221,17 @@
     .tab-btn{flex:1;padding:9px;font-size:13px;font-weight:600;border:none;background:white;cursor:pointer;transition:all 0.15s;color:#718096}
     .tab-btn.active{background:#0070d2;color:white}
 
+    /* ── Prev-org reconnect cards ── */
+    .prev-org-card{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;gap:12px;flex-wrap:wrap}
+    .prev-org-card:hover{border-color:#bfdbfe;background:#eff6ff}
+    .prev-org-card .poc-name{font-weight:700;font-size:14px;color:#1a202c}
+    .prev-org-card .poc-meta{font-size:12px;color:#6b7280;margin-top:2px}
+    .prev-org-card .poc-score{font-size:20px;font-weight:900;min-width:36px;text-align:right}
+    .btn-reconnect{padding:7px 16px;background:#0070d2;color:white;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background 0.15s}
+    .btn-reconnect:hover{background:#005fb2}
+    .btn-reconnect.sandbox{background:white;color:#0070d2;border:1.5px solid #0070d2}
+    .btn-reconnect.sandbox:hover{background:#eff6ff}
+
     /* ── MC Setup Guide ── */
     .guide-step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #f3f4f6}
     .guide-step-num{flex-shrink:0;width:28px;height:28px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;margin-top:1px}
@@ -305,12 +316,22 @@
   <div class="page active" id="page-connect">
     <div class="card">
       <div id="error-banner" class="error-banner"></div>
-      <div class="connect-wrap">
-        <div class="sf-logo">
+
+      <!-- Previously audited orgs — shown when history exists -->
+      <div id="prev-orgs-section" style="display:none;margin-bottom:24px">
+        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">Previously audited orgs</div>
+        <div id="prev-orgs-list" style="display:flex;flex-direction:column;gap:8px"></div>
+        <div style="margin-top:14px;border-top:1px solid #f3f4f6;padding-top:16px">
+          <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Connect a different org</div>
+        </div>
+      </div>
+
+      <div class="connect-wrap" style="padding-top:0">
+        <div class="sf-logo" id="connect-logo">
           <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
         </div>
-        <h1>Salesforce Org Health Dashboard</h1>
-        <p>Connect your Salesforce org or Marketing Cloud instance — securely audited in under 2 minutes.</p>
+        <h1 id="connect-heading">Salesforce Org Health Dashboard</h1>
+        <p id="connect-subtext">Connect your Salesforce org or Marketing Cloud instance — securely audited in under 2 minutes.</p>
 
         <!-- Salesforce Core -->
         <div style="margin-bottom:20px">
@@ -1014,14 +1035,93 @@ async function checkSession() {
   const appData = await appRes.json();
   renderAppUserNav(appData.loggedIn ? appData.user : null);
 
-  // Check SF org session
+  // Always show connect page first — user must explicitly choose an org
+  showPage("connect");
+
+  // Load previously audited orgs for quick reconnect
+  loadPrevOrgs();
+
+  // Check if there's a live SF session (came back from OAuth callback)
   const res     = await fetch("/auth/session", { credentials: "include" });
   const session = await res.json();
-  if (!session.connected) { showPage("connect"); return; }
-  renderSfNav(session);
+  if (session.connected) {
+    // We have a live token from OAuth callback — wire up the audit page but stay on connect
+    // so user sees their orgs. They can click "Continue" or pick a different org.
+    renderSfNav(session);
+    // Show a "continue as" banner on the connect page
+    showContinueAsBanner(session);
+  }
+}
+
+function showContinueAsBanner(session) {
+  // Only show if there's no error banner already visible
+  const errBanner = document.getElementById("error-banner");
+  if (errBanner.style.display === "block") return;
+
+  const existing = document.getElementById("continue-as-banner");
+  if (existing) existing.remove();
+
+  const banner = document.createElement("div");
+  banner.id = "continue-as-banner";
+  banner.style.cssText = "background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap";
+  banner.innerHTML = `
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#166534">Connected: ${session.orgName || session.orgId}</div>
+      <div style="font-size:12px;color:#4ade80;margin-top:2px">${session.username} · ${session.instanceUrl}</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="proceedToAudit()" style="padding:7px 18px;background:#16a34a;color:white;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">Continue →</button>
+      <button onclick="document.getElementById('continue-as-banner').remove();fetch('/auth/logout',{method:'POST',credentials:'include'})" style="padding:7px 12px;background:white;color:#6b7280;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;cursor:pointer">Switch Org</button>
+    </div>`;
+  errBanner.after(banner);
+  window._liveSession = session;
+}
+
+function proceedToAudit() {
+  const session = window._liveSession;
+  if (!session) return;
   document.getElementById("banner-org-name").textContent = session.orgName || session.orgId;
   document.getElementById("banner-org-id").textContent   = `${session.username} · ${session.instanceUrl}`;
   showPage("audit");
+}
+
+async function loadPrevOrgs() {
+  try {
+    const res  = await fetch("/api/orgs", { credentials: "include" });
+    const orgs = await res.json();
+    const section = document.getElementById("prev-orgs-section");
+    const list    = document.getElementById("prev-orgs-list");
+    if (!Array.isArray(orgs) || orgs.length === 0) { section.style.display = "none"; return; }
+
+    // Hide the logo/heading/subtext when we have previous orgs — cleaner UI
+    document.getElementById("connect-logo").style.display   = "none";
+    document.getElementById("connect-heading").style.display = "none";
+    document.getElementById("connect-subtext").style.display = "none";
+
+    list.innerHTML = orgs.slice(0, 5).map(org => {
+      const isSandbox = org.is_sandbox == 1 || org.is_sandbox === true;
+      const scoreColor = (s) => s>=80?"#16a34a":s>=60?"#ca8a04":"#dc2626";
+      const sc = org.latest_score;
+      return `<div class="prev-org-card">
+        <div style="flex:1;min-width:0">
+          <div class="poc-name">${org.name}</div>
+          <div class="poc-meta">${org.id} · ${org.total_audits} audit${org.total_audits!=1?"s":""} · Last: ${org.last_audit_at?fmtDate(org.last_audit_at):"—"}</div>
+        </div>
+        ${sc!=null?`<div class="poc-score" style="color:${scoreColor(sc)}">${sc}</div>`:""}
+        <button class="btn-reconnect ${isSandbox?"sandbox":""}"
+          onclick="reconnectOrg('${org.id}','${org.name}','${isSandbox?'sandbox':'production'}')"
+        >${isSandbox?"Reconnect Sandbox":"Reconnect"}</button>
+      </div>`;
+    }).join("");
+    section.style.display = "block";
+  } catch { /* silently ignore */ }
+}
+
+function reconnectOrg(orgId, orgName, env) {
+  // Store intent so after OAuth callback we show the right org
+  sessionStorage.setItem("reconnect_org_id",   orgId);
+  sessionStorage.setItem("reconnect_org_name",  orgName);
+  window.location.href = `/auth/salesforce?env=${env}`;
 }
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
@@ -2007,30 +2107,17 @@ document.getElementById("mc-connect-submit").addEventListener("click", async () 
 });
 
 async function checkMcSession() {
+  // MC session check: only wire up the nav button if connected — never auto-navigate
   const res  = await fetch("/api/mc/session", { credentials: "include" });
   const data = await res.json();
-  if (data.connected) showMcPage(data.subdomain, data.orgName, data.mid, data.eid);
+  if (data.connected) wireMcNavButton(data.subdomain, data.orgName, data.mid, data.eid);
 }
 
-function showMcPage(subdomain, orgName, mid, eid) {
-  document.getElementById("mc-banner-name").textContent = orgName || subdomain;
-  const subParts = [subdomain];
-  if (mid) subParts.push("MID: " + mid);
-  if (eid) subParts.push("EID: " + eid);
-  document.getElementById("mc-banner-sub").textContent = subParts.join(" · ");
-
-  // Always reset results so stale data never shows automatically
-  document.getElementById("mc-results").style.display = "none";
-  document.getElementById("mc-operational-card").style.display = "none";
-  document.getElementById("mc-status-box").style.display = "none";
-  document.getElementById("mc-partial-warning").style.display = "none";
-
-  // Add MC nav button if not already there
+function wireMcNavButton(subdomain, orgName, mid, eid) {
   if (!document.getElementById("btn-nav-mc")) {
     const btn = document.createElement("button");
     btn.className = "nav-link"; btn.id = "btn-nav-mc"; btn.textContent = "MC Audit";
     btn.addEventListener("click", () => {
-      // Reset on nav click too
       document.getElementById("mc-results").style.display = "none";
       document.getElementById("mc-operational-card").style.display = "none";
       document.getElementById("mc-status-box").style.display = "none";
@@ -2038,6 +2125,22 @@ function showMcPage(subdomain, orgName, mid, eid) {
     });
     document.getElementById("btn-logout").before(btn);
   }
+  // Pre-fill banner so MC page is ready when user clicks in
+  document.getElementById("mc-banner-name").textContent = orgName || subdomain;
+  const subParts = [subdomain];
+  if (mid) subParts.push("MID: " + mid);
+  if (eid) subParts.push("EID: " + eid);
+  document.getElementById("mc-banner-sub").textContent = subParts.join(" · ");
+}
+
+function showMcPage(subdomain, orgName, mid, eid) {
+  // Reset results so stale data never shows
+  document.getElementById("mc-results").style.display = "none";
+  document.getElementById("mc-operational-card").style.display = "none";
+  document.getElementById("mc-status-box").style.display = "none";
+  document.getElementById("mc-partial-warning").style.display = "none";
+
+  wireMcNavButton(subdomain, orgName, mid, eid);
   showPage("mc");
 }
 

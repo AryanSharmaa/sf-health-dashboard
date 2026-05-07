@@ -1,4 +1,4 @@
-const CACHE = "sfhealth-v8";
+const CACHE = "sfhealth-v9";
 const STATIC = ["/app", "/favicon.svg", "/manifest.json", "/icons/icon-192.svg", "/icons/icon-512.svg"];
 
 self.addEventListener("install", e => {

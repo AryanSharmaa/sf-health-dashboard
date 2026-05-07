@@ -226,8 +226,9 @@
     <a href="#how-it-works" class="nav-link">How it works</a>
     <a href="#what-we-check" class="nav-link">What we check</a>
     <a href="#security" class="nav-link">Security</a>
+    <a href="/login" class="nav-link" id="nav-login-link">Log In</a>
     <a href="/app" class="nav-cta nav-mobile-cta">Get Started Free</a>
-    <a href="/app" class="nav-cta">Get Started Free →</a>
+    <a href="/signup" class="nav-cta" id="nav-signup-link">Sign Up Free →</a>
   </div>
 </nav>
 
@@ -240,9 +241,9 @@
   <h1>Know exactly what's wrong<br/>with your <span>Salesforce org</span></h1>
   <p class="hero-sub">Instant automated health audit for Salesforce CRM and Marketing Cloud. Get a scored report with prioritised fixes — no setup, no agents, no guesswork.</p>
   <div class="hero-actions">
-    <a href="/app" class="btn-hero-primary">
+    <a href="#get-started" class="btn-hero-primary">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-      Run Free Audit Now
+      Get Started Free
     </a>
     <a href="#how-it-works" class="btn-hero-secondary">
       See how it works ↓
@@ -658,16 +659,70 @@
   </div>
 </section>
 
-<!-- ══ CTA ══ -->
-<div class="cta-section">
+<!-- ══ CTA / AUTH ══ -->
+<div class="cta-section" id="get-started">
   <h2>Ready to audit your org?</h2>
-  <p>Free, instant, no credit card. Connect your Salesforce org or Marketing Cloud and get your health score in under 2 minutes.</p>
+  <p>Create a free account to save your audit history — or jump straight in.</p>
+
+  <!-- Inline auth card -->
+  <div id="auth-card" style="background:white;border-radius:16px;padding:28px 32px;max-width:400px;margin:0 auto 28px;box-shadow:0 8px 40px rgba(0,0,0,0.2)">
+    <!-- Tab switcher -->
+    <div style="display:flex;gap:0;margin-bottom:22px;border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden">
+      <button id="auth-tab-signup" onclick="switchAuthTab('signup')" style="flex:1;padding:9px;font-size:13px;font-weight:700;border:none;background:#0070d2;color:white;cursor:pointer">Sign Up Free</button>
+      <button id="auth-tab-login"  onclick="switchAuthTab('login')"  style="flex:1;padding:9px;font-size:13px;font-weight:600;border:none;background:white;color:#718096;cursor:pointer">Log In</button>
+    </div>
+
+    <div id="auth-error" style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:9px 13px;border-radius:8px;font-size:13px;margin-bottom:16px;display:none"></div>
+
+    <!-- Signup form -->
+    <div id="auth-signup-form">
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px">Name <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
+        <input id="auth-name" type="text" placeholder="Aryan Sharma" autocomplete="name"
+          style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;color:#1a202c;box-sizing:border-box"/>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px">Email *</label>
+        <input id="auth-signup-email" type="email" placeholder="you@company.com" autocomplete="email"
+          style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;color:#1a202c;box-sizing:border-box"/>
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px">Password * <span style="color:#a0aec0;font-weight:400">(min 8 chars)</span></label>
+        <input id="auth-signup-pass" type="password" placeholder="••••••••" autocomplete="new-password"
+          style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;color:#1a202c;box-sizing:border-box"/>
+      </div>
+      <button id="btn-auth-signup" onclick="doAuthSignup()"
+        style="width:100%;padding:12px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer">
+        Create Free Account →
+      </button>
+    </div>
+
+    <!-- Login form -->
+    <div id="auth-login-form" style="display:none">
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px">Email</label>
+        <input id="auth-login-email" type="email" placeholder="you@company.com" autocomplete="email"
+          style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;color:#1a202c;box-sizing:border-box"/>
+      </div>
+      <div style="margin-bottom:18px">
+        <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:5px">Password</label>
+        <input id="auth-login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
+          style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;color:#1a202c;box-sizing:border-box"/>
+      </div>
+      <button id="btn-auth-login" onclick="doAuthLogin()"
+        style="width:100%;padding:12px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer">
+        Log In →
+      </button>
+    </div>
+  </div>
+
+  <div id="auth-success-msg" style="display:none;font-size:15px;color:rgba(255,255,255,0.9);margin-bottom:20px">
+    ✅ Account created! Redirecting…
+  </div>
+
   <div class="cta-buttons">
-    <a href="/app" class="btn-hero-primary">
-      Run Free Audit Now →
-    </a>
-    <a href="/app#mc" class="btn-hero-secondary">
-      Audit Marketing Cloud
+    <a href="/app" class="btn-hero-secondary" style="font-size:14px">
+      Skip — run audit without account
     </a>
   </div>
 </div>
@@ -894,6 +949,90 @@ document.getElementById("btn-submit-ticket").addEventListener("click", async () 
 });
 </script>
 
+<script>
+// ── Auth card on landing page ──────────────────────────────────────────────
+
+function switchAuthTab(tab) {
+  document.getElementById("auth-signup-form").style.display = tab === "signup" ? "block" : "none";
+  document.getElementById("auth-login-form").style.display  = tab === "login"  ? "block" : "none";
+  document.getElementById("auth-tab-signup").style.cssText  = tab === "signup"
+    ? "flex:1;padding:9px;font-size:13px;font-weight:700;border:none;background:#0070d2;color:white;cursor:pointer"
+    : "flex:1;padding:9px;font-size:13px;font-weight:600;border:none;background:white;color:#718096;cursor:pointer";
+  document.getElementById("auth-tab-login").style.cssText   = tab === "login"
+    ? "flex:1;padding:9px;font-size:13px;font-weight:700;border:none;background:#0070d2;color:white;cursor:pointer"
+    : "flex:1;padding:9px;font-size:13px;font-weight:600;border:none;background:white;color:#718096;cursor:pointer";
+  document.getElementById("auth-error").style.display = "none";
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById("auth-error");
+  el.textContent = msg;
+  el.style.display = "block";
+}
+
+async function doAuthSignup() {
+  const name     = document.getElementById("auth-name").value.trim();
+  const email    = document.getElementById("auth-signup-email").value.trim();
+  const password = document.getElementById("auth-signup-pass").value;
+  if (!email)         return showAuthError("Please enter your email.");
+  if (!password)      return showAuthError("Please enter a password.");
+  const btn = document.getElementById("btn-auth-signup");
+  btn.disabled = true; btn.textContent = "Creating account…";
+  document.getElementById("auth-error").style.display = "none";
+  try {
+    const r = await fetch("/user/signup", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      credentials: "include", body: JSON.stringify({ email, password, name }),
+    });
+    const data = await r.json();
+    if (!r.ok) { showAuthError(data.error || "Signup failed."); return; }
+    document.getElementById("auth-card").style.display = "none";
+    document.getElementById("auth-success-msg").style.display = "block";
+    setTimeout(() => window.location.href = "/app", 1200);
+  } catch { showAuthError("Network error. Please try again."); }
+  finally { btn.disabled = false; btn.textContent = "Create Free Account →"; }
+}
+
+async function doAuthLogin() {
+  const email    = document.getElementById("auth-login-email").value.trim();
+  const password = document.getElementById("auth-login-pass").value;
+  if (!email || !password) return showAuthError("Please enter email and password.");
+  const btn = document.getElementById("btn-auth-login");
+  btn.disabled = true; btn.textContent = "Logging in…";
+  document.getElementById("auth-error").style.display = "none";
+  try {
+    const r = await fetch("/user/login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      credentials: "include", body: JSON.stringify({ email, password }),
+    });
+    const data = await r.json();
+    if (!r.ok) { showAuthError(data.error || "Login failed."); return; }
+    window.location.href = "/app";
+  } catch { showAuthError("Network error. Please try again."); }
+  finally { btn.disabled = false; btn.textContent = "Log In →"; }
+}
+
+// If user is already logged in, swap nav CTA to "Go to Dashboard"
+(async () => {
+  try {
+    const r = await fetch("/user/me", { credentials: "include" });
+    const d = await r.json();
+    if (d.loggedIn) {
+      const loginLink  = document.getElementById("nav-login-link");
+      const signupLink = document.getElementById("nav-signup-link");
+      if (loginLink)  loginLink.style.display  = "none";
+      if (signupLink) { signupLink.textContent = "Go to Dashboard →"; signupLink.href = "/app"; }
+      // Swap auth card to a welcome message
+      document.getElementById("auth-card").innerHTML =
+        `<div style="text-align:center;padding:12px 0">
+          <div style="font-size:32px;margin-bottom:12px">👋</div>
+          <div style="font-size:17px;font-weight:800;color:#1a202c;margin-bottom:6px">Welcome back, ${d.user.name || d.user.email}!</div>
+          <a href="/app" style="display:inline-block;margin-top:14px;padding:12px 28px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border-radius:9px;font-size:15px;font-weight:700;text-decoration:none">Open Dashboard →</a>
+        </div>`;
+    }
+  } catch {}
+})();
+</script>
 <script>if("serviceWorker"in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script>
 </body>
 </html>
