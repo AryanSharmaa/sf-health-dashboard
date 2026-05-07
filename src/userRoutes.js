@@ -53,7 +53,7 @@ router.post("/login", async (req, res) => {
 router.get("/me", async (req, res) => {
   const session = await getAppSession(req.cookies?.[SESSION_COOKIE]);
   if (!session) return res.json({ loggedIn: false });
-  res.json({ loggedIn: true, user: { id: session.user_id, email: session.email, name: session.name } });
+  res.json({ loggedIn: true, user: { id: session.user_id, email: session.email, name: session.name, created_at: session.user_created_at } });
 });
 
 // POST /user/logout

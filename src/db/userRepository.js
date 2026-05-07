@@ -58,7 +58,7 @@ async function getAppSession(sessionId) {
   if (!sessionId) return null;
   const db = await getDb();
   const { rows } = await db.query(
-    `SELECT s.*, u.email, u.name FROM app_sessions s
+    `SELECT s.*, u.email, u.name, u.created_at AS user_created_at FROM app_sessions s
      JOIN users u ON u.id = s.user_id
      WHERE s.id = ? AND s.expires_at > ?`,
     [sessionId, new Date().toISOString()]

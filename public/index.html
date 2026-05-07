@@ -33,6 +33,26 @@
     .btn-logout{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:white;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer}
     .btn-logout:hover{background:rgba(255,255,255,0.2)}
 
+    /* ── Profile dropdown ── */
+    .profile-wrap{position:relative}
+    .profile-btn{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);padding:5px 12px 5px 6px;border-radius:99px;cursor:pointer;transition:background 0.2s;color:white;font-size:13px;font-weight:600}
+    .profile-btn:hover{background:rgba(255,255,255,0.28)}
+    .profile-btn .p-avatar{width:28px;height:28px;background:#7dd3fc;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#1e3a5f;flex-shrink:0}
+    .profile-btn .p-name{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .profile-btn .p-caret{font-size:9px;opacity:0.7;margin-left:2px;transition:transform 0.2s}
+    .profile-btn.open .p-caret{transform:rotate(180deg)}
+    .profile-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;min-width:200px;background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.15);border:1px solid #e2e8f0;overflow:hidden;z-index:500}
+    .profile-dropdown.open{display:block}
+    .pd-header{padding:14px 16px 10px;border-bottom:1px solid #f3f4f6}
+    .pd-header-name{font-size:14px;font-weight:700;color:#1a202c}
+    .pd-header-email{font-size:12px;color:#718096;margin-top:1px}
+    .pd-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;font-weight:600;color:#374151;cursor:pointer;transition:background 0.15s;border:none;background:none;width:100%;text-align:left}
+    .pd-item:hover{background:#f8fafc;color:#0070d2}
+    .pd-item .pd-icon{font-size:15px;width:20px;text-align:center}
+    .pd-divider{height:1px;background:#f3f4f6;margin:4px 0}
+    .pd-item.danger{color:#dc2626}
+    .pd-item.danger:hover{background:#fef2f2;color:#dc2626}
+
     /* ── Layout ── */
     .main{max-width:960px;margin:36px auto;padding:0 24px;flex:1;width:100%}
     .card{background:white;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);padding:28px;margin-bottom:22px}
@@ -314,10 +334,7 @@
   <a href="/" class="logo" style="cursor:pointer;text-decoration:none">SF<span>Health</span></a>
   <span class="tagline">Automated Salesforce Org Audit</span>
   <div class="nav-right" id="nav-right" style="display:none">
-    <div class="user-pill" id="app-user-pill" style="display:none">
-      <div class="avatar" id="app-nav-avatar">?</div>
-      <span class="uname" id="app-nav-username"></span>
-    </div>
+    <!-- SF session pill (shown when Salesforce OAuth is active) -->
     <div class="user-pill" id="sf-user-pill" style="display:none">
       <div class="avatar" id="nav-avatar">?</div>
       <span class="uname" id="nav-username"></span>
@@ -325,7 +342,28 @@
     <button class="nav-link" id="btn-nav-audit">Audit</button>
     <button class="nav-link" id="btn-nav-history">History</button>
     <button class="btn-logout" id="btn-logout">Disconnect SF</button>
-    <button class="btn-logout" id="btn-app-logout" style="display:none">Sign Out</button>
+
+    <!-- Profile icon (shown when app user is logged in) -->
+    <div class="profile-wrap" id="profile-wrap" style="display:none">
+      <button class="profile-btn" id="profile-btn" aria-haspopup="true" aria-expanded="false">
+        <div class="p-avatar" id="profile-avatar">?</div>
+        <span class="p-name" id="profile-name"></span>
+        <span class="p-caret">▼</span>
+      </button>
+      <div class="profile-dropdown" id="profile-dropdown">
+        <div class="pd-header">
+          <div class="pd-header-name" id="pd-name"></div>
+          <div class="pd-header-email" id="pd-email"></div>
+        </div>
+        <button class="pd-item" id="pd-profile"><span class="pd-icon">👤</span>Profile</button>
+        <button class="pd-item" id="pd-about"><span class="pd-icon">ℹ️</span>About Us</button>
+        <div class="pd-divider"></div>
+        <button class="pd-item" id="pd-feedback"><span class="pd-icon">⭐</span>Feedback</button>
+        <button class="pd-item" id="pd-support"><span class="pd-icon">🎫</span>Support</button>
+        <div class="pd-divider"></div>
+        <button class="pd-item danger" id="pd-signout"><span class="pd-icon">🚪</span>Sign Out</button>
+      </div>
+    </div>
   </div>
   <div class="nav-right" id="nav-auth-links" style="display:none">
     <a href="/login" class="nav-link" style="text-decoration:none">Log In</a>
@@ -989,6 +1027,79 @@
   </div>
 </div>
 
+<!-- ══ PROFILE MODAL ══ -->
+<div class="modal-backdrop" id="profile-modal-backdrop">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">My Profile</div>
+      <button class="modal-close" onclick="document.getElementById('profile-modal-backdrop').classList.remove('open')">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;padding:8px 0 22px">
+      <div id="pm-avatar" style="width:56px;height:56px;background:linear-gradient(135deg,#1e3a5f,#0070d2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:white;flex-shrink:0">?</div>
+      <div>
+        <div id="pm-name" style="font-size:17px;font-weight:800;color:#1a202c"></div>
+        <div id="pm-email" style="font-size:13px;color:#718096;margin-top:3px"></div>
+        <div id="pm-member-since" style="font-size:11px;color:#a0aec0;margin-top:3px"></div>
+      </div>
+    </div>
+    <div style="border-top:1px solid #f3f4f6;padding-top:18px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:12px">Account Details</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;font-size:13px">
+          <span style="color:#718096;font-weight:500">Email</span>
+          <span id="pm-email-val" style="font-weight:600;color:#1a202c"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px">
+          <span style="color:#718096;font-weight:500">Display name</span>
+          <span id="pm-name-val" style="font-weight:600;color:#1a202c"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px">
+          <span style="color:#718096;font-weight:500">Member since</span>
+          <span id="pm-since-val" style="font-weight:600;color:#1a202c"></span>
+        </div>
+      </div>
+    </div>
+    <div style="border-top:1px solid #f3f4f6;padding-top:18px;margin-top:18px">
+      <button class="btn-submit" onclick="appLogout()" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ABOUT US MODAL ══ -->
+<div class="modal-backdrop" id="about-modal-backdrop">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">About SFHealth</div>
+      <button class="modal-close" onclick="document.getElementById('about-modal-backdrop').classList.remove('open')">✕</button>
+    </div>
+    <div style="text-align:center;padding:8px 0 22px">
+      <div style="width:60px;height:60px;background:linear-gradient(135deg,#1e3a5f,#0070d2);border-radius:18px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 4px 16px rgba(0,112,210,0.3)">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      </div>
+      <div style="font-size:22px;font-weight:900;color:#1a202c;letter-spacing:-0.5px">SF<span style="color:#0070d2">Health</span></div>
+      <div style="font-size:13px;color:#718096;margin-top:4px">Automated Salesforce Org Audit · v1.0</div>
+    </div>
+    <p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:16px">SFHealth gives Salesforce admins and consultants an instant, actionable health score for any Salesforce org — covering automation, security, data quality, API limits, code quality, and user adoption.</p>
+    <p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:20px">Connect your org in seconds via OAuth, get a detailed scorecard with prioritised recommendations, and track improvement over time. Marketing Cloud audits are also supported.</p>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#6b7280;margin-bottom:10px">Built by</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;background:linear-gradient(135deg,#1e3a5f,#0070d2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:white">A</div>
+        <div>
+          <div style="font-size:15px;font-weight:800;color:#1a202c">Aryan Sharma</div>
+          <div style="font-size:12px;color:#718096">Founder &amp; Developer</div>
+        </div>
+        <div style="margin-left:auto;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;letter-spacing:0.04em;text-transform:uppercase">Owner</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="pd-item" style="flex:1;justify-content:center;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px" onclick="document.getElementById('about-modal-backdrop').classList.remove('open');openModal('feedback')"><span class="pd-icon">⭐</span>Leave Feedback</button>
+      <button class="pd-item" style="flex:1;justify-content:center;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px" onclick="document.getElementById('about-modal-backdrop').classList.remove('open');openModal('support')"><span class="pd-icon">🎫</span>Get Support</button>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:12px;color:#a0aec0">© 2026 SFHealth · All rights reserved</div>
+  </div>
+</div>
+
 <!-- ══ FOOTER WATERMARK ══ -->
 <footer>
   <div class="footer-left">
@@ -1222,24 +1333,41 @@ function reconnectOrg(orgId, orgName, env) {
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 
 function renderAppUserNav(user) {
-  const navRight    = document.getElementById("nav-right");
-  const authLinks   = document.getElementById("nav-auth-links");
-  const appPill     = document.getElementById("app-user-pill");
-  const appAvatar   = document.getElementById("app-nav-avatar");
-  const appUsername = document.getElementById("app-nav-username");
-  const appLogout   = document.getElementById("btn-app-logout");
+  const navRight   = document.getElementById("nav-right");
+  const authLinks  = document.getElementById("nav-auth-links");
+  const profileWrap = document.getElementById("profile-wrap");
 
   if (user) {
-    appAvatar.textContent   = (user.name || user.email || "?")[0].toUpperCase();
-    appUsername.textContent = user.name || user.email;
-    appPill.style.display   = "flex";
-    appLogout.style.display = "inline-block";
-    authLinks.style.display = "none";
-    navRight.style.display  = "flex";
+    const initials = (user.name || user.email || "?")[0].toUpperCase();
+    const displayName = user.name || user.email;
+
+    // Profile button in nav
+    document.getElementById("profile-avatar").textContent = initials;
+    document.getElementById("profile-name").textContent   = displayName;
+
+    // Dropdown header
+    document.getElementById("pd-name").textContent  = displayName;
+    document.getElementById("pd-email").textContent = user.email || "";
+
+    // Profile modal
+    document.getElementById("pm-avatar").textContent  = initials;
+    document.getElementById("pm-name").textContent    = displayName;
+    document.getElementById("pm-email").textContent   = user.email || "";
+    document.getElementById("pm-email-val").textContent = user.email || "";
+    document.getElementById("pm-name-val").textContent  = user.name || "—";
+    if (user.created_at) {
+      const d = new Date(user.created_at);
+      const since = d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      document.getElementById("pm-member-since").textContent = "Member since " + since;
+      document.getElementById("pm-since-val").textContent    = since;
+    }
+
+    profileWrap.style.display = "flex";
+    authLinks.style.display   = "none";
+    navRight.style.display    = "flex";
   } else {
-    appPill.style.display   = "none";
-    appLogout.style.display = "none";
-    authLinks.style.display = "flex";
+    profileWrap.style.display = "none";
+    authLinks.style.display   = "flex";
   }
 }
 
@@ -2339,7 +2467,52 @@ document.getElementById("run-btn").addEventListener("click", startAudit);
 document.getElementById("btn-nav-audit").addEventListener("click", () => showPage("audit"));
 document.getElementById("btn-nav-history").addEventListener("click", () => { showPage("history"); loadOrgList(); });
 document.getElementById("btn-logout").addEventListener("click", logout);
-document.getElementById("btn-app-logout").addEventListener("click", appLogout);
+
+// ── Profile dropdown ──────────────────────────────────────────────────────────
+(function() {
+  const btn  = document.getElementById("profile-btn");
+  const drop = document.getElementById("profile-dropdown");
+
+  function openDrop()  { drop.classList.add("open");    btn.classList.add("open");    btn.setAttribute("aria-expanded","true");  }
+  function closeDrop() { drop.classList.remove("open"); btn.classList.remove("open"); btn.setAttribute("aria-expanded","false"); }
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    drop.classList.contains("open") ? closeDrop() : openDrop();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!btn.contains(e.target) && !drop.contains(e.target)) closeDrop();
+  });
+
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrop(); });
+
+  document.getElementById("pd-profile").addEventListener("click", () => {
+    closeDrop();
+    document.getElementById("profile-modal-backdrop").classList.add("open");
+  });
+
+  document.getElementById("pd-about").addEventListener("click", () => {
+    closeDrop();
+    document.getElementById("about-modal-backdrop").classList.add("open");
+  });
+
+  document.getElementById("pd-feedback").addEventListener("click", () => {
+    closeDrop();
+    openModal("feedback");
+  });
+
+  document.getElementById("pd-support").addEventListener("click", () => {
+    closeDrop();
+    openModal("support");
+  });
+
+  document.getElementById("pd-signout").addEventListener("click", () => {
+    closeDrop();
+    appLogout();
+  });
+})();
+
 checkSession();
 
 // ─── Marketing Cloud ─────────────────────────────────────────────────────────
