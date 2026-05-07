@@ -60,26 +60,62 @@
     .card h2{font-size:16px;font-weight:700;margin-bottom:20px;color:#1a202c;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
     /* ── Connect screen ── */
-    .connect-wrap{text-align:center;padding:24px 0 12px}
-    .sf-logo{width:64px;height:64px;background:linear-gradient(135deg,#1e3a5f,#0070d2);border-radius:18px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,112,210,0.3)}
-    .sf-logo svg{width:36px;height:36px;fill:white}
-    .connect-wrap h1{font-size:28px;font-weight:800;color:#1a202c;margin-bottom:10px}
-    .connect-wrap>p{color:#718096;font-size:15px;max-width:440px;margin:0 auto 28px}
-    .connect-buttons{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap}
-    .btn-connect{display:inline-flex;align-items:center;gap:10px;background:#0070d2;color:white;border:none;padding:14px 32px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;text-decoration:none;box-shadow:0 2px 8px rgba(0,112,210,0.3)}
-    .btn-connect:hover{background:#005fb2;transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,112,210,0.4)}
-    .btn-connect-sandbox{background:white;color:#0070d2;border:2px solid #0070d2;box-shadow:none}
-    .btn-connect-sandbox:hover{background:#eff6ff}
-    .connect-note{font-size:12px;color:#a0aec0;margin-top:18px;line-height:1.6}
-    .error-banner{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:9px;font-size:14px;margin-bottom:20px;display:none;line-height:1.7}
+    .connect-page{max-width:760px;margin:0 auto}
+    .connect-hero{text-align:center;padding:40px 0 32px}
+    .connect-icon{width:72px;height:72px;background:linear-gradient(135deg,#0a1628,#0070d2);border-radius:22px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:22px;box-shadow:0 8px 24px rgba(0,112,210,0.3)}
+    .connect-icon svg{width:38px;height:38px;fill:white}
+    .connect-hero h1{font-size:30px;font-weight:900;color:#0f172a;margin-bottom:10px;letter-spacing:-.5px}
+    .connect-hero p{color:#64748b;font-size:15px;max-width:440px;margin:0 auto;line-height:1.65}
+    .error-banner{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:10px;font-size:14px;margin-bottom:20px;display:none;line-height:1.7}
     .error-banner code{background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px;font-size:12px}
 
-    /* ── How it works cards ── */
-    .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:8px}
-    .how-item{text-align:center;padding:20px 16px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0}
-    .how-icon{font-size:30px;margin-bottom:12px}
-    .how-title{font-weight:700;margin-bottom:8px;font-size:14px}
-    .how-desc{font-size:13px;color:#718096;line-height:1.55}
+    /* connect option cards */
+    .connect-options{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:28px}
+    .connect-card{background:white;border:2px solid #e2e8f0;border-radius:16px;padding:22px 20px;cursor:pointer;transition:all .2s;text-decoration:none;display:flex;flex-direction:column;gap:0;position:relative;overflow:hidden}
+    .connect-card:hover{border-color:#0070d2;box-shadow:0 4px 24px rgba(0,112,210,.1);transform:translateY(-2px)}
+    .connect-card.mc-card:hover{border-color:#e8720c;box-shadow:0 4px 24px rgba(232,114,12,.1)}
+    .connect-card.sandbox-card:hover{border-color:#0070d2;box-shadow:0 4px 24px rgba(0,112,210,.08)}
+    .cc-badge{position:absolute;top:14px;right:14px;font-size:10px;font-weight:800;padding:3px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.05em}
+    .cc-badge-prod{background:#dcfce7;color:#16a34a}
+    .cc-badge-sandbox{background:#fef9c3;color:#ca8a04}
+    .cc-badge-mc{background:#fff7ed;color:#e8720c}
+    .cc-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+    .cc-icon-sf{background:#eff6ff}
+    .cc-icon-sandbox{background:#fefce8}
+    .cc-icon-mc{background:#fff7ed}
+    .cc-title{font-size:15px;font-weight:800;color:#0f172a;margin-bottom:5px}
+    .cc-desc{font-size:13px;color:#64748b;line-height:1.55}
+    .cc-action{display:flex;align-items:center;gap:6px;margin-top:14px;font-size:13px;font-weight:700;color:#0070d2}
+    .connect-card.mc-card .cc-action{color:#e8720c}
+    .cc-action-arrow{transition:transform .2s}
+    .connect-card:hover .cc-action-arrow{transform:translateX(4px)}
+    .connect-security{display:flex;align-items:center;justify-content:center;gap:20px;margin-top:18px;padding:12px 0;border-top:1px solid #f1f5f9}
+    .cs-item{display:flex;align-items:center;gap:6px;font-size:12px;color:#94a3b8;font-weight:500}
+    .cs-dot{width:6px;height:6px;background:#4ade80;border-radius:50%}
+    @media(max-width:600px){.connect-options{grid-template-columns:1fr}}
+
+    /* prev org cards — redesigned */
+    .prev-section-label{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px}
+    .prev-org-card{display:flex;align-items:center;gap:14px;padding:14px 16px;background:white;border:1.5px solid #e2e8f0;border-radius:12px;transition:all .18s;cursor:default}
+    .prev-org-card:hover{border-color:#bfdbfe;background:#f8fbff;box-shadow:0 2px 10px rgba(0,112,210,.06)}
+    .poc-avatar{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#0a1628,#0070d2);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:white;flex-shrink:0}
+    .poc-info{flex:1;min-width:0}
+    .poc-name{font-weight:700;font-size:14px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .poc-meta{font-size:12px;color:#94a3b8;margin-top:2px}
+    .poc-score-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+    .poc-score{font-size:22px;font-weight:900;line-height:1}
+    .poc-grade{font-size:11px;font-weight:700;opacity:.7}
+    .btn-reconnect{padding:7px 16px;background:#0070d2;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
+    .btn-reconnect:hover{background:#005ab5;transform:translateY(-1px)}
+    .btn-reconnect.sandbox{background:white;color:#0070d2;border:1.5px solid #0070d2}
+    .btn-reconnect.sandbox:hover{background:#eff6ff}
+
+    /* How it works — compact inline */
+    .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:8px}
+    .how-item{padding:18px 16px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0}
+    .how-icon{font-size:26px;margin-bottom:10px}
+    .how-title{font-weight:700;margin-bottom:6px;font-size:13px;color:#0f172a}
+    .how-desc{font-size:12px;color:#64748b;line-height:1.55}
 
     /* ── Org banner ── */
     .org-banner{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:12px;margin-bottom:20px;border:1px solid #bfdbfe;gap:12px;flex-wrap:wrap}
@@ -376,71 +412,86 @@
 
   <!-- ══ PAGE: CONNECT ══ -->
   <div class="page active" id="page-connect">
-    <div class="card">
+    <div class="connect-page">
       <div id="error-banner" class="error-banner"></div>
 
-      <!-- Previously audited orgs — shown when history exists -->
-      <div id="prev-orgs-section" style="display:none;margin-bottom:24px">
-        <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">Previously audited orgs</div>
+      <!-- Previously audited orgs -->
+      <div id="prev-orgs-section" style="display:none;margin-bottom:28px">
+        <div class="prev-section-label">Previously audited orgs</div>
         <div id="prev-orgs-list" style="display:flex;flex-direction:column;gap:8px"></div>
-        <div style="margin-top:14px;border-top:1px solid #f3f4f6;padding-top:16px">
-          <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Connect a different org</div>
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid #f1f5f9">
+          <div class="prev-section-label">Connect a different org</div>
         </div>
       </div>
 
-      <div class="connect-wrap" style="padding-top:0">
-        <div class="sf-logo" id="connect-logo">
+      <!-- Hero -->
+      <div class="connect-hero" id="connect-hero-section">
+        <div class="connect-icon" id="connect-logo">
           <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
         </div>
-        <h1 id="connect-heading">Salesforce Org Health Dashboard</h1>
-        <p id="connect-subtext">Connect your Salesforce org or Marketing Cloud instance — securely audited in under 2 minutes.</p>
-
-        <!-- Salesforce Core -->
-        <div style="margin-bottom:20px">
-          <div style="font-size:11px;font-weight:700;color:#a0aec0;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Salesforce Core (CRM)</div>
-          <div class="connect-buttons">
-            <a href="/auth/salesforce?env=production" class="btn-connect">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
-              Connect Production Org
-            </a>
-            <a href="/auth/salesforce?env=sandbox" class="btn-connect btn-connect-sandbox">
-              Connect Sandbox
-            </a>
-          </div>
-        </div>
-
-        <!-- Marketing Cloud -->
-        <div>
-          <div style="font-size:11px;font-weight:700;color:#a0aec0;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Marketing Cloud</div>
-          <button class="btn-connect" id="btn-mc-connect" style="background:linear-gradient(135deg,#e8720c,#f59e0b);box-shadow:0 2px 8px rgba(245,158,11,0.35)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-            Connect Marketing Cloud
-          </button>
-        </div>
-
-        <p class="connect-note">
-          Salesforce: redirected to official login page — we never see your password.<br/>
-          Marketing Cloud: uses your Installed Package credentials (Server-to-Server OAuth).
-        </p>
+        <h1 id="connect-heading">Connect your Salesforce org</h1>
+        <p id="connect-subtext">Securely audited in under 2 minutes. No setup, no agents — just instant, actionable results.</p>
       </div>
-    </div>
-    <div class="card">
-      <h2>How it works</h2>
-      <div class="how-grid">
-        <div class="how-item">
-          <div class="how-icon">🔐</div>
-          <div class="how-title">Secure OAuth Login</div>
-          <div class="how-desc">Login via Salesforce's official page. We only receive a temporary access token — never your password.</div>
+
+      <!-- Connect option cards -->
+      <div class="connect-options">
+        <a href="/auth/salesforce?env=production" class="connect-card">
+          <span class="cc-badge cc-badge-prod">Production</span>
+          <div class="cc-icon cc-icon-sf">☁️</div>
+          <div class="cc-title">Salesforce Production</div>
+          <div class="cc-desc">Connect your live production org via Salesforce's official OAuth. Read-only — we never write to your org.</div>
+          <div class="cc-action">Connect <span class="cc-action-arrow">→</span></div>
+        </a>
+
+        <a href="/auth/salesforce?env=sandbox" class="connect-card sandbox-card">
+          <span class="cc-badge cc-badge-sandbox">Sandbox</span>
+          <div class="cc-icon cc-icon-sandbox">🧪</div>
+          <div class="cc-title">Salesforce Sandbox</div>
+          <div class="cc-desc">Audit a sandbox or developer org. Identical checks — great for testing before rolling out fixes to production.</div>
+          <div class="cc-action">Connect <span class="cc-action-arrow">→</span></div>
+        </a>
+
+        <a class="connect-card mc-card" id="btn-mc-connect" style="cursor:pointer">
+          <span class="cc-badge cc-badge-mc">Marketing Cloud</span>
+          <div class="cc-icon cc-icon-mc">✉️</div>
+          <div class="cc-title">Marketing Cloud</div>
+          <div class="cc-desc">Audit Email Studio, Journey Builder, Automation Studio, and Sender Authentication in one pass.</div>
+          <div class="cc-action" style="color:#e8720c">Connect <span class="cc-action-arrow">→</span></div>
+        </a>
+
+        <div class="connect-card" style="border-style:dashed;cursor:default;pointer-events:none;opacity:.55">
+          <div class="cc-icon" style="background:#f1f5f9">🔜</div>
+          <div class="cc-title" style="color:#94a3b8">More coming soon</div>
+          <div class="cc-desc">Revenue Cloud, Experience Cloud, and Field Service audits are on the roadmap.</div>
         </div>
-        <div class="how-item">
-          <div class="how-icon">🔍</div>
-          <div class="how-title">Automated Audit</div>
-          <div class="how-desc">We scan automation, security, code quality, data integrity, API usage, and user adoption in under 2 minutes.</div>
-        </div>
-        <div class="how-item">
-          <div class="how-icon">📊</div>
-          <div class="how-title">Score + Actions</div>
-          <div class="how-desc">Get a 0–100 health score, per-category breakdown benchmarked against similar orgs, and prioritised fixes.</div>
+      </div>
+
+      <!-- Security strip -->
+      <div class="connect-security">
+        <div class="cs-item"><div class="cs-dot"></div>OAuth 2.0 + PKCE — no password shared</div>
+        <div class="cs-item"><div class="cs-dot"></div>Read-only access — nothing written</div>
+        <div class="cs-item"><div class="cs-dot"></div>Token expires in 8 hours</div>
+      </div>
+
+      <!-- How it works -->
+      <div class="card" style="margin-top:20px">
+        <h2>How it works</h2>
+        <div class="how-grid">
+          <div class="how-item">
+            <div class="how-icon">🔐</div>
+            <div class="how-title">Secure OAuth Login</div>
+            <div class="how-desc">Redirected to Salesforce's official login page. We receive a temporary read-only token — never your password.</div>
+          </div>
+          <div class="how-item">
+            <div class="how-icon">🔍</div>
+            <div class="how-title">38+ Automated Checks</div>
+            <div class="how-desc">Automation, security, code quality, data integrity, API limits, and user adoption — scanned in under 2 minutes.</div>
+          </div>
+          <div class="how-item">
+            <div class="how-icon">📊</div>
+            <div class="how-title">Score + AI Fix Guides</div>
+            <div class="how-desc">0–100 health score, per-category breakdown benchmarked against similar orgs, and step-by-step AI remediation guides.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1304,22 +1355,25 @@ function loadPrevOrgs() {
   const list    = document.getElementById("prev-orgs-list");
   if (!orgs.length) { section.style.display = "none"; return; }
 
-  document.getElementById("connect-logo").style.display    = "none";
-  document.getElementById("connect-heading").style.display = "none";
-  document.getElementById("connect-subtext").style.display = "none";
+  const heroSection = document.getElementById("connect-hero-section");
+  if (heroSection) heroSection.style.display = "none";
 
   list.innerHTML = orgs.map(org => {
-    const sc = org.lastScore;
-    const scCol = sc!=null ? (sc>=80?"#16a34a":sc>=60?"#ca8a04":"#dc2626") : "#a0aec0";
+    const sc    = org.lastScore;
+    const scCol = sc != null ? (sc >= 80 ? "#16a34a" : sc >= 60 ? "#ca8a04" : "#dc2626") : "#94a3b8";
+    const grade = sc != null ? (sc >= 90 ? "A" : sc >= 80 ? "B" : sc >= 70 ? "C" : sc >= 60 ? "D" : "F") : "–";
+    const initial = (org.name || "?")[0].toUpperCase();
+    const typeLabel = org.isSandbox ? "Sandbox" : "Production";
     return `<div class="prev-org-card">
-      <div style="flex:1;min-width:0">
+      <div class="poc-avatar">${initial}</div>
+      <div class="poc-info">
         <div class="poc-name">${escHtml(org.name)}</div>
-        <div class="poc-meta">${escHtml(org.id)}${org.lastAudit?" · Last: "+fmtDate(org.lastAudit):""}</div>
+        <div class="poc-meta">${typeLabel}${org.lastAudit ? " · Last audit " + fmtDate(org.lastAudit) : ""}</div>
       </div>
-      ${sc!=null?`<div class="poc-score" style="color:${scCol}">${sc}</div>`:""}
-      <button class="btn-reconnect ${org.isSandbox?"sandbox":""}"
-        onclick="reconnectOrg('${escHtml(org.id)}','${escHtml(org.name)}','${org.env||"production"}')"
-      >${org.isSandbox?"Reconnect Sandbox":"Reconnect"}</button>
+      ${sc != null ? `<div class="poc-score-wrap"><div class="poc-score" style="color:${scCol}">${sc}</div><div class="poc-grade" style="color:${scCol}">${grade}</div></div>` : ""}
+      <button class="btn-reconnect ${org.isSandbox ? "sandbox" : ""}"
+        onclick="reconnectOrg('${escHtml(org.id)}','${escHtml(org.name)}','${org.env || "production"}')"
+      >${org.isSandbox ? "Reconnect Sandbox" : "Reconnect"}</button>
     </div>`;
   }).join("");
   section.style.display = "block";

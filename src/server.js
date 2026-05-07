@@ -35,6 +35,14 @@ const app = express();
 
 app.set("trust proxy", 1);
 
+// ─── Request ID — every response gets a unique ID for tracing ─────────────────
+app.use((req, res, next) => {
+  const id = uuidv4();
+  req.requestId = id;
+  res.setHeader("X-Request-Id", id);
+  next();
+});
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -93,28 +101,46 @@ app.use(express.static(path.join(__dirname, "../public"), { maxAge: "1h" }));
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 
+function rateLimitHandler(msg) {
+  return (req, res) => {
+    const retryAfter = Math.ceil((res.getHeader("X-RateLimit-Reset") - Date.now()) / 1000) || 60;
+    res.setHeader("Retry-After", retryAfter);
+    res.status(429).json({
+      error: msg,
+      code: "RATE_LIMITED",
+      retryAfterSeconds: retryAfter,
+      requestId: req.requestId,
+    });
+  };
+}
+
 const auditLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, max: 5,
   standardHeaders: true, legacyHeaders: false,
-  message: { error: "Too many audit requests. Please wait 10 minutes." },
+  handler: rateLimitHandler("Too many audit requests. Please wait 10 minutes before running another audit."),
 });
 
 const readLimiter = rateLimit({
-  windowMs: 60 * 1000, max: 60,
+  windowMs: 60 * 1000, max: 120,
   standardHeaders: true, legacyHeaders: false,
+  handler: rateLimitHandler("Too many requests. Please slow down."),
 });
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000, max: 20,
   standardHeaders: true, legacyHeaders: false,
-  message: { error: "Too many AI requests. Please wait a minute." },
+  handler: rateLimitHandler("Too many AI guide requests. Please wait a minute."),
 });
 
 // ─── Auth middleware ──────────────────────────────────────────────────────────
 
 function requireSession(req, res, next) {
   const session = getSession(req.cookies?.sf_session);
-  if (!session) return res.status(401).json({ error: "Not connected. Please connect your Salesforce org first." });
+  if (!session) return res.status(401).json({
+    error: "Not connected. Please connect your Salesforce org first.",
+    code: "SF_SESSION_REQUIRED",
+    requestId: req.requestId,
+  });
   req.sfSession = session;
   next();
 }
@@ -126,7 +152,12 @@ const runningJobs = new Map();
 
 async function requireAppAuth(req, res, next) {
   const session = await getAppSession(req.cookies?.[APP_SESSION_COOKIE]);
-  if (!session) return res.status(401).json({ error: "Please log in to use this feature.", loginRequired: true });
+  if (!session) return res.status(401).json({
+    error: "Please log in to use this feature.",
+    code: "APP_AUTH_REQUIRED",
+    loginRequired: true,
+    requestId: req.requestId,
+  });
   req.appUser = { id: session.user_id, email: session.email, name: session.name };
   next();
 }
@@ -154,10 +185,32 @@ app.get("/api/share/:token", readLimiter, async (req, res) => {
   res.json({ share, report: audit.rawScore, metadata: audit.rawMetadata });
 });
 
-// ─── Health check ─────────────────────────────────────────────────────────────
+// ─── Health & status ──────────────────────────────────────────────────────────
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", version: "2.0.0", timestamp: new Date().toISOString() });
+});
+
+app.get("/api/status", async (_req, res) => {
+  const start = Date.now();
+  let dbStatus = "ok";
+  try {
+    const db = await require("./db/db").getDb();
+    await db.query("SELECT 1");
+  } catch {
+    dbStatus = "degraded";
+  }
+  res.json({
+    status: dbStatus === "ok" ? "ok" : "degraded",
+    version: "2.0.0",
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(process.uptime()),
+    services: {
+      database: dbStatus,
+      ai: process.env.OPENROUTER_API_KEY ? "configured" : "not_configured",
+    },
+    latencyMs: Date.now() - start,
+  });
 });
 
 // ─── Start audit (OAuth session) ──────────────────────────────────────────────
@@ -193,7 +246,7 @@ app.post("/api/audit", auditLimiter, requireSession, async (req, res) => {
     }
   })();
 
-  res.status(202).json({ jobId, status: "running" });
+  res.status(202).json({ jobId, status: "running", requestId: req.requestId });
 });
 
 // ─── Poll job ─────────────────────────────────────────────────────────────────
@@ -960,9 +1013,15 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/landing.html"));
 });
 
-app.use((err, _req, res, _next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Internal server error." });
+app.use((err, req, res, _next) => {
+  const isProd = process.env.NODE_ENV === "production";
+  console.error(`[${req.requestId}]`, err.stack || err.message);
+  res.status(err.status || 500).json({
+    error: isProd ? "An unexpected error occurred. Please try again." : err.message,
+    code: "INTERNAL_ERROR",
+    requestId: req.requestId,
+    ...(isProd ? {} : { stack: err.stack }),
+  });
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────

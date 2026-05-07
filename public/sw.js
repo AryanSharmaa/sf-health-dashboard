@@ -1,4 +1,4 @@
-const CACHE = "sfhealth-v15";
+const CACHE = "sfhealth-v16";
 
 // Only truly static, versioned assets get cached
 const PRECACHE = ["/favicon.svg", "/manifest.json", "/icons/icon-192.svg", "/icons/icon-512.svg"];
