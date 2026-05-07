@@ -110,6 +110,19 @@ CREATE TABLE IF NOT EXISTS scheduled_audits (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS mc_orgs (
+  id                TEXT        PRIMARY KEY,
+  subdomain         TEXT        NOT NULL,
+  mid               TEXT,
+  eid               TEXT,
+  org_name          TEXT,
+  client_id_enc     TEXT        NOT NULL,
+  client_secret_enc TEXT        NOT NULL,
+  last_used_at      TIMESTAMPTZ,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
 CREATE INDEX IF NOT EXISTS idx_cat_scores_org    ON category_scores(org_id, category, created_at);

@@ -125,6 +125,22 @@ CREATE TABLE IF NOT EXISTS scheduled_audits (
   updated_at      TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- ─── MC Orgs ──────────────────────────────────────────────────────────────
+-- One row per Marketing Cloud account whose credentials have been saved once.
+-- client_id and client_secret are AES-256-GCM encrypted with MC_CRED_SECRET.
+CREATE TABLE IF NOT EXISTS mc_orgs (
+  id                TEXT  PRIMARY KEY,
+  subdomain         TEXT  NOT NULL,
+  mid               TEXT,
+  eid               TEXT,
+  org_name          TEXT,
+  client_id_enc     TEXT  NOT NULL,
+  client_secret_enc TEXT  NOT NULL,
+  last_used_at      TEXT,
+  created_at        TEXT  NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at        TEXT  NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
 -- ─── Indexes ──────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);

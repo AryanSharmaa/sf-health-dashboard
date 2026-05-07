@@ -23,6 +23,8 @@ services:
         sync: false          # free AI — get key at aistudio.google.com (1M tokens/day free)
       - key: ANTHROPIC_API_KEY
         sync: false          # optional paid fallback — only used if Gemini key not set
+      - key: MC_CRED_SECRET
+        sync: false          # 32+ char random secret — encrypts saved MC credentials at rest
       - key: ADMIN_KEY
         sync: false          # secret key to access /api/admin/* endpoints
       - key: SMTP_HOST

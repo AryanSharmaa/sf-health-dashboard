@@ -21,6 +21,7 @@ const authRoutes = require("./authRoutes");
 const { getSession } = require("./oauth");
 const { generateRemediationGuide, streamOpenRouter } = require("./aiAdvisor");
 const { fetchToken, createMcSession, getMcSession, deleteMcSession } = require("./mcOAuth");
+const { saveMcOrg, getMcOrgByMid, getMcOrgByEid, listMcOrgs, touchMcOrg } = require("./db/mcRepository");
 const { collectMcMetadata } = require("./mcCollector");
 const { scoreMcHealth }     = require("./mcHealthScore");
 const { startScheduler }    = require("./scheduler");
@@ -667,28 +668,93 @@ function requireMcSession(req, res, next) {
   next();
 }
 
-// Connect — exchange credentials for a token and create a session
-app.post("/api/mc/connect", auditLimiter, async (req, res) => {
+// List saved MC orgs (no secrets)
+app.get("/api/mc/orgs", readLimiter, requireSession, async (_req, res) => {
+  try {
+    const orgs = await listMcOrgs();
+    res.json({ orgs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Connect — two modes:
+//   Full:  { subdomain, clientId, clientSecret, mid?, eid? }  — saves credentials, starts session
+//   Quick: { mid } or { eid }                                 — looks up saved credentials, starts session
+app.post("/api/mc/connect", auditLimiter, requireSession, async (req, res) => {
   const { subdomain, clientId, clientSecret, mid, eid } = req.body || {};
-  if (!subdomain || !clientId || !clientSecret) {
+
+  let resolvedSubdomain = subdomain;
+  let resolvedClientId  = clientId;
+  let resolvedSecret    = clientSecret;
+  let resolvedMid       = mid || null;
+  let resolvedEid       = eid || null;
+  let savedOrgId        = null;
+
+  // ── Quick reconnect: MID or EID only ─────────────────────────────────────
+  if (!clientId && !clientSecret) {
+    if (!mid && !eid) {
+      return res.status(400).json({ error: "Provide clientId + clientSecret for a new org, or a saved MID / EID to reconnect." });
+    }
+    const saved = mid ? await getMcOrgByMid(mid) : await getMcOrgByEid(eid);
+    if (!saved) {
+      return res.status(404).json({ error: "No saved credentials found for that MID/EID. Connect with full credentials first." });
+    }
+    resolvedSubdomain = saved.subdomain;
+    resolvedClientId  = saved.clientId;
+    resolvedSecret    = saved.clientSecret;
+    resolvedMid       = saved.mid;
+    resolvedEid       = saved.eid;
+    savedOrgId        = saved.id;
+  }
+
+  // ── Full connect: validate required fields ────────────────────────────────
+  if (!resolvedSubdomain || !resolvedClientId || !resolvedSecret) {
     return res.status(400).json({ error: "subdomain, clientId, and clientSecret are required." });
   }
+
   try {
-    const data = await fetchToken({ subdomain, clientId, clientSecret, mid, eid });
-    const sessionId = createMcSession({
-      subdomain, clientId, clientSecret, mid, eid,
-      accessToken: data.access_token,
-      expiresIn:   data.expires_in,
-      accountId:   data.rest_instance_url,
-      orgName:     subdomain,
+    const data = await fetchToken({
+      subdomain: resolvedSubdomain,
+      clientId:  resolvedClientId,
+      clientSecret: resolvedSecret,
+      mid: resolvedMid,
+      eid: resolvedEid,
     });
+
+    // Persist credentials on a successful full connect (or re-save on reconnect to refresh)
+    if (clientId && clientSecret) {
+      savedOrgId = await saveMcOrg({
+        subdomain:    resolvedSubdomain,
+        mid:          resolvedMid,
+        eid:          resolvedEid,
+        orgName:      resolvedSubdomain,
+        clientId:     resolvedClientId,
+        clientSecret: resolvedSecret,
+      });
+    } else if (savedOrgId) {
+      await touchMcOrg(savedOrgId);
+    }
+
+    const sessionId = createMcSession({
+      subdomain:    resolvedSubdomain,
+      clientId:     resolvedClientId,
+      clientSecret: resolvedSecret,
+      mid:          resolvedMid,
+      eid:          resolvedEid,
+      accessToken:  data.access_token,
+      expiresIn:    data.expires_in,
+      accountId:    data.rest_instance_url,
+      orgName:      resolvedSubdomain,
+    });
+
     res.cookie("mc_session", sessionId, {
       httpOnly: true,
       secure:   process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge:   8 * 60 * 60 * 1000,
     });
-    res.json({ connected: true, subdomain, mid: mid || null, eid: eid || null });
+    res.json({ connected: true, subdomain: resolvedSubdomain, mid: resolvedMid, eid: resolvedEid });
   } catch (err) {
     res.status(401).json({ error: err.message });
   }

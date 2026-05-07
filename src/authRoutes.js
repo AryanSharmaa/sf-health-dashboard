@@ -29,15 +29,18 @@ router.get("/salesforce", (req, res) => {
 
   const codeVerifier  = generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
-  const state         = generateState(codeVerifier);
+  const state         = generateState();
   const loginUrl      = req.query.env === "sandbox"
     ? "https://test.salesforce.com"
     : "https://login.salesforce.com";
   const redirectUri   = getRedirectUri(req);
-  const authUrl       = getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge });
+  const forceLogin    = req.query.force === "1";
+  const authUrl       = getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge, forceLogin });
 
-  res.cookie("sf_env",   loginUrl, { httpOnly: true, maxAge: 10 * 60 * 1000, sameSite: "lax" });
-  res.cookie("sf_state", state,    { httpOnly: true, maxAge: 10 * 60 * 1000, sameSite: "lax" });
+  const cookieOpts = { httpOnly: true, maxAge: 10 * 60 * 1000, sameSite: "lax", secure: process.env.NODE_ENV === "production" };
+  res.cookie("sf_env",   loginUrl,     cookieOpts);
+  res.cookie("sf_state", state,        cookieOpts);
+  res.cookie("sf_pkce",  codeVerifier, cookieOpts);
 
   res.redirect(authUrl);
 });
@@ -48,23 +51,27 @@ router.get("/salesforce/callback", async (req, res) => {
   const { code, state, error, error_description } = req.query;
 
   if (error) {
-    // Any SF-side error (cross-org, access_denied, etc.) — silently restart auth with a fresh PKCE flow.
-    // The user gets a clean login screen rather than an error page.
     const isSandbox = (req.cookies?.sf_env || "").includes("test.salesforce.com");
     res.clearCookie("sf_state");
     res.clearCookie("sf_env");
-    res.clearCookie("sf_cross_org_retry");
-    const envParam = isSandbox ? "?env=sandbox" : "";
-    return res.redirect(`/auth/salesforce${envParam}`);
+    res.clearCookie("sf_pkce");
+    const isCrossOrg = error.includes("cross") ||
+      (error === "access_denied" && (error_description || "").toLowerCase().includes("cross"));
+    if (isCrossOrg) {
+      const envParam = isSandbox ? "&env=sandbox" : "";
+      return res.redirect(`/app?error=cross-org-conflict${envParam}`);
+    }
+    return res.redirect(`/app?error=${encodeURIComponent(error_description || error)}`);
   }
 
-  // Validate state + retrieve PKCE verifier
-  const storedState   = req.cookies?.sf_state;
-  if (!state || state !== storedState) {
+  // Validate state (CSRF) and retrieve PKCE verifier — both live in cookies,
+  // so a server restart between authorize and callback doesn't break the flow.
+  const storedState  = req.cookies?.sf_state;
+  const codeVerifier = req.cookies?.sf_pkce;
+
+  if (!validateState(state, storedState)) {
     return res.redirect("/app?error=Invalid+state.+Please+try+again.");
   }
-
-  const codeVerifier = validateState(state);
   if (!codeVerifier) {
     return res.redirect("/app?error=Session+expired.+Please+try+again.");
   }
@@ -103,11 +110,39 @@ router.get("/salesforce/callback", async (req, res) => {
 
     res.clearCookie("sf_state");
     res.clearCookie("sf_env");
+    res.clearCookie("sf_pkce");
     res.redirect("/app");
   } catch (err) {
     console.error("OAuth callback error:", err.message);
     res.redirect(`/app?error=${encodeURIComponent(err.message)}`);
   }
+});
+
+// ─── Clear session + re-auth (cross-org recovery) ────────────────────────────
+// The user has an active SF session from a different org in their browser.
+// We clear our app session and send them to SF logout first, then back to /auth/salesforce.
+// SF's own logout clears the browser session on login.salesforce.com so the next
+// authorize call gets a fresh login screen instead of inheriting the wrong org.
+
+router.get("/salesforce/clear-session", (req, res) => {
+  const isSandbox = req.query.env === "sandbox";
+  const loginUrl  = isSandbox ? "https://test.salesforce.com" : "https://login.salesforce.com";
+
+  // Clear our own session cookie
+  res.clearCookie("sf_session", {
+    httpOnly: true,
+    secure:   process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  });
+  res.clearCookie("sf_state");
+  res.clearCookie("sf_env");
+  res.clearCookie("sf_pkce");
+
+  // After SF logs the user out it will redirect to retUrl — which is our fresh auth start
+  const appUrl      = process.env.APP_URL || `${req.protocol}://${req.get("host")}`;
+  const authRestart = `${appUrl}/auth/salesforce?force=1${isSandbox ? "&env=sandbox" : ""}`;
+  const retUrl      = encodeURIComponent(authRestart);
+  res.redirect(`${loginUrl}/secur/logout.jsp?retUrl=${retUrl}`);
 });
 
 // ─── Session info ─────────────────────────────────────────────────────────────

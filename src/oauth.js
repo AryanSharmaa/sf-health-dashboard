@@ -43,41 +43,36 @@ function generateCodeChallenge(verifier) {
 }
 
 // ─── State + verifier store (CSRF + PKCE) ────────────────────────────────────
+// The codeVerifier is stored in the sf_pkce cookie (httpOnly, 10min TTL) rather
+// than in-process memory. This survives server restarts on Render's free tier,
+// which spins down and cold-starts between requests.
 
-const pendingAuth = new Map();
-
-function generateState(codeVerifier) {
-  const state = crypto.randomBytes(16).toString("hex");
-  pendingAuth.set(state, { codeVerifier, createdAt: Date.now() });
-  // Clean up old entries
-  for (const [k, v] of pendingAuth) {
-    if (Date.now() - v.createdAt > 10 * 60 * 1000) pendingAuth.delete(k);
-  }
-  return state;
+function generateState() {
+  return crypto.randomBytes(16).toString("hex");
 }
 
-function validateState(state) {
-  const entry = pendingAuth.get(state);
-  if (!entry) return null;
-  pendingAuth.delete(state);
-  return entry.codeVerifier;
+function validateState(state, storedState) {
+  if (!state || !storedState || state !== storedState) return false;
+  return true;
 }
 
 // ─── OAuth URL builder (with PKCE) ───────────────────────────────────────────
 
-function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge }) {
+function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge, forceLogin = false }) {
   const base   = loginUrl || "https://login.salesforce.com";
   const params = new URLSearchParams({
-    response_type:          "code",
-    client_id:              clientId,
-    redirect_uri:           redirectUri,
-    state:                  state || "",
-    scope:                  "full",
-    code_challenge:         codeChallenge,
-    code_challenge_method:  "S256",
-    prompt:                 "login",
-    display:                "page",
+    response_type:         "code",
+    client_id:             clientId,
+    redirect_uri:          redirectUri,
+    state:                 state || "",
+    scope:                 "api refresh_token openid",
+    code_challenge:        codeChallenge,
+    code_challenge_method: "S256",
+    display:               "page",
   });
+  // Only force re-login when we explicitly want a fresh SF session (e.g. cross-org recovery).
+  // Using prompt=login on every connect forces a password prompt even for already-logged-in users.
+  if (forceLogin) params.set("prompt", "login");
   return `${base}/services/oauth2/authorize?${params.toString()}`;
 }
 
@@ -170,7 +165,6 @@ async function revokeToken(instanceUrl, token) {
 
 module.exports = {
   createSession, getSession, deleteSession,
-  generateCodeVerifier, generateCodeChallenge,
-  generateState, validateState,
+  generateCodeVerifier, generateCodeChallenge, generateState, validateState,
   getAuthorizationUrl, exchangeCodeForToken, getUserInfo, revokeToken,
 };

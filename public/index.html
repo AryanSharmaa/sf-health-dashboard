@@ -580,17 +580,29 @@
       <button class="modal-close" id="mc-modal-close">✕</button>
     </div>
 
-    <!-- ── CONNECT FORM VIEW ── -->
-    <div id="mc-view-form">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <p style="font-size:13px;color:#718096;line-height:1.6;margin:0">
-          Paste your Installed Package credentials below to connect.
-        </p>
+    <!-- ── SAVED ORGS VIEW (primary) ── -->
+    <div id="mc-view-saved">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <p style="font-size:13px;color:#718096;margin:0">Select a saved org or connect a new one.</p>
         <button id="btn-show-guide" style="flex-shrink:0;margin-left:12px;background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8;border-radius:8px;padding:6px 13px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
-          📖 Setup Guide
+          Setup Guide
         </button>
       </div>
+      <div id="mc-saved-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;max-height:260px;overflow-y:auto"></div>
+      <div id="mc-saved-empty" style="display:none;font-size:13px;color:#a0aec0;margin-bottom:14px;text-align:center;padding:18px 0">
+        No saved orgs yet — connect a new one below.
+      </div>
+      <button id="btn-show-new-org" style="width:100%;padding:10px;background:#f8fafc;border:1.5px dashed #cbd5e0;border-radius:8px;color:#4a5568;font-size:13px;font-weight:600;cursor:pointer">
+        + Connect New Org
+      </button>
+      <div id="mc-saved-error" style="color:#dc2626;font-size:13px;margin-top:10px;display:none"></div>
+    </div>
 
+    <!-- ── CONNECT FORM VIEW (new org) ── -->
+    <div id="mc-view-form" style="display:none">
+      <button id="btn-back-saved" style="display:inline-flex;align-items:center;gap:6px;background:none;border:none;color:#0070d2;font-size:13px;font-weight:600;cursor:pointer;padding:0;margin-bottom:16px">
+        ← Back
+      </button>
       <div class="form-group">
         <label class="form-label">Subdomain or REST Base URI <span style="color:#dc2626">*</span></label>
         <input class="form-input" id="mc-subdomain" type="text" placeholder="mcXXXXXX  or  https://mcXXXXXX.rest.marketingcloudapis.com"/>
@@ -615,9 +627,9 @@
           <span style="font-size:11px;color:#a0aec0;margin-top:4px;display:block">Scopes audit to parent account</span>
         </div>
       </div>
-      <p style="font-size:11px;color:#a0aec0;margin-top:10px;margin-bottom:16px">MID takes priority over EID if both are entered. Leave both blank to use the default account.</p>
+      <p style="font-size:11px;color:#a0aec0;margin-top:10px;margin-bottom:16px">Credentials are saved encrypted — future audits of this org only need the MID or EID.</p>
       <div id="mc-connect-error" style="color:#dc2626;font-size:13px;margin-bottom:12px;display:none"></div>
-      <button class="btn-submit" id="mc-connect-submit">Connect Marketing Cloud</button>
+      <button class="btn-submit" id="mc-connect-submit">Connect &amp; Save</button>
     </div>
 
     <!-- ── SETUP GUIDE VIEW ── -->
@@ -627,8 +639,8 @@
       </button>
 
       <div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:20px">
-        You need to create a free <strong>Installed Package</strong> in Marketing Cloud once.
-        It takes about <strong>5 minutes</strong> and gives this tool read-only API access to your account.
+        Create a free <strong>Installed Package</strong> in Marketing Cloud <strong>once per org</strong> — takes about 5 minutes.
+        Credentials are saved encrypted, so <strong>every future audit only needs a one-click reconnect</strong>. No re-entry, no customer involvement after this.
       </div>
 
       <!-- Step 1 -->
@@ -713,7 +725,7 @@
         </div>
       </div>
 
-      <button class="btn-submit" id="btn-guide-done" style="margin-top:22px">I'm Ready — Enter Credentials</button>
+      <button class="btn-submit" id="btn-guide-done" style="margin-top:22px">I'm Ready — Connect New Org</button>
     </div>
 
   </div>
@@ -1844,7 +1856,8 @@ function mcGradeColor(g) { return { A:"#16a34a",B:"#65a30d",C:"#ca8a04",D:"#ea58
 
 // MC connect modal open/close
 document.getElementById("btn-mc-connect").addEventListener("click", () => {
-  showMcModalView("form");
+  showMcModalView("saved");
+  loadMcSavedOrgs();
   document.getElementById("mc-modal-backdrop").classList.add("open");
 });
 document.getElementById("mc-modal-close").addEventListener("click", () => {
@@ -1854,18 +1867,78 @@ document.getElementById("mc-modal-backdrop").addEventListener("click", e => {
   if (e.target === e.currentTarget) document.getElementById("mc-modal-backdrop").classList.remove("open");
 });
 
-// Guide toggle
-document.getElementById("btn-show-guide").addEventListener("click", () => showMcModalView("guide"));
-document.getElementById("btn-back-form").addEventListener("click",  () => showMcModalView("form"));
-document.getElementById("btn-guide-done").addEventListener("click", () => showMcModalView("form"));
+// View navigation
+document.getElementById("btn-show-guide").addEventListener("click",   () => showMcModalView("guide"));
+document.getElementById("btn-back-form").addEventListener("click",    () => showMcModalView("saved"));
+document.getElementById("btn-guide-done").addEventListener("click",   () => showMcModalView("form"));
+document.getElementById("btn-show-new-org").addEventListener("click", () => showMcModalView("form"));
+document.getElementById("btn-back-saved").addEventListener("click",   () => showMcModalView("saved"));
 
 function showMcModalView(view) {
-  const isGuide = view === "guide";
-  document.getElementById("mc-view-form").style.display  = isGuide ? "none"  : "block";
-  document.getElementById("mc-view-guide").style.display = isGuide ? "block" : "none";
-  document.getElementById("mc-modal-title").textContent  = isGuide ? "Setup Guide — Installed Package" : "Connect Marketing Cloud";
+  document.getElementById("mc-view-saved").style.display = view === "saved" ? "block" : "none";
+  document.getElementById("mc-view-form").style.display  = view === "form"  ? "block" : "none";
+  document.getElementById("mc-view-guide").style.display = view === "guide" ? "block" : "none";
+  const titles = { saved: "Connect Marketing Cloud", form: "New Org — Installed Package", guide: "Setup Guide — Installed Package" };
+  document.getElementById("mc-modal-title").textContent = titles[view] || "Connect Marketing Cloud";
 }
 
+// Load saved orgs into the picker
+async function loadMcSavedOrgs() {
+  const list  = document.getElementById("mc-saved-list");
+  const empty = document.getElementById("mc-saved-empty");
+  list.innerHTML = "<p style='font-size:12px;color:#a0aec0;text-align:center;padding:8px 0'>Loading…</p>";
+  try {
+    const res  = await fetch("/api/mc/orgs", { credentials: "include" });
+    const data = await res.json();
+    const orgs = data.orgs || [];
+    list.innerHTML = "";
+    if (orgs.length === 0) {
+      empty.style.display = "block";
+    } else {
+      empty.style.display = "none";
+      orgs.forEach(org => {
+        const label = org.org_name || org.subdomain;
+        const sub   = [org.subdomain, org.mid ? "MID: " + org.mid : null, org.eid ? "EID: " + org.eid : null].filter(Boolean).join(" · ");
+        const btn   = document.createElement("button");
+        btn.style.cssText = "display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:10px 14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;cursor:pointer;text-align:left;transition:border-color 0.15s";
+        btn.onmouseenter = () => btn.style.borderColor = "#0070d2";
+        btn.onmouseleave = () => btn.style.borderColor = "#e2e8f0";
+        btn.innerHTML = `<span style="font-size:13px;font-weight:700;color:#1a202c">${label}</span><span style="font-size:11px;color:#718096">${sub}</span>`;
+        btn.addEventListener("click", () => mcQuickConnect(org));
+        list.appendChild(btn);
+      });
+    }
+  } catch {
+    list.innerHTML = "<p style='font-size:12px;color:#dc2626;text-align:center'>Failed to load saved orgs.</p>";
+  }
+}
+
+// One-click reconnect using saved credentials
+async function mcQuickConnect(org) {
+  const errEl = document.getElementById("mc-saved-error");
+  errEl.style.display = "none";
+  const btn = event.currentTarget;
+  const orig = btn.innerHTML;
+  btn.innerHTML = "<span style='font-size:13px;color:#718096'>Connecting…</span>";
+  btn.disabled  = true;
+  try {
+    const body = org.mid ? { mid: org.mid } : { eid: org.eid };
+    const res  = await fetch("/api/mc/connect", {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Connection failed");
+    document.getElementById("mc-modal-backdrop").classList.remove("open");
+    showMcPage(data.subdomain, org.org_name || data.subdomain, data.mid, data.eid);
+  } catch (err) {
+    errEl.textContent = err.message; errEl.style.display = "block";
+    btn.innerHTML = orig; btn.disabled = false;
+  }
+}
+
+// Full connect (new org with credentials)
 document.getElementById("mc-connect-submit").addEventListener("click", async () => {
   const subdomain    = document.getElementById("mc-subdomain").value.trim();
   const clientId     = document.getElementById("mc-client-id").value.trim();
@@ -1895,7 +1968,7 @@ document.getElementById("mc-connect-submit").addEventListener("click", async () 
   } catch (err) {
     errEl.textContent = err.message; errEl.style.display = "block";
   } finally {
-    btn.disabled = false; btn.textContent = "Connect Marketing Cloud";
+    btn.disabled = false; btn.textContent = "Connect &amp; Save";
   }
 });
 
