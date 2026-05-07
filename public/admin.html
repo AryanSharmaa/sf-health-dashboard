@@ -146,10 +146,10 @@
 
     <!-- Stat cards -->
     <div class="stat-row" id="stat-row">
+      <div class="stat purple"><div class="val" id="s-users">—</div><div class="lbl">Registered Users</div></div>
       <div class="stat"><div class="val" id="s-total-fb">—</div><div class="lbl">Total Feedback</div></div>
       <div class="stat green"><div class="val" id="s-avg-rating">—</div><div class="lbl">Avg Rating</div></div>
       <div class="stat yellow"><div class="val" id="s-recommend">—</div><div class="lbl">Would Recommend</div></div>
-      <div class="stat purple"><div class="val" id="s-tickets">—</div><div class="lbl">Total Tickets</div></div>
       <div class="stat red"><div class="val" id="s-open">—</div><div class="lbl">Open Tickets</div></div>
     </div>
 
@@ -157,6 +157,7 @@
     <div class="tab-row">
       <button class="tab-btn active" id="tab-fb">⭐ Feedback</button>
       <button class="tab-btn" id="tab-tk">🎫 Support Tickets</button>
+      <button class="tab-btn" id="tab-us">👤 Users</button>
     </div>
 
     <!-- ── FEEDBACK PANEL ── -->
@@ -174,6 +175,17 @@
           <button class="btn-refresh" id="btn-refresh-fb">↻ Refresh</button>
         </div>
         <div id="fb-table-wrap"><div class="loading"><span class="spinner"></span>Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- ── USERS PANEL ── -->
+    <div id="panel-us" style="display:none">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div class="card-title" style="margin-bottom:0">Registered Users <span class="count-badge" id="us-count">0</span></div>
+          <button class="btn-refresh" id="btn-refresh-us">↻ Refresh</button>
+        </div>
+        <div id="us-table-wrap"><div class="loading"><span class="spinner"></span>Loading…</div></div>
       </div>
     </div>
 
@@ -260,25 +272,30 @@ window.addEventListener("load", async () => {
 let activeTab = "fb";
 document.getElementById("tab-fb").addEventListener("click", () => switchTab("fb"));
 document.getElementById("tab-tk").addEventListener("click", () => switchTab("tk"));
+document.getElementById("tab-us").addEventListener("click", () => switchTab("us"));
 
 function switchTab(tab) {
   activeTab = tab;
   document.getElementById("panel-fb").style.display = tab === "fb" ? "block" : "none";
   document.getElementById("panel-tk").style.display = tab === "tk" ? "block" : "none";
+  document.getElementById("panel-us").style.display = tab === "us" ? "block" : "none";
   document.getElementById("tab-fb").classList.toggle("active", tab === "fb");
   document.getElementById("tab-tk").classList.toggle("active", tab === "tk");
+  document.getElementById("tab-us").classList.toggle("active", tab === "us");
+  if (tab === "us") loadUsers();
 }
 
 // ─── Load all ─────────────────────────────────────────────────────────────────
 
 async function loadAll() {
-  await Promise.all([loadFeedback(), loadTickets()]);
+  await Promise.all([loadFeedback(), loadTickets(), loadUsers()]);
   document.getElementById("last-refresh").textContent =
     "Last refreshed: " + new Date().toLocaleTimeString();
 }
 
 document.getElementById("btn-refresh-fb").addEventListener("click", loadFeedback);
 document.getElementById("btn-refresh-tk").addEventListener("click", loadTickets);
+document.getElementById("btn-refresh-us").addEventListener("click", loadUsers);
 document.getElementById("tk-filter").addEventListener("change", loadTickets);
 
 // ─── Feedback ─────────────────────────────────────────────────────────────────
@@ -463,6 +480,42 @@ async function updateTicketStatus(select) {
     alert("Failed to update: " + err.message);
   } finally {
     select.disabled = false;
+  }
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+async function loadUsers() {
+  document.getElementById("us-table-wrap").innerHTML =
+    '<div class="loading"><span class="spinner"></span>Loading…</div>';
+  try {
+    const res  = await fetch("/api/admin/users", { headers: { "x-admin-key": ADMIN_KEY } });
+    const data = await res.json();
+    document.getElementById("s-users").textContent  = data.total || 0;
+    document.getElementById("us-count").textContent = data.total || 0;
+    if (!data.users?.length) {
+      document.getElementById("us-table-wrap").innerHTML = '<div class="empty">No registered users yet.</div>';
+      return;
+    }
+    document.getElementById("us-table-wrap").innerHTML = `
+      <table>
+        <thead>
+          <tr><th>#</th><th>Email</th><th>Name</th><th>Joined</th></tr>
+        </thead>
+        <tbody>
+          ${data.users.map((u, i) => `
+            <tr>
+              <td style="color:#9ca3af;font-size:12px">${i + 1}</td>
+              <td style="font-weight:600">${escHtml(u.email)}</td>
+              <td style="color:#6b7280">${u.name ? escHtml(u.name) : '<span style="color:#d1d5db">—</span>'}</td>
+              <td style="white-space:nowrap;color:#9ca3af;font-size:12px">${fmtDate(u.created_at)}</td>
+            </tr>`
+          ).join("")}
+        </tbody>
+      </table>`;
+  } catch (err) {
+    document.getElementById("us-table-wrap").innerHTML =
+      `<div class="empty" style="color:#dc2626">Failed to load: ${err.message}</div>`;
   }
 }
 

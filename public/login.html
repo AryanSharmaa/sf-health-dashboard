@@ -89,6 +89,15 @@
   btn.addEventListener('click', doLogin);
   passEl.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   emailEl.addEventListener('keydown', e => { if (e.key === 'Enter') passEl.focus(); });
+
+  // Redirect away if already logged in
+  (async () => {
+    try {
+      const r = await fetch('/user/me', { credentials: 'include' });
+      const d = await r.json();
+      if (d.loggedIn) window.location.replace('/app');
+    } catch {}
+  })();
 </script>
 </body>
 </html>

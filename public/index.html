@@ -1159,13 +1159,21 @@ function renderSfNav(session) {
 }
 
 async function logout() {
-  await fetch("/auth/logout", { method: "POST", credentials: "include" });
+  // Clear both SF session and app session in one go
+  await Promise.all([
+    fetch("/auth/logout",  { method: "POST", credentials: "include" }),
+    fetch("/user/logout",  { method: "POST", credentials: "include" }),
+  ]);
   window.location.href = "/?t=" + Date.now();
 }
 
 async function appLogout() {
-  await fetch("/user/logout", { method: "POST", credentials: "include" });
-  window.location.href = "/login";
+  // Same — always clear both
+  await Promise.all([
+    fetch("/auth/logout",  { method: "POST", credentials: "include" }),
+    fetch("/user/logout",  { method: "POST", credentials: "include" }),
+  ]);
+  window.location.href = "/?t=" + Date.now();
 }
 
 function showPage(name) {

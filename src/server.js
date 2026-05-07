@@ -464,6 +464,19 @@ app.get("/api/admin/tickets", requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get("/api/admin/users", requireAdmin, async (req, res) => {
+  try {
+    const db = await require("./db/db").getDb();
+    const { rows: users } = await db.query(
+      `SELECT id, email, name, created_at FROM users ORDER BY created_at DESC`
+    );
+    const { rows: counts } = await db.query(
+      `SELECT COUNT(*) as total FROM users`
+    );
+    res.json({ total: counts[0]?.total || 0, users });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.patch("/api/admin/tickets/:id", requireAdmin, async (req, res) => {
   const { status } = req.body || {};
   if (!["open","in_progress","resolved"].includes(status)) return res.status(400).json({ error: "Invalid status." });
