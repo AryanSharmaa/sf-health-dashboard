@@ -526,18 +526,18 @@
       <div id="org-list"><div class="trend-empty">No orgs audited yet.</div></div>
     </div>
 
-    <!-- Compare orgs -->
+    <!-- Compare two audits of the same org -->
     <div class="card" id="compare-card" style="display:none">
-      <h2>Compare Org Audits</h2>
-      <p style="font-size:13px;color:#718096;margin-bottom:16px">Select two audit results to compare side-by-side.</p>
+      <h2>Compare Audits</h2>
+      <p style="font-size:13px;color:#718096;margin-bottom:16px">Compare two audit runs of this org side-by-side to track changes.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
         <div>
-          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Org A</label>
-          <select class="form-input" id="compare-a-org"></select>
+          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Audit A (newer)</label>
+          <select class="form-input" id="compare-a-audit"></select>
         </div>
         <div>
-          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Org B</label>
-          <select class="form-input" id="compare-b-org"></select>
+          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Audit B (older)</label>
+          <select class="form-input" id="compare-b-audit"></select>
         </div>
       </div>
       <button class="btn-run" id="btn-run-compare" style="padding:10px 24px;font-size:14px">Compare</button>
@@ -1144,6 +1144,17 @@ function showContinueAsBanner(session) {
     </div>`;
   errBanner.after(banner);
   window._liveSession = session;
+  // Save this org to the browser's own history (localStorage — never shared)
+  savePrevOrg({
+    id:        session.orgId,
+    name:      session.orgName || session.orgId,
+    isSandbox: session.isSandbox || false,
+    env:       session.isSandbox ? "sandbox" : "production",
+    lastScore: null,
+    lastAudit: new Date().toISOString(),
+  });
+  // Refresh prev-orgs list with the freshly connected org
+  loadPrevOrgs();
 }
 
 function proceedToAudit() {
@@ -1154,40 +1165,55 @@ function proceedToAudit() {
   showPage("audit");
 }
 
-async function loadPrevOrgs() {
+// ── Per-browser org history (localStorage, never shared across users) ─────────
+
+const PREV_ORGS_KEY = "sfh_prev_orgs_v2";
+
+function savePrevOrg(org) {
+  // org = { id, name, isSandbox, env, lastScore }
   try {
-    const res  = await fetch("/api/orgs", { credentials: "include" });
-    const orgs = await res.json();
-    const section = document.getElementById("prev-orgs-section");
-    const list    = document.getElementById("prev-orgs-list");
-    if (!Array.isArray(orgs) || orgs.length === 0) { section.style.display = "none"; return; }
+    const existing = getPrevOrgs().filter(o => o.id !== org.id);
+    existing.unshift(org);
+    localStorage.setItem(PREV_ORGS_KEY, JSON.stringify(existing.slice(0, 5)));
+  } catch {}
+}
 
-    // Hide the logo/heading/subtext when we have previous orgs — cleaner UI
-    document.getElementById("connect-logo").style.display   = "none";
-    document.getElementById("connect-heading").style.display = "none";
-    document.getElementById("connect-subtext").style.display = "none";
+function getPrevOrgs() {
+  try { return JSON.parse(localStorage.getItem(PREV_ORGS_KEY) || "[]"); } catch { return []; }
+}
 
-    list.innerHTML = orgs.slice(0, 5).map(org => {
-      const isSandbox = org.is_sandbox == 1 || org.is_sandbox === true;
-      const scoreColor = (s) => s>=80?"#16a34a":s>=60?"#ca8a04":"#dc2626";
-      const sc = org.latest_score;
-      return `<div class="prev-org-card">
-        <div style="flex:1;min-width:0">
-          <div class="poc-name">${org.name}</div>
-          <div class="poc-meta">${org.id} · ${org.total_audits} audit${org.total_audits!=1?"s":""} · Last: ${org.last_audit_at?fmtDate(org.last_audit_at):"—"}</div>
-        </div>
-        ${sc!=null?`<div class="poc-score" style="color:${scoreColor(sc)}">${sc}</div>`:""}
-        <button class="btn-reconnect ${isSandbox?"sandbox":""}"
-          onclick="reconnectOrg('${org.id}','${org.name}','${isSandbox?'sandbox':'production'}')"
-        >${isSandbox?"Reconnect Sandbox":"Reconnect"}</button>
-      </div>`;
-    }).join("");
-    section.style.display = "block";
-  } catch { /* silently ignore */ }
+function clearPrevOrgs() {
+  try { localStorage.removeItem(PREV_ORGS_KEY); } catch {}
+}
+
+function loadPrevOrgs() {
+  const orgs    = getPrevOrgs();
+  const section = document.getElementById("prev-orgs-section");
+  const list    = document.getElementById("prev-orgs-list");
+  if (!orgs.length) { section.style.display = "none"; return; }
+
+  document.getElementById("connect-logo").style.display    = "none";
+  document.getElementById("connect-heading").style.display = "none";
+  document.getElementById("connect-subtext").style.display = "none";
+
+  list.innerHTML = orgs.map(org => {
+    const sc = org.lastScore;
+    const scCol = sc!=null ? (sc>=80?"#16a34a":sc>=60?"#ca8a04":"#dc2626") : "#a0aec0";
+    return `<div class="prev-org-card">
+      <div style="flex:1;min-width:0">
+        <div class="poc-name">${escHtml(org.name)}</div>
+        <div class="poc-meta">${escHtml(org.id)}${org.lastAudit?" · Last: "+fmtDate(org.lastAudit):""}</div>
+      </div>
+      ${sc!=null?`<div class="poc-score" style="color:${scCol}">${sc}</div>`:""}
+      <button class="btn-reconnect ${org.isSandbox?"sandbox":""}"
+        onclick="reconnectOrg('${escHtml(org.id)}','${escHtml(org.name)}','${org.env||"production"}')"
+      >${org.isSandbox?"Reconnect Sandbox":"Reconnect"}</button>
+    </div>`;
+  }).join("");
+  section.style.display = "block";
 }
 
 function reconnectOrg(orgId, orgName, env) {
-  // Store intent so after OAuth callback we show the right org
   sessionStorage.setItem("reconnect_org_id",   orgId);
   sessionStorage.setItem("reconnect_org_name",  orgName);
   window.location.href = `/auth/salesforce?env=${env}`;
@@ -1228,7 +1254,8 @@ function renderSfNav(session) {
 }
 
 async function logout() {
-  // Clear both SF session and app session in one go
+  clearPrevOrgs();
+  sessionStorage.clear();
   await Promise.all([
     fetch("/auth/logout",  { method: "POST", credentials: "include" }),
     fetch("/user/logout",  { method: "POST", credentials: "include" }),
@@ -1237,7 +1264,8 @@ async function logout() {
 }
 
 async function appLogout() {
-  // Same — always clear both
+  clearPrevOrgs();
+  sessionStorage.clear();
   await Promise.all([
     fetch("/auth/logout",  { method: "POST", credentials: "include" }),
     fetch("/user/logout",  { method: "POST", credentials: "include" }),
@@ -1386,6 +1414,17 @@ function renderAuditResults(data, jobId) {
   // Track current org for dismiss
   _currentOrgId = data.report.orgId || window._liveSession?.orgId || null;
   if (_currentOrgId) loadDismissed(_currentOrgId).then(() => reapplyDismissed());
+
+  // Persist latest score into localStorage so reconnect card shows it
+  if (_currentOrgId && data.report.overallScore != null) {
+    const orgs = getPrevOrgs();
+    const idx  = orgs.findIndex(o => o.id === _currentOrgId);
+    if (idx >= 0) {
+      orgs[idx].lastScore = data.report.overallScore;
+      orgs[idx].lastAudit = new Date().toISOString();
+      try { localStorage.setItem(PREV_ORGS_KEY, JSON.stringify(orgs)); } catch {}
+    }
+  }
 
   // Score + gauge
   document.getElementById("overall-score").textContent = overallScore;
@@ -2046,15 +2085,22 @@ async function fetchMcAiGuide(jobId, action, index) {
 
 // ─── History ──────────────────────────────────────────────────────────────────
 
-let _allOrgs = [];
+let _allOrgs    = [];
+let _orgAudits  = [];
 
 async function loadOrgList() {
   const res  = await fetch("/api/orgs", { credentials:"include" });
+  if (!res.ok) {
+    // Not connected — show empty state
+    document.getElementById("org-list").innerHTML = '<div class="trend-empty">Connect a Salesforce org to see your audit history.</div>';
+    document.getElementById("compare-card").style.display = "none";
+    return;
+  }
   const orgs = await res.json();
   _allOrgs   = orgs;
   const el   = document.getElementById("org-list");
   if (!orgs.length) {
-    el.innerHTML = '<div class="trend-empty">No orgs audited yet — run your first audit.</div>';
+    el.innerHTML = '<div class="trend-empty">No audits yet — run your first audit.</div>';
     document.getElementById("compare-card").style.display = "none";
     return;
   }
@@ -2074,15 +2120,8 @@ async function loadOrgList() {
     item.addEventListener("click", () => loadOrgDetail(item.dataset.orgid));
   });
 
-  // Populate compare dropdowns if 2+ orgs exist
-  if (orgs.length >= 2) {
-    const optHtml = orgs.map(o => `<option value="${o.id}">${o.name} (score: ${o.latest_score||"—"})</option>`).join("");
-    document.getElementById("compare-a-org").innerHTML = optHtml;
-    document.getElementById("compare-b-org").innerHTML = optHtml;
-    // Pre-select different orgs by default
-    if (orgs.length > 1) document.getElementById("compare-b-org").selectedIndex = 1;
-    document.getElementById("compare-card").style.display = "block";
-  }
+  // Auto-expand the only org
+  if (orgs.length === 1) loadOrgDetail(orgs[0].id);
 }
 
 async function loadOrgDetail(orgId) {
@@ -2094,7 +2133,11 @@ async function loadOrgDetail(orgId) {
   const audits = await auditRes.json();
   const trend  = await trendRes.json();
 
-  document.getElementById("detail-org-name").textContent = orgId;
+  _orgAudits = audits;
+
+  // Show org name from allOrgs or from the id
+  const orgName = _allOrgs.find(o => o.id === orgId)?.name || orgId;
+  document.getElementById("detail-org-name").textContent = orgName;
   const delta = trend.delta;
   document.getElementById("detail-delta").innerHTML =
     delta?.delta !== null && delta?.delta !== undefined
@@ -2120,36 +2163,44 @@ async function loadOrgDetail(orgId) {
     </tr>`
   ).join("");
 
+  // Populate compare dropdowns if 2+ audits exist
+  const completedAudits = audits.filter(a => a.status === "complete");
+  if (completedAudits.length >= 2) {
+    const opts = completedAudits.map(a =>
+      `<option value="${a.id}">${fmtDate(a.created_at)} — score ${a.overall_score}</option>`
+    ).join("");
+    document.getElementById("compare-a-audit").innerHTML = opts;
+    document.getElementById("compare-b-audit").innerHTML = opts;
+    document.getElementById("compare-b-audit").selectedIndex = 1;
+    document.getElementById("compare-card").style.display = "block";
+    document.getElementById("compare-result").style.display = "none";
+  } else {
+    document.getElementById("compare-card").style.display = "none";
+  }
+
   document.getElementById("org-detail").scrollIntoView({ behavior:"smooth", block:"start" });
 }
 
-// ─── Multi-org comparison ─────────────────────────────────────────────────────
+// ─── Audit comparison ─────────────────────────────────────────────────────────
 
 async function runCompare() {
-  const orgAId = document.getElementById("compare-a-org").value;
-  const orgBId = document.getElementById("compare-b-org").value;
-  if (orgAId === orgBId) { alert("Please select two different orgs."); return; }
+  const auditAId = document.getElementById("compare-a-audit").value;
+  const auditBId = document.getElementById("compare-b-audit").value;
+  if (auditAId === auditBId) { alert("Please select two different audit runs."); return; }
 
   const btn = document.getElementById("btn-run-compare");
   btn.disabled = true;
   btn.textContent = "Loading…";
 
   try {
-    // Get latest audit IDs for each org
-    const [resA, resB] = await Promise.all([
-      fetch(`/api/orgs/${encodeURIComponent(orgAId)}/audits?limit=1`, { credentials:"include" }),
-      fetch(`/api/orgs/${encodeURIComponent(orgBId)}/audits?limit=1`, { credentials:"include" }),
-    ]);
-    const [auditsA, auditsB] = await Promise.all([resA.json(), resB.json()]);
-    if (!auditsA[0] || !auditsB[0]) { alert("No completed audits found for one or both orgs."); return; }
-
-    const r = await fetch(`/api/compare?a=${auditsA[0].id}&b=${auditsB[0].id}`, { credentials:"include" });
+    const r = await fetch(`/api/compare?a=${auditAId}&b=${auditBId}`, { credentials:"include" });
     const catRows = await r.json();
-    if (!r.ok) throw new Error((catRows.error) || "Compare failed");
+    if (!r.ok) throw new Error(catRows.error || "Compare failed");
 
-    const orgA = _allOrgs.find(o => o.id === orgAId) || { id: orgAId, name: orgAId };
-    const orgB = _allOrgs.find(o => o.id === orgBId) || { id: orgBId, name: orgBId };
-    renderCompareResult(catRows, orgA, auditsA[0], orgB, auditsB[0]);
+    const auditA = _orgAudits.find(a => a.id === auditAId);
+    const auditB = _orgAudits.find(a => a.id === auditBId);
+    const orgName = _allOrgs[0]?.name || "This Org";
+    renderCompareResult(catRows, { name: orgName + " (A)" }, auditA, { name: orgName + " (B)" }, auditB);
   } catch(e) {
     alert("Compare failed: " + e.message);
   } finally {
@@ -2185,26 +2236,27 @@ function renderCompareResult(catRows, orgA, auditA, orgB, auditB) {
     </div>`;
   }).join("");
 
+  const dateA = auditA?.created_at ? fmtDate(auditA.created_at) : "Audit A";
+  const dateB = auditB?.created_at ? fmtDate(auditB.created_at) : "Audit B";
+
   el.innerHTML = `
     <div class="cmp-grid" style="grid-template-columns:1fr 1fr">
       <div class="cmp-col${aWins&&!tie?" cmp-winner":""}">
-        <div class="cmp-org-name">${escHtml(orgA.name)}</div>
-        <div style="font-size:11px;color:#a0aec0;margin-bottom:4px">${fmtDate(auditA.created_at)}</div>
+        <div class="cmp-org-name">${dateA}</div>
         <div class="cmp-score" style="color:${scoreColor(scoreA)}">${scoreA}</div>
-        <div class="cmp-grade" style="color:${gradeColor(auditA.grade)}">${auditA.grade}</div>
-        ${aWins&&!tie?'<div style="font-size:11px;font-weight:700;color:#16a34a">Higher Score</div>':''}
+        <div class="cmp-grade" style="color:${gradeColor(auditA?.grade)}">${auditA?.grade||"—"}</div>
+        ${aWins&&!tie?'<div style="font-size:11px;font-weight:700;color:#16a34a">Better Score</div>':''}
       </div>
       <div class="cmp-col${!aWins&&!tie?" cmp-winner":""}">
-        <div class="cmp-org-name">${escHtml(orgB.name)}</div>
-        <div style="font-size:11px;color:#a0aec0;margin-bottom:4px">${fmtDate(auditB.created_at)}</div>
+        <div class="cmp-org-name">${dateB}</div>
         <div class="cmp-score" style="color:${scoreColor(scoreB)}">${scoreB}</div>
-        <div class="cmp-grade" style="color:${gradeColor(auditB.grade)}">${auditB.grade}</div>
-        ${!aWins&&!tie?'<div style="font-size:11px;font-weight:700;color:#16a34a">Higher Score</div>':''}
+        <div class="cmp-grade" style="color:${gradeColor(auditB?.grade)}">${auditB?.grade||"—"}</div>
+        ${!aWins&&!tie?'<div style="font-size:11px;font-weight:700;color:#16a34a">Better Score</div>':''}
       </div>
     </div>
     <div style="margin-top:16px;background:#f8fafc;border-radius:10px;padding:14px;border:1px solid #e2e8f0">
       <div style="display:grid;grid-template-columns:1fr 36px 44px 36px;gap:4px;font-size:11px;font-weight:700;color:#a0aec0;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">
-        <span>Category</span><span style="text-align:center">${escHtml(orgA.name.split(" ")[0])}</span><span style="text-align:center">Δ</span><span style="text-align:center">${escHtml(orgB.name.split(" ")[0])}</span>
+        <span>Category</span><span style="text-align:center">A</span><span style="text-align:center">Δ</span><span style="text-align:center">B</span>
       </div>
       ${rows}
     </div>`;

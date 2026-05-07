@@ -650,21 +650,44 @@ app.get("/api/einstein-probe", requireSession, async (req, res) => {
   res.json({ instanceUrl, results });
 });
 
-// ─── Orgs & history ───────────────────────────────────────────────────────────
+// ─── Orgs & history (session-scoped — only your own org) ─────────────────────
 
-app.get("/api/orgs", readLimiter, async (_req, res) => {
-  try { res.json(await repo.listOrgs()); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+// Returns only the single org the current SF session belongs to
+app.get("/api/orgs", readLimiter, requireSession, async (req, res) => {
+  try {
+    const orgId = req.sfSession.orgId;
+    const db    = await require("./db/db").getDb();
+    const { rows } = await db.query(
+      `SELECT o.*,
+              COUNT(a.id)          AS total_audits,
+              MAX(a.created_at)    AS last_audit_at,
+              (SELECT a2.overall_score FROM audits a2
+               WHERE a2.org_id = o.id ORDER BY a2.created_at DESC LIMIT 1) AS latest_score
+       FROM orgs o
+       LEFT JOIN audits a ON a.org_id = o.id
+       WHERE o.id = ?
+       GROUP BY o.id`,
+      [orgId]
+    );
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get("/api/orgs/:orgId/audits", readLimiter, async (req, res) => {
+function guardOrgAccess(req, res, next) {
+  if (req.sfSession.orgId !== req.params.orgId) {
+    return res.status(403).json({ error: "Access denied — this org belongs to a different session." });
+  }
+  next();
+}
+
+app.get("/api/orgs/:orgId/audits", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     res.json(await repo.listAuditsForOrg(req.params.orgId, limit));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get("/api/orgs/:orgId/trend", readLimiter, async (req, res) => {
+app.get("/api/orgs/:orgId/trend", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
     const [trend, delta, categoryTrends, recurringIssues, unusedSummary] = await Promise.all([
@@ -678,7 +701,7 @@ app.get("/api/orgs/:orgId/trend", readLimiter, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get("/api/orgs/:orgId/issues", readLimiter, async (req, res) => {
+app.get("/api/orgs/:orgId/issues", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
   try {
     const [latest, recurring] = await Promise.all([
       repo.getTopIssuesByPriority(req.params.orgId),
@@ -688,7 +711,7 @@ app.get("/api/orgs/:orgId/issues", readLimiter, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get("/api/compare", readLimiter, async (req, res) => {
+app.get("/api/compare", readLimiter, requireSession, async (req, res) => {
   const { a, b } = req.query;
   if (!a || !b) return res.status(400).json({ error: "Provide ?a=auditId&b=auditId" });
   try { res.json(await repo.compareAudits(a, b)); }
@@ -697,7 +720,7 @@ app.get("/api/compare", readLimiter, async (req, res) => {
 
 // ─── Dismissed findings ───────────────────────────────────────────────────────
 
-app.get("/api/orgs/:orgId/dismissed", readLimiter, async (req, res) => {
+app.get("/api/orgs/:orgId/dismissed", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
   try {
     const db = await require("./db/db").getDb();
     const { rows } = await db.query(
@@ -708,7 +731,7 @@ app.get("/api/orgs/:orgId/dismissed", readLimiter, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post("/api/orgs/:orgId/dismissed", readLimiter, requireSession, async (req, res) => {
+app.post("/api/orgs/:orgId/dismissed", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
   const { finding_key, category, action_text, reason } = req.body || {};
   if (!finding_key || !category || !action_text)
     return res.status(400).json({ error: "finding_key, category, action_text required" });
@@ -722,7 +745,7 @@ app.post("/api/orgs/:orgId/dismissed", readLimiter, requireSession, async (req, 
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.delete("/api/orgs/:orgId/dismissed/:key", readLimiter, requireSession, async (req, res) => {
+app.delete("/api/orgs/:orgId/dismissed/:key", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
   try {
     const db = await require("./db/db").getDb();
     await db.query(
