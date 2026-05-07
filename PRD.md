@@ -180,5 +180,5 @@ A single click runs a full audit across 8 data collection modules:
 | Production URL | https://sf-health-dashboard.onrender.com |
 | Hosting | Render.com (web service + PostgreSQL) |
 | Repository | https://github.com/AryanSharmaa/sf-health-dashboard |
-| Salesforce Connected App | External Client App (Production) |
+| Salesforce Connected App | Classic Connected App — All users may self-authorize |
 | Auth callback URL | https://sf-health-dashboard.onrender.com/auth/salesforce/callback |

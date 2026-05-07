@@ -69,11 +69,6 @@ function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChall
     code_challenge:        codeChallenge,
     code_challenge_method: "S256",
     display:               "page",
-    // prompt=login forces fresh credential entry on every authorize request.
-    // This prevents cross-org conflicts (no existing session is ever reused)
-    // and is safe now that the PKCE verifier is stored in a cookie rather than
-    // in-process memory (which caused the old login loop on server restarts).
-    prompt:                "login",
   });
   return `${base}/services/oauth2/authorize?${params.toString()}`;
 }
