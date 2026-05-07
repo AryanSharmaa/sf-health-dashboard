@@ -695,6 +695,44 @@ app.get("/api/compare", readLimiter, async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ─── Dismissed findings ───────────────────────────────────────────────────────
+
+app.get("/api/orgs/:orgId/dismissed", readLimiter, async (req, res) => {
+  try {
+    const db = await require("./db/db").getDb();
+    const { rows } = await db.query(
+      "SELECT * FROM dismissed_findings WHERE org_id = ? ORDER BY dismissed_at DESC",
+      [req.params.orgId]
+    );
+    res.json({ dismissed: rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post("/api/orgs/:orgId/dismissed", readLimiter, requireSession, async (req, res) => {
+  const { finding_key, category, action_text, reason } = req.body || {};
+  if (!finding_key || !category || !action_text)
+    return res.status(400).json({ error: "finding_key, category, action_text required" });
+  try {
+    const db = await require("./db/db").getDb();
+    await db.query(
+      "INSERT INTO dismissed_findings (org_id, finding_key, category, action_text, reason) VALUES (?,?,?,?,?)",
+      [req.params.orgId, finding_key, category, action_text, reason || null]
+    );
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete("/api/orgs/:orgId/dismissed/:key", readLimiter, requireSession, async (req, res) => {
+  try {
+    const db = await require("./db/db").getDb();
+    await db.query(
+      "DELETE FROM dismissed_findings WHERE org_id = ? AND finding_key = ?",
+      [req.params.orgId, req.params.key]
+    );
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ─── Marketing Cloud routes ───────────────────────────────────────────────────
 
 const mcJobs = new Map();

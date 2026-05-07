@@ -159,6 +159,18 @@ CREATE TABLE IF NOT EXISTS app_sessions (
   expires_at TEXT  NOT NULL
 );
 
+-- ─── Dismissed Findings ──────────────────────────────────────────────────────
+-- Findings that a user has acknowledged / dismissed for a specific org
+CREATE TABLE IF NOT EXISTS dismissed_findings (
+  id            INTEGER  PRIMARY KEY AUTOINCREMENT,
+  org_id        TEXT     NOT NULL,
+  finding_key   TEXT     NOT NULL,   -- stable key: "{category}:{action_hash}"
+  category      TEXT     NOT NULL,
+  action_text   TEXT     NOT NULL,
+  reason        TEXT,
+  dismissed_at  TEXT     NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
 -- ─── Indexes ──────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);

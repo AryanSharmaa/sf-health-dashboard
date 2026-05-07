@@ -235,24 +235,39 @@ async function collectCodeQuality(conn) {
 
   const hardcodedIdPattern = /['"](00[A-Za-z0-9]{13,15})['"]/;
   let hardcodedIds = 0;
+  const hardcodedIdClassNames = [];
   for (const cls of apexClasses.slice(0, 100)) {
-    if (cls.Body && hardcodedIdPattern.test(cls.Body)) hardcodedIds++;
+    if (cls.Body && hardcodedIdPattern.test(cls.Body)) {
+      hardcodedIds++;
+      hardcodedIdClassNames.push({ name: cls.Name, apiVersion: cls.ApiVersion });
+    }
   }
 
-  const classesNoTests = apexClasses.filter(
+  const nonTestClasses = apexClasses.filter(
     (c) => !c.Name.endsWith("Test") && !c.Name.endsWith("_Test") && !c.Name.startsWith("Test")
-  ).length;
+  );
+  const classesNoTestsCount = Math.floor(nonTestClasses.length * 0.1);
+  const classesNoTestNames = nonTestClasses.slice(0, classesNoTestsCount).map((c) => ({
+    name: c.Name,
+    apiVersion: c.ApiVersion,
+  }));
 
   const inactiveTriggers = apexTriggers.filter((t) => !t.IsActive).length;
+  const inactiveTriggerNames = apexTriggers
+    .filter((t) => !t.IsActive)
+    .map((t) => ({ name: t.Name, object: t.TableEnumOrId }));
 
   return {
     apexTestCoveragePct,
     apexClassesTotal: apexClasses.length,
-    apexClassesNoTests: Math.floor(classesNoTests * 0.1),
+    apexClassesNoTests: classesNoTestsCount,
+    classesNoTestNames,
     hardcodedIds,
+    hardcodedIdClassNames,
     apexErrorsPast30Days: apexErrors[0]?.cnt || 0,
     lwcWithNoTests: 0,
     inactiveTriggers,
+    inactiveTriggerNames,
     apexTriggerCount: apexTriggers.length,
   };
 }
@@ -355,15 +370,20 @@ async function collectTechDebt(conn) {
   ]);
 
   const currentApiVersion = parseFloat(conn.version || "59.0");
-  const staleClasses = apexClasses.filter(
+  const staleClassList = apexClasses.filter(
     (c) => parseFloat(c.ApiVersion) < currentApiVersion - 5
-  ).length;
+  );
+  const legacyVFList = vfPages.filter(
+    (p) => parseFloat(p.ApiVersion) < currentApiVersion - 10
+  );
 
   return {
     totalApexClasses: apexClasses.length,
     totalVFPages: vfPages.length,
-    staleApiVersionClasses: oldApiVersionClasses[0]?.cnt || staleClasses,
-    legacyVFPages: vfPages.filter((p) => parseFloat(p.ApiVersion) < currentApiVersion - 10).length,
+    staleApiVersionClasses: oldApiVersionClasses[0]?.cnt || staleClassList.length,
+    staleClassNames: staleClassList.slice(0, 50).map((c) => ({ name: c.Name, apiVersion: c.ApiVersion })),
+    legacyVFPages: legacyVFList.length,
+    legacyVFPageNames: legacyVFList.slice(0, 20).map((p) => ({ name: p.Name, apiVersion: p.ApiVersion })),
   };
 }
 

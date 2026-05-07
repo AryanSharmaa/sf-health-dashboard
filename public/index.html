@@ -116,6 +116,16 @@
     .btn-ai{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:4px 10px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
     .btn-ai:hover{background:#ede9fe;border-color:#c4b5fd}
     .btn-ai:disabled{opacity:0.6;cursor:not-allowed}
+    .btn-dismiss{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#6b7280;background:#f9fafb;border:1px solid #e2e8f0;border-radius:6px;padding:4px 9px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+    .btn-dismiss:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+    .action-item.dismissed{opacity:0.45;transition:opacity 0.4s}
+    .dismissed-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#6b7280;background:#f3f4f6;border:1px solid #e2e8f0;border-radius:99px;padding:2px 8px}
+    .class-names-toggle{font-size:11px;color:#0070d2;cursor:pointer;margin-top:6px;display:inline-flex;align-items:center;gap:4px;font-weight:600;background:none;border:none;padding:0}
+    .class-names-toggle:hover{text-decoration:underline}
+    .class-names-list{display:none;margin-top:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;max-height:160px;overflow-y:auto}
+    .class-names-list.open{display:block}
+    .class-chip{display:inline-block;font-size:11px;font-family:monospace;background:#fff;border:1px solid #e2e8f0;border-radius:5px;padding:2px 7px;margin:2px;color:#1a202c}
+    .class-chip .cv{font-size:10px;color:#a0aec0;margin-left:3px}
     .ai-guide{display:none;margin-top:12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:16px 18px;font-size:13px;line-height:1.7;color:#374151}
     .ai-guide.visible{display:block}
     .ai-guide strong{color:#1a202c}
@@ -220,6 +230,19 @@
     .tab-row{display:flex;gap:0;margin-bottom:22px;border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden}
     .tab-btn{flex:1;padding:9px;font-size:13px;font-weight:600;border:none;background:white;cursor:pointer;transition:all 0.15s;color:#718096}
     .tab-btn.active{background:#0070d2;color:white}
+
+    /* ── Compare view ── */
+    .cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+    .cmp-col{background:#f8fafc;border-radius:12px;padding:16px;border:1px solid #e2e8f0}
+    .cmp-org-name{font-weight:800;font-size:15px;margin-bottom:4px}
+    .cmp-score{font-size:40px;font-weight:900;line-height:1;margin:8px 0 4px}
+    .cmp-grade{font-size:18px;font-weight:700;margin-bottom:10px}
+    .cmp-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+    .cmp-row:last-child{border-bottom:none}
+    .cmp-label{color:#6b7280;font-weight:500}
+    .cmp-val{font-weight:700}
+    .cmp-winner{background:#f0fdf4;border-color:#bbf7d0}
+    @media(max-width:640px){.cmp-grid{grid-template-columns:1fr}}
 
     /* ── Prev-org reconnect cards ── */
     .prev-org-card{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;gap:12px;flex-wrap:wrap}
@@ -501,6 +524,24 @@
     <div class="card">
       <h2>Connected Orgs</h2>
       <div id="org-list"><div class="trend-empty">No orgs audited yet.</div></div>
+    </div>
+
+    <!-- Compare orgs -->
+    <div class="card" id="compare-card" style="display:none">
+      <h2>Compare Org Audits</h2>
+      <p style="font-size:13px;color:#718096;margin-bottom:16px">Select two audit results to compare side-by-side.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Org A</label>
+          <select class="form-input" id="compare-a-org"></select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Org B</label>
+          <select class="form-input" id="compare-b-org"></select>
+        </div>
+      </div>
+      <button class="btn-run" id="btn-run-compare" style="padding:10px 24px;font-size:14px">Compare</button>
+      <div id="compare-result" style="display:none;margin-top:20px"></div>
     </div>
     <div id="org-detail" style="display:none">
       <div class="card">
@@ -920,6 +961,34 @@
   </div>
 </div>
 
+<!-- ══ DISMISS FINDING MODAL ══ -->
+<div class="modal-backdrop" id="dismiss-backdrop">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">Acknowledge Finding</div>
+      <button class="modal-close" onclick="document.getElementById('dismiss-backdrop').classList.remove('open')">✕</button>
+    </div>
+    <p style="font-size:13px;color:#718096;margin-bottom:16px;line-height:1.55">Mark this finding as expected or already handled. It will be hidden from the scorecard and excluded from future reports for this org.</p>
+    <div class="form-group">
+      <label class="form-label">Finding</label>
+      <div id="dismiss-finding-text" style="font-size:13px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;color:#374151;line-height:1.5"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reason <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
+      <select class="form-input" id="dismiss-reason-select" onchange="document.getElementById('dismiss-reason-custom').style.display=this.value==='custom'?'block':'none'">
+        <option value="">Select a reason…</option>
+        <option value="Expected for this org type">Expected for this org type</option>
+        <option value="Already in progress — fix scheduled">Already in progress — fix scheduled</option>
+        <option value="Accepted risk — risk accepted by stakeholders">Accepted risk — accepted by stakeholders</option>
+        <option value="Not applicable to our setup">Not applicable to our setup</option>
+        <option value="custom">Other (type below)</option>
+      </select>
+      <input class="form-input" id="dismiss-reason-custom" type="text" placeholder="Describe reason…" style="display:none;margin-top:8px" maxlength="200"/>
+    </div>
+    <button class="btn-submit" id="btn-confirm-dismiss">Acknowledge &amp; Hide</button>
+  </div>
+</div>
+
 <!-- ══ FOOTER WATERMARK ══ -->
 <footer>
   <div class="footer-left">
@@ -1250,6 +1319,61 @@ async function pollJob(jobId) {
   }
 }
 
+// ── Apex class name drill-down helpers ───────────────────────────────────────
+
+function classChips(classes, limit) {
+  if (!classes || classes.length === 0) return "";
+  const shown = classes.slice(0, limit || 20);
+  const chips  = shown.map(c =>
+    `<span class="class-chip">${escHtml(c.name)}<span class="cv">v${c.apiVersion}</span></span>`
+  ).join("");
+  const more = classes.length > shown.length
+    ? `<span class="class-chip" style="background:#e2e8f0;color:#6b7280">+${classes.length - shown.length} more</span>`
+    : "";
+  return `<div class="class-names-list">${chips}${more}</div>`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function findingKey(category, action) {
+  let h = 0;
+  for (let i = 0; i < action.length; i++) { h = (Math.imul(31, h) + action.charCodeAt(i)) | 0; }
+  return category + ":" + Math.abs(h).toString(16);
+}
+
+function getApexDrilldown(category, actionText, meta) {
+  const cq = meta.codeQuality || {};
+  const td = meta.techDebt || {};
+  if (category === "codeQuality") {
+    if (/hardcoded/i.test(actionText) && cq.hardcodedIdClassNames?.length)
+      return { label: "Classes with hardcoded IDs", classes: cq.hardcodedIdClassNames };
+    if (/test coverage|classesNoTest/i.test(actionText) && cq.classesNoTestNames?.length)
+      return { label: "Classes needing tests (sample)", classes: cq.classesNoTestNames };
+  }
+  if (category === "codeQuality" || category === "techDebt") {
+    if (/stale|api version|old version/i.test(actionText) && td.staleClassNames?.length)
+      return { label: "Stale API version classes", classes: td.staleClassNames };
+  }
+  return null;
+}
+
+// ── Main render ───────────────────────────────────────────────────────────────
+
+let _dismissedKeys = new Set();
+let _currentOrgId  = null;
+let _pendingDismiss = null;
+
+async function loadDismissed(orgId) {
+  try {
+    const r = await fetch(`/api/orgs/${encodeURIComponent(orgId)}/dismissed`);
+    if (!r.ok) return;
+    const d = await r.json();
+    _dismissedKeys = new Set((d.dismissed || []).map(x => x.finding_key));
+  } catch { _dismissedKeys = new Set(); }
+}
+
 function renderAuditResults(data, jobId) {
   // Reset cards before rendering fresh data
   document.getElementById("proactive-card").style.display = "none";
@@ -1258,6 +1382,10 @@ function renderAuditResults(data, jobId) {
   const { overallScore, grade, categories, top5RecommendedActions,
           orgProfile, isPartial, partialModules, benchmark } = data.report;
   const meta = data.report.metadata || {};
+
+  // Track current org for dismiss
+  _currentOrgId = data.report.orgId || window._liveSession?.orgId || null;
+  if (_currentOrgId) loadDismissed(_currentOrgId).then(() => reapplyDismissed());
 
   // Score + gauge
   document.getElementById("overall-score").textContent = overallScore;
@@ -1323,28 +1451,43 @@ function renderAuditResults(data, jobId) {
     </div>`
   ).join("");
 
-  // Actions with AI guide buttons
-  const aiEnabled = true;
-  document.getElementById("actions").innerHTML = top5RecommendedActions.length === 0
-    ? '<p style="color:#16a34a;font-weight:600;padding:8px 0">No issues — this org is in excellent health!</p>'
-    : top5RecommendedActions.map((a,i) =>
-        `<div class="action-item" id="action-${i}">
-          <div class="action-top">
-            <div class="action-num">${i+1}</div>
-            <span class="badge ${priorityClass(a.priority)}">${a.priority}</span>
-            <div style="font-size:13px;color:#2d3748;line-height:1.55">${a.action}</div>
-            ${aiEnabled ? `<button class="btn-ai" id="ai-btn-${i}" data-index="${i}">✦ AI Fix Guide</button>` : ""}
+  // Actions with AI guide + Dismiss + Class-name drill-down
+  if (top5RecommendedActions.length === 0) {
+    document.getElementById("actions").innerHTML =
+      '<p style="color:#16a34a;font-weight:600;padding:8px 0">No issues — this org is in excellent health!</p>';
+  } else {
+    document.getElementById("actions").innerHTML = top5RecommendedActions.map((a, i) => {
+      const key      = findingKey(a.category, a.action);
+      const drill    = getApexDrilldown(a.category, a.action, meta);
+      const drillId  = `drill-${i}`;
+      const drillHtml = drill
+        ? `<button class="class-names-toggle" onclick="document.getElementById('${drillId}').classList.toggle('open');this.textContent=document.getElementById('${drillId}').classList.contains('open')?'▲ Hide ${drill.label}':'▼ ${drill.label} (${drill.classes.length})'">▼ ${drill.label} (${drill.classes.length})</button>${classChips(drill.classes)}`
+        : "";
+      return `<div class="action-item" id="action-${i}" data-key="${escHtml(key)}">
+        <div class="action-top">
+          <div class="action-num">${i+1}</div>
+          <span class="badge ${priorityClass(a.priority)}">${a.priority}</span>
+          <div>
+            <div style="font-size:13px;color:#2d3748;line-height:1.55">${escHtml(a.action)}</div>
+            ${drillHtml}
           </div>
-          <div class="ai-guide" id="ai-guide-${i}"></div>
-        </div>`
-      ).join("");
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+            <button class="btn-ai" id="ai-btn-${i}" data-index="${i}">✦ AI Fix Guide</button>
+            <button class="btn-dismiss" id="dismiss-btn-${i}" data-index="${i}" data-key="${escHtml(key)}" data-action="${escHtml(a.action)}" data-cat="${escHtml(a.category)}">✓ Acknowledge</button>
+          </div>
+        </div>
+        <div class="ai-guide" id="ai-guide-${i}"></div>
+      </div>`;
+    }).join("");
 
-  // Wire AI buttons
-  top5RecommendedActions.forEach((a, i) => {
-    const btn = document.getElementById("ai-btn-"+i);
-    if (!btn) return;
-    btn.addEventListener("click", () => fetchAiGuide(jobId, a, i));
-  });
+    // Wire AI + Dismiss buttons
+    top5RecommendedActions.forEach((a, i) => {
+      const aiBtn  = document.getElementById("ai-btn-"+i);
+      if (aiBtn) aiBtn.addEventListener("click", () => fetchAiGuide(jobId, a, i));
+      const dimBtn = document.getElementById("dismiss-btn-"+i);
+      if (dimBtn) dimBtn.addEventListener("click", () => openDismissModal(i, a));
+    });
+  }
 
   // Proactive monitoring
   renderProactiveMonitoring(meta.proactiveMonitoring);
@@ -1527,6 +1670,71 @@ function renderMcOperationalHealth(oh) {
 
   content.innerHTML = html || '<div style="font-size:13px;color:#a0aec0;padding:8px 0">Operational health data could not be retrieved for this org. Some APIs may require additional permissions.</div>';
   card.style.display = "block";
+}
+
+// ─── Dismiss / Acknowledge findings ──────────────────────────────────────────
+
+function openDismissModal(index, action) {
+  _pendingDismiss = { index, action };
+  document.getElementById("dismiss-finding-text").textContent = action.action;
+  document.getElementById("dismiss-reason-select").value = "";
+  document.getElementById("dismiss-reason-custom").style.display = "none";
+  document.getElementById("dismiss-reason-custom").value = "";
+  document.getElementById("btn-confirm-dismiss").disabled = false;
+  document.getElementById("btn-confirm-dismiss").textContent = "Acknowledge & Hide";
+  document.getElementById("dismiss-backdrop").classList.add("open");
+}
+
+document.getElementById("dismiss-backdrop").addEventListener("click", e => {
+  if (e.target === e.currentTarget) document.getElementById("dismiss-backdrop").classList.remove("open");
+});
+
+document.getElementById("btn-confirm-dismiss").addEventListener("click", async () => {
+  if (!_pendingDismiss || !_currentOrgId) return;
+  const { index, action } = _pendingDismiss;
+  const selectEl = document.getElementById("dismiss-reason-select");
+  const customEl = document.getElementById("dismiss-reason-custom");
+  const reason   = selectEl.value === "custom"
+    ? (customEl.value.trim() || null)
+    : (selectEl.value || null);
+  const key = findingKey(action.category, action.action);
+
+  const btn = document.getElementById("btn-confirm-dismiss");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+
+  try {
+    const r = await fetch(`/api/orgs/${encodeURIComponent(_currentOrgId)}/dismissed`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ finding_key: key, category: action.category, action_text: action.action, reason }),
+    });
+    if (r.ok) {
+      _dismissedKeys.add(key);
+      const el = document.getElementById("action-"+index);
+      if (el) {
+        el.classList.add("dismissed");
+        setTimeout(() => { el.style.display = "none"; }, 450);
+      }
+      document.getElementById("dismiss-backdrop").classList.remove("open");
+    } else {
+      const d = await r.json().catch(() => ({}));
+      btn.disabled = false;
+      btn.textContent = "Acknowledge & Hide";
+      alert(d.error || "Could not save — are you logged in?");
+    }
+  } catch {
+    btn.disabled = false;
+    btn.textContent = "Acknowledge & Hide";
+    alert("Network error.");
+  }
+});
+
+function reapplyDismissed() {
+  document.querySelectorAll(".action-item[data-key]").forEach(el => {
+    if (_dismissedKeys.has(el.dataset.key)) el.style.display = "none";
+  });
 }
 
 // ─── Share report ─────────────────────────────────────────────────────────────
@@ -1838,12 +2046,16 @@ async function fetchMcAiGuide(jobId, action, index) {
 
 // ─── History ──────────────────────────────────────────────────────────────────
 
+let _allOrgs = [];
+
 async function loadOrgList() {
   const res  = await fetch("/api/orgs", { credentials:"include" });
   const orgs = await res.json();
+  _allOrgs   = orgs;
   const el   = document.getElementById("org-list");
   if (!orgs.length) {
     el.innerHTML = '<div class="trend-empty">No orgs audited yet — run your first audit.</div>';
+    document.getElementById("compare-card").style.display = "none";
     return;
   }
   el.innerHTML = orgs.map(org =>
@@ -1861,6 +2073,16 @@ async function loadOrgList() {
   el.querySelectorAll(".org-item").forEach(item => {
     item.addEventListener("click", () => loadOrgDetail(item.dataset.orgid));
   });
+
+  // Populate compare dropdowns if 2+ orgs exist
+  if (orgs.length >= 2) {
+    const optHtml = orgs.map(o => `<option value="${o.id}">${o.name} (score: ${o.latest_score||"—"})</option>`).join("");
+    document.getElementById("compare-a-org").innerHTML = optHtml;
+    document.getElementById("compare-b-org").innerHTML = optHtml;
+    // Pre-select different orgs by default
+    if (orgs.length > 1) document.getElementById("compare-b-org").selectedIndex = 1;
+    document.getElementById("compare-card").style.display = "block";
+  }
 }
 
 async function loadOrgDetail(orgId) {
@@ -1900,6 +2122,100 @@ async function loadOrgDetail(orgId) {
 
   document.getElementById("org-detail").scrollIntoView({ behavior:"smooth", block:"start" });
 }
+
+// ─── Multi-org comparison ─────────────────────────────────────────────────────
+
+async function runCompare() {
+  const orgAId = document.getElementById("compare-a-org").value;
+  const orgBId = document.getElementById("compare-b-org").value;
+  if (orgAId === orgBId) { alert("Please select two different orgs."); return; }
+
+  const btn = document.getElementById("btn-run-compare");
+  btn.disabled = true;
+  btn.textContent = "Loading…";
+
+  try {
+    // Get latest audit IDs for each org
+    const [resA, resB] = await Promise.all([
+      fetch(`/api/orgs/${encodeURIComponent(orgAId)}/audits?limit=1`, { credentials:"include" }),
+      fetch(`/api/orgs/${encodeURIComponent(orgBId)}/audits?limit=1`, { credentials:"include" }),
+    ]);
+    const [auditsA, auditsB] = await Promise.all([resA.json(), resB.json()]);
+    if (!auditsA[0] || !auditsB[0]) { alert("No completed audits found for one or both orgs."); return; }
+
+    const r = await fetch(`/api/compare?a=${auditsA[0].id}&b=${auditsB[0].id}`, { credentials:"include" });
+    const catRows = await r.json();
+    if (!r.ok) throw new Error((catRows.error) || "Compare failed");
+
+    const orgA = _allOrgs.find(o => o.id === orgAId) || { id: orgAId, name: orgAId };
+    const orgB = _allOrgs.find(o => o.id === orgBId) || { id: orgBId, name: orgBId };
+    renderCompareResult(catRows, orgA, auditsA[0], orgB, auditsB[0]);
+  } catch(e) {
+    alert("Compare failed: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Compare";
+  }
+}
+
+function renderCompareResult(catRows, orgA, auditA, orgB, auditB) {
+  const el = document.getElementById("compare-result");
+  if (!catRows || !catRows.length) {
+    el.innerHTML = '<p style="color:#dc2626;font-size:13px">No category data to compare.</p>';
+    el.style.display = "block";
+    return;
+  }
+
+  const totalA = catRows.reduce((s, r) => s + (r.scoreA || 0), 0) / catRows.length;
+  const totalB = catRows.reduce((s, r) => s + (r.scoreB || 0), 0) / catRows.length;
+  const scoreA = Math.round(auditA.overall_score ?? totalA);
+  const scoreB = Math.round(auditB.overall_score ?? totalB);
+  const aWins  = scoreA > scoreB;
+  const tie    = scoreA === scoreB;
+
+  const rows = catRows.map(r => {
+    const aColor = r.scoreA > r.scoreB ? "#16a34a" : r.scoreA < r.scoreB ? "#dc2626" : "#6b7280";
+    const bColor = r.scoreB > r.scoreA ? "#16a34a" : r.scoreB < r.scoreA ? "#dc2626" : "#6b7280";
+    const delta  = r.scoreA - r.scoreB;
+    return `<div class="cmp-row">
+      <span class="cmp-label" style="flex:1">${CAT_LABELS[r.category]||r.category}</span>
+      <span class="cmp-val" style="min-width:36px;text-align:center;color:${r.scoreA!=null?aColor:'#a0aec0'}">${r.scoreA ?? "—"}</span>
+      <span style="font-size:11px;color:#a0aec0;min-width:44px;text-align:center">${delta>0?"+"+delta:delta<0?delta:"="}</span>
+      <span class="cmp-val" style="min-width:36px;text-align:center;color:${r.scoreB!=null?bColor:'#a0aec0'}">${r.scoreB ?? "—"}</span>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="cmp-grid" style="grid-template-columns:1fr 1fr">
+      <div class="cmp-col${aWins&&!tie?" cmp-winner":""}">
+        <div class="cmp-org-name">${escHtml(orgA.name)}</div>
+        <div style="font-size:11px;color:#a0aec0;margin-bottom:4px">${fmtDate(auditA.created_at)}</div>
+        <div class="cmp-score" style="color:${scoreColor(scoreA)}">${scoreA}</div>
+        <div class="cmp-grade" style="color:${gradeColor(auditA.grade)}">${auditA.grade}</div>
+        ${aWins&&!tie?'<div style="font-size:11px;font-weight:700;color:#16a34a">Higher Score</div>':''}
+      </div>
+      <div class="cmp-col${!aWins&&!tie?" cmp-winner":""}">
+        <div class="cmp-org-name">${escHtml(orgB.name)}</div>
+        <div style="font-size:11px;color:#a0aec0;margin-bottom:4px">${fmtDate(auditB.created_at)}</div>
+        <div class="cmp-score" style="color:${scoreColor(scoreB)}">${scoreB}</div>
+        <div class="cmp-grade" style="color:${gradeColor(auditB.grade)}">${auditB.grade}</div>
+        ${!aWins&&!tie?'<div style="font-size:11px;font-weight:700;color:#16a34a">Higher Score</div>':''}
+      </div>
+    </div>
+    <div style="margin-top:16px;background:#f8fafc;border-radius:10px;padding:14px;border:1px solid #e2e8f0">
+      <div style="display:grid;grid-template-columns:1fr 36px 44px 36px;gap:4px;font-size:11px;font-weight:700;color:#a0aec0;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">
+        <span>Category</span><span style="text-align:center">${escHtml(orgA.name.split(" ")[0])}</span><span style="text-align:center">Δ</span><span style="text-align:center">${escHtml(orgB.name.split(" ")[0])}</span>
+      </div>
+      ${rows}
+    </div>`;
+  el.style.display = "block";
+  el.scrollIntoView({ behavior:"smooth", block:"nearest" });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const cmpBtn = document.getElementById("btn-run-compare");
+  if (cmpBtn) cmpBtn.addEventListener("click", runCompare);
+});
 
 function renderTrendChart(points) {
   const el = document.getElementById("trend-chart");

@@ -139,6 +139,16 @@ CREATE TABLE IF NOT EXISTS app_sessions (
   expires_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS dismissed_findings (
+  id            SERIAL       PRIMARY KEY,
+  org_id        TEXT         NOT NULL,
+  finding_key   TEXT         NOT NULL,
+  category      TEXT         NOT NULL,
+  action_text   TEXT         NOT NULL,
+  reason        TEXT,
+  dismissed_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
 CREATE INDEX IF NOT EXISTS idx_cat_scores_org    ON category_scores(org_id, category, created_at);
