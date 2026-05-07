@@ -69,11 +69,11 @@ function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChall
     code_challenge:        codeChallenge,
     code_challenge_method: "S256",
     display:               "page",
-    // prompt=select_account prevents cross-org conflicts by always showing the
-    // account picker, so users can choose the right org even if another SF
-    // session is active in their browser. This is the only reliable solution —
-    // trying to clear the SF session from outside login.salesforce.com does not work.
-    prompt:                "select_account",
+    // prompt=login forces fresh credential entry on every authorize request.
+    // This prevents cross-org conflicts (no existing session is ever reused)
+    // and is safe now that the PKCE verifier is stored in a cookie rather than
+    // in-process memory (which caused the old login loop on server restarts).
+    prompt:                "login",
   });
   return `${base}/services/oauth2/authorize?${params.toString()}`;
 }
