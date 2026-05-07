@@ -123,6 +123,22 @@ CREATE TABLE IF NOT EXISTS mc_orgs (
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS users (
+  id            TEXT        PRIMARY KEY,
+  email         TEXT        NOT NULL UNIQUE,
+  password_hash TEXT        NOT NULL,
+  name          TEXT        NOT NULL DEFAULT '',
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS app_sessions (
+  id         TEXT        PRIMARY KEY,
+  user_id    TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
 CREATE INDEX IF NOT EXISTS idx_cat_scores_org    ON category_scores(org_id, category, created_at);
@@ -133,3 +149,6 @@ CREATE INDEX IF NOT EXISTS idx_tickets_status    ON support_tickets(status, crea
 CREATE INDEX IF NOT EXISTS idx_shares_audit      ON shared_reports(audit_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_org     ON scheduled_audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_enabled ON scheduled_audits(enabled, frequency, day_of_week, hour);
+CREATE INDEX IF NOT EXISTS idx_users_email       ON users(email);
+CREATE INDEX IF NOT EXISTS idx_app_sessions_user ON app_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_app_sessions_exp  ON app_sessions(expires_at);

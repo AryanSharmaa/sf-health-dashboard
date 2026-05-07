@@ -18,7 +18,10 @@ const { scoreOrgHealth }           = require("../sfHealthScore");
 const { generateHTML, generateJSON } = require("./reportGenerator");
 const repo       = require("./db/auditRepository");
 const authRoutes = require("./authRoutes");
+const userRoutes = require("./userRoutes");
+const { SESSION_COOKIE: APP_SESSION_COOKIE } = require("./userRoutes");
 const { getSession } = require("./oauth");
+const { getAppSession } = require("./db/userRepository");
 const { generateRemediationGuide, streamOpenRouter } = require("./aiAdvisor");
 const { fetchToken, createMcSession, getMcSession, deleteMcSession } = require("./mcOAuth");
 const { saveMcOrg, getMcOrgByMid, getMcOrgByEid, listMcOrgs, touchMcOrg } = require("./db/mcRepository");
@@ -74,6 +77,18 @@ app.get("/app", (_req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/index.html"));
 });
+app.get("/login", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/login.html"));
+});
+app.get("/signup", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/signup.html"));
+});
+app.get("/mc-setup", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/mc-setup.html"));
+});
 app.use(express.static(path.join(__dirname, "../public"), { maxAge: "1h" }));
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
@@ -107,9 +122,19 @@ function requireSession(req, res, next) {
 // In-memory job store for in-flight audits
 const runningJobs = new Map();
 
+// ─── App auth middleware ───────────────────────────────────────────────────────
+
+async function requireAppAuth(req, res, next) {
+  const session = await getAppSession(req.cookies?.[APP_SESSION_COOKIE]);
+  if (!session) return res.status(401).json({ error: "Please log in to use this feature.", loginRequired: true });
+  req.appUser = { id: session.user_id, email: session.email, name: session.name };
+  next();
+}
+
 // ─── Auth routes ──────────────────────────────────────────────────────────────
 
 app.use("/auth", authRoutes);
+app.use("/user", userRoutes);
 
 // ─── Shared report (public, no auth) ─────────────────────────────────────────
 
@@ -848,13 +873,15 @@ app.get("/admin", (_req, res) => {
 
 app.get("*", (req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  // Auth/app routes → app; share routes → share page; else → landing
   if (req.path.startsWith("/auth") || req.path.startsWith("/app")) {
     return res.sendFile(path.join(__dirname, "../public/index.html"));
   }
   if (req.path.startsWith("/share/")) {
     return res.sendFile(path.join(__dirname, "../public/share.html"));
   }
+  if (req.path === "/login") return res.sendFile(path.join(__dirname, "../public/login.html"));
+  if (req.path === "/signup") return res.sendFile(path.join(__dirname, "../public/signup.html"));
+  if (req.path === "/mc-setup") return res.sendFile(path.join(__dirname, "../public/mc-setup.html"));
   res.sendFile(path.join(__dirname, "../public/landing.html"));
 });
 

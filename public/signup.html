@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <title>Sign Up — SF Health Dashboard</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f8;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+    .card{background:white;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.09);padding:40px 36px;width:100%;max-width:420px}
+    .logo{font-size:22px;font-weight:800;color:#1e3a5f;margin-bottom:6px;text-decoration:none;display:inline-block}
+    .logo span{color:#0070d2}
+    h1{font-size:24px;font-weight:800;color:#1a202c;margin-bottom:6px}
+    .sub{font-size:14px;color:#718096;margin-bottom:28px}
+    .form-group{margin-bottom:18px}
+    label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px}
+    input{width:100%;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;color:#1a202c;font-family:inherit;transition:border 0.15s;background:white}
+    input:focus{outline:none;border-color:#0070d2}
+    .btn{width:100%;padding:13px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.2s;margin-top:4px}
+    .btn:hover{opacity:0.9}
+    .btn:disabled{opacity:0.6;cursor:not-allowed}
+    .error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:18px;display:none}
+    .hint{font-size:11px;color:#a0aec0;margin-top:4px}
+    .switch{text-align:center;margin-top:22px;font-size:13px;color:#718096}
+    .switch a{color:#0070d2;font-weight:600;text-decoration:none}
+    .switch a:hover{text-decoration:underline}
+    .divider{border:none;border-top:1px solid #f3f4f6;margin:22px 0}
+    .perks{display:flex;flex-direction:column;gap:7px;margin-bottom:24px}
+    .perk{display:flex;align-items:center;gap:8px;font-size:13px;color:#374151}
+    .perk-icon{width:20px;height:20px;background:#eff6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+  </style>
+</head>
+<body>
+<div class="card">
+  <a href="/" class="logo">SF<span>Health</span></a>
+  <h1>Create your account</h1>
+  <p class="sub">Free forever — your audit history persists across sessions.</p>
+
+  <div class="perks">
+    <div class="perk"><div class="perk-icon">📊</div>Audit history saved permanently</div>
+    <div class="perk"><div class="perk-icon">🔁</div>One-click reconnect for repeat audits</div>
+    <div class="perk"><div class="perk-icon">📈</div>Score trends and chronic issue tracking</div>
+  </div>
+
+  <div class="error" id="error-msg"></div>
+
+  <div class="form-group">
+    <label for="name">Your name <span style="color:#a0aec0;font-weight:400">(optional)</span></label>
+    <input type="text" id="name" placeholder="Aryan Sharma" autocomplete="name"/>
+  </div>
+  <div class="form-group">
+    <label for="email">Email <span style="color:#dc2626">*</span></label>
+    <input type="email" id="email" placeholder="you@company.com" autocomplete="email"/>
+  </div>
+  <div class="form-group">
+    <label for="password">Password <span style="color:#dc2626">*</span></label>
+    <input type="password" id="password" placeholder="Minimum 8 characters" autocomplete="new-password"/>
+    <div class="hint">At least 8 characters</div>
+  </div>
+  <button class="btn" id="btn-signup">Create Account</button>
+
+  <hr class="divider"/>
+  <div class="switch">Already have an account? <a href="/login">Log in</a></div>
+  <div class="switch" style="margin-top:10px"><a href="/app">Continue without account →</a></div>
+</div>
+
+<script>
+  const nameEl  = document.getElementById('name');
+  const emailEl = document.getElementById('email');
+  const passEl  = document.getElementById('password');
+  const btn     = document.getElementById('btn-signup');
+  const errEl   = document.getElementById('error-msg');
+
+  function showError(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+  }
+
+  async function doSignup() {
+    const name     = nameEl.value.trim();
+    const email    = emailEl.value.trim();
+    const password = passEl.value;
+    if (!email) return showError('Please enter your email.');
+    if (!password) return showError('Please enter a password.');
+    btn.disabled = true;
+    btn.textContent = 'Creating account…';
+    errEl.style.display = 'none';
+    try {
+      const r = await fetch('/user/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password, name }),
+      });
+      const data = await r.json();
+      if (!r.ok) { showError(data.error || 'Signup failed.'); btn.disabled = false; btn.textContent = 'Create Account'; return; }
+      window.location.href = '/app';
+    } catch {
+      showError('Network error. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+    }
+  }
+
+  btn.addEventListener('click', doSignup);
+  passEl.addEventListener('keydown', e => { if (e.key === 'Enter') doSignup(); });
+  emailEl.addEventListener('keydown', e => { if (e.key === 'Enter') passEl.focus(); });
+</script>
+</body>
+</html>

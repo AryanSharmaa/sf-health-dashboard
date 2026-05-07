@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <title>Marketing Cloud Setup Guide — SF Health Dashboard</title>
+  <meta name="description" content="Step-by-step guide to create an Installed Package in Marketing Cloud for SF Health Dashboard audits."/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh;display:flex;flex-direction:column}
+    nav{background:linear-gradient(135deg,#1e3a5f 0%,#0070d2 100%);padding:16px 32px;display:flex;align-items:center;gap:16px}
+    nav .logo{color:white;font-size:20px;font-weight:800;letter-spacing:-0.5px;text-decoration:none}
+    nav .logo span{color:#7dd3fc}
+    nav .tagline{color:rgba(255,255,255,0.6);font-size:13px}
+    .main{max-width:760px;margin:40px auto;padding:0 24px;flex:1;width:100%}
+    .hero{text-align:center;margin-bottom:36px}
+    .hero-icon{width:72px;height:72px;background:linear-gradient(135deg,#e8720c,#f59e0b);border-radius:20px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 6px 20px rgba(245,158,11,0.35)}
+    .hero-icon svg{width:40px;height:40px;fill:white}
+    .hero h1{font-size:30px;font-weight:900;color:#1a202c;margin-bottom:10px;line-height:1.2}
+    .hero p{font-size:15px;color:#718096;max-width:520px;margin:0 auto;line-height:1.7}
+    .card{background:white;border-radius:16px;box-shadow:0 2px 12px rgba(0,0,0,0.07);padding:28px 32px;margin-bottom:22px}
+    .card-title{font-size:17px;font-weight:800;color:#1a202c;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+    .time-badge{display:inline-flex;align-items:center;gap:5px;background:#fef9c3;border:1px solid #fde047;color:#92400e;border-radius:99px;padding:3px 12px;font-size:12px;font-weight:700}
+    .step{display:flex;gap:16px;padding:18px 0;border-bottom:1px solid #f3f4f6}
+    .step:last-child{border-bottom:none;padding-bottom:0}
+    .step-num{flex-shrink:0;width:32px;height:32px;background:linear-gradient(135deg,#e8720c,#f59e0b);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;margin-top:1px}
+    .step-body{flex:1}
+    .step-title{font-size:15px;font-weight:700;color:#1a202c;margin-bottom:5px}
+    .step-desc{font-size:13px;color:#4b5563;line-height:1.65}
+    .path{display:inline-flex;align-items:center;gap:4px;margin-top:10px;background:#f0f4f8;border:1px solid #e2e8f0;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:600;color:#374151;font-family:monospace}
+    .scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+    .scope{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:6px 10px;font-size:12px;font-weight:600;color:#166534}
+    .cred-row{display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:9px 13px;margin-top:6px}
+    .cred-label{font-size:12px;font-weight:700;color:#1a202c;min-width:100px}
+    .cred-desc{font-size:12px;color:#6b7280;line-height:1.45}
+    code{background:#f0f4f8;padding:2px 6px;border-radius:4px;font-size:11px;font-family:monospace}
+    .note-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;font-size:13px;color:#1e40af;line-height:1.6;margin-top:12px}
+    .tip-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 16px;font-size:13px;color:#92400e;line-height:1.6;margin-top:12px}
+    .cta-card{background:linear-gradient(135deg,#1e3a5f,#0070d2);border-radius:16px;padding:32px;text-align:center;color:white;margin-top:28px}
+    .cta-card h2{font-size:22px;font-weight:800;margin-bottom:10px}
+    .cta-card p{font-size:14px;opacity:0.85;margin-bottom:24px;line-height:1.6}
+    .btn-cta{display:inline-block;background:white;color:#1e3a5f;padding:13px 32px;border-radius:10px;font-size:15px;font-weight:800;text-decoration:none;transition:all 0.2s;box-shadow:0 3px 10px rgba(0,0,0,0.2)}
+    .btn-cta:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.25)}
+    footer{background:white;border-top:1px solid #e2e8f0;padding:16px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .footer-logo{font-size:15px;font-weight:800;color:#1e3a5f}
+    .footer-logo span{color:#0070d2}
+    .footer-copy{font-size:12px;color:#a0aec0}
+    @media(max-width:600px){
+      .main{padding:0 14px;margin:24px auto}
+      .card{padding:20px 16px}
+      .hero h1{font-size:22px}
+      .scope-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="logo">SF<span>Health</span></a>
+  <span class="tagline">Salesforce Org Health Dashboard</span>
+</nav>
+
+<div class="main">
+
+  <div class="hero">
+    <div class="hero-icon">
+      <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+    </div>
+    <h1>Marketing Cloud Setup Guide</h1>
+    <p>Create a read-only Installed Package in Marketing Cloud — takes about 5 minutes, done once per org. After setup, every future audit is a single click.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      Step-by-step instructions
+      <span class="time-badge">⏱ ~5 minutes</span>
+    </div>
+
+    <!-- Step 1 -->
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Log in to Marketing Cloud Setup</div>
+        <div class="step-desc">In the top-right corner of Marketing Cloud, click your name (or the account icon) → <strong>Setup</strong>. This opens the Admin Setup area — it's separate from the main MC navigation bar.</div>
+        <div class="path">Your Name → Setup</div>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Navigate to Installed Packages</div>
+        <div class="step-desc">In the left sidebar under <strong>Platform Tools</strong>, expand <strong>Apps</strong> and click <strong>Installed Packages</strong>.</div>
+        <div class="path">Setup → Platform Tools → Apps → Installed Packages</div>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Create a New Package</div>
+        <div class="step-desc">Click <strong>New</strong> (top right of the Installed Packages list). Give it a name like <em>"SF Health Audit"</em> and an optional description. Leave all other settings as default. Click <strong>Save</strong>.</div>
+        <div class="path">Installed Packages → New → Name: "SF Health Audit" → Save</div>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Add an API Integration Component</div>
+        <div class="step-desc">Inside the new package, click <strong>Add Component</strong>. Select <strong>API Integration</strong> as the component type, then select <strong>Server-to-Server</strong> as the integration type. Click <strong>Next</strong>.</div>
+        <div class="path">Package → Add Component → API Integration → Server-to-Server → Next</div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">Grant the Required Read Permissions</div>
+        <div class="step-desc">On the scopes screen, enable <strong>Read</strong> access for each of the following. The audit is completely read-only — it never writes to your org.</div>
+        <div class="scope-grid">
+          <div class="scope">✓ Journeys — Read</div>
+          <div class="scope">✓ Automations — Read</div>
+          <div class="scope">✓ Email — Read</div>
+          <div class="scope">✓ Contacts — Read</div>
+          <div class="scope">✓ Tracking &amp; Analytics — Read</div>
+          <div class="scope">✓ Accounts — Read</div>
+        </div>
+        <div style="font-size:12px;color:#6b7280;margin-top:10px">Click <strong>Save</strong> when done.</div>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="step-title">Copy Your Credentials</div>
+        <div class="step-desc">After saving, the package detail page shows your credentials. Copy all three values:</div>
+        <div class="cred-row"><span class="cred-label">Client ID</span><span class="cred-desc">Alphanumeric string — copy exactly as shown</span></div>
+        <div class="cred-row"><span class="cred-label">Client Secret</span><span class="cred-desc">Click <strong>Show</strong> to reveal, then copy it immediately</span></div>
+        <div class="cred-row"><span class="cred-label">REST Base URI</span><span class="cred-desc">Looks like <code>https://mcXXXXX.rest.marketingcloudapis.com</code></span></div>
+        <div class="note-box">These credentials are saved encrypted in SF Health Dashboard. You only enter them once — all future audits reconnect automatically with your MID or EID.</div>
+      </div>
+    </div>
+
+    <!-- Step 7 -->
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <div class="step-title">Find Your MID / EID <span style="font-size:12px;font-weight:400;color:#a0aec0">(optional but recommended)</span></div>
+        <div class="step-desc">Still in Setup, go to <strong>Company Settings → Account Management</strong>. You'll see a table of Business Units. The number in the <strong>MID</strong> column for your BU is what to enter. The top-level row shows your Enterprise ID (EID).</div>
+        <div class="path">Setup → Company Settings → Account Management → MID column</div>
+        <div class="tip-box">Having your MID/EID lets you reconnect instantly in future sessions — just enter your MID instead of re-entering the full credentials.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="cta-card">
+    <h2>Ready to run your audit?</h2>
+    <p>Connect your Marketing Cloud org using the credentials you just copied. It takes under 2 minutes to get a full health score.</p>
+    <a href="/app" class="btn-cta">Go to SF Health Dashboard →</a>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-logo">SF<span>Health</span></div>
+  <div class="footer-copy">Automated Salesforce Org Audit · © 2026 Aryan Sharma</div>
+</footer>
+
+</body>
+</html>

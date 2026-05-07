@@ -280,13 +280,22 @@
   <a href="/" class="logo" style="cursor:pointer;text-decoration:none">SF<span>Health</span></a>
   <span class="tagline">Automated Salesforce Org Audit</span>
   <div class="nav-right" id="nav-right" style="display:none">
-    <div class="user-pill">
+    <div class="user-pill" id="app-user-pill" style="display:none">
+      <div class="avatar" id="app-nav-avatar">?</div>
+      <span class="uname" id="app-nav-username"></span>
+    </div>
+    <div class="user-pill" id="sf-user-pill" style="display:none">
       <div class="avatar" id="nav-avatar">?</div>
       <span class="uname" id="nav-username"></span>
     </div>
     <button class="nav-link" id="btn-nav-audit">Audit</button>
     <button class="nav-link" id="btn-nav-history">History</button>
-    <button class="btn-logout" id="btn-logout">Disconnect</button>
+    <button class="btn-logout" id="btn-logout">Disconnect SF</button>
+    <button class="btn-logout" id="btn-app-logout" style="display:none">Sign Out</button>
+  </div>
+  <div class="nav-right" id="nav-auth-links" style="display:none">
+    <a href="/login" class="nav-link" style="text-decoration:none">Log In</a>
+    <a href="/signup" class="nav-link" style="text-decoration:none;background:rgba(255,255,255,0.25)">Sign Up</a>
   </div>
 </nav>
 
@@ -999,10 +1008,17 @@ async function checkSession() {
     banner.style.display = "block";
     history.replaceState({}, "", "/app");
   }
+
+  // Check app account (login/signup)
+  const appRes  = await fetch("/user/me", { credentials: "include" });
+  const appData = await appRes.json();
+  renderAppUserNav(appData.loggedIn ? appData.user : null);
+
+  // Check SF org session
   const res     = await fetch("/auth/session", { credentials: "include" });
   const session = await res.json();
-  if (!session.connected) { showPage("connect"); renderNav(null); return; }
-  renderNav(session);
+  if (!session.connected) { showPage("connect"); return; }
+  renderSfNav(session);
   document.getElementById("banner-org-name").textContent = session.orgName || session.orgId;
   document.getElementById("banner-org-id").textContent   = `${session.username} · ${session.instanceUrl}`;
   showPage("audit");
@@ -1010,17 +1026,46 @@ async function checkSession() {
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 
-function renderNav(session) {
-  const el = document.getElementById("nav-right");
-  if (!session) { el.style.display = "none"; return; }
+function renderAppUserNav(user) {
+  const navRight    = document.getElementById("nav-right");
+  const authLinks   = document.getElementById("nav-auth-links");
+  const appPill     = document.getElementById("app-user-pill");
+  const appAvatar   = document.getElementById("app-nav-avatar");
+  const appUsername = document.getElementById("app-nav-username");
+  const appLogout   = document.getElementById("btn-app-logout");
+
+  if (user) {
+    appAvatar.textContent   = (user.name || user.email || "?")[0].toUpperCase();
+    appUsername.textContent = user.name || user.email;
+    appPill.style.display   = "flex";
+    appLogout.style.display = "inline-block";
+    authLinks.style.display = "none";
+    navRight.style.display  = "flex";
+  } else {
+    appPill.style.display   = "none";
+    appLogout.style.display = "none";
+    authLinks.style.display = "flex";
+  }
+}
+
+function renderSfNav(session) {
+  const el     = document.getElementById("nav-right");
+  const sfPill = document.getElementById("sf-user-pill");
+  if (!session) { sfPill.style.display = "none"; el.style.display = "flex"; return; }
   document.getElementById("nav-avatar").textContent   = (session.displayName || session.username || "?")[0].toUpperCase();
   document.getElementById("nav-username").textContent = session.displayName || session.username;
+  sfPill.style.display = "flex";
   el.style.display = "flex";
 }
 
 async function logout() {
   await fetch("/auth/logout", { method: "POST", credentials: "include" });
   window.location.href = "/?t=" + Date.now();
+}
+
+async function appLogout() {
+  await fetch("/user/logout", { method: "POST", credentials: "include" });
+  window.location.href = "/login";
 }
 
 function showPage(name) {
@@ -1818,6 +1863,7 @@ document.getElementById("run-btn").addEventListener("click", startAudit);
 document.getElementById("btn-nav-audit").addEventListener("click", () => showPage("audit"));
 document.getElementById("btn-nav-history").addEventListener("click", () => { showPage("history"); loadOrgList(); });
 document.getElementById("btn-logout").addEventListener("click", logout);
+document.getElementById("btn-app-logout").addEventListener("click", appLogout);
 checkSession();
 
 // ─── Marketing Cloud ─────────────────────────────────────────────────────────

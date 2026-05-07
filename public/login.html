@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <title>Log In — SF Health Dashboard</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f8;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+    .card{background:white;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,0.09);padding:40px 36px;width:100%;max-width:420px}
+    .logo{font-size:22px;font-weight:800;color:#1e3a5f;margin-bottom:6px;text-decoration:none;display:inline-block}
+    .logo span{color:#0070d2}
+    h1{font-size:24px;font-weight:800;color:#1a202c;margin-bottom:6px}
+    .sub{font-size:14px;color:#718096;margin-bottom:28px}
+    .form-group{margin-bottom:18px}
+    label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px}
+    input{width:100%;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;color:#1a202c;font-family:inherit;transition:border 0.15s;background:white}
+    input:focus{outline:none;border-color:#0070d2}
+    .btn{width:100%;padding:13px;background:linear-gradient(135deg,#1e3a5f,#0070d2);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.2s;margin-top:4px}
+    .btn:hover{opacity:0.9}
+    .btn:disabled{opacity:0.6;cursor:not-allowed}
+    .error{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:18px;display:none}
+    .switch{text-align:center;margin-top:22px;font-size:13px;color:#718096}
+    .switch a{color:#0070d2;font-weight:600;text-decoration:none}
+    .switch a:hover{text-decoration:underline}
+    .divider{border:none;border-top:1px solid #f3f4f6;margin:22px 0}
+  </style>
+</head>
+<body>
+<div class="card">
+  <a href="/" class="logo">SF<span>Health</span></a>
+  <h1>Welcome back</h1>
+  <p class="sub">Log in to your account to run and track audits.</p>
+
+  <div class="error" id="error-msg"></div>
+
+  <div class="form-group">
+    <label for="email">Email</label>
+    <input type="email" id="email" placeholder="you@company.com" autocomplete="email"/>
+  </div>
+  <div class="form-group">
+    <label for="password">Password</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+  </div>
+  <button class="btn" id="btn-login">Log In</button>
+
+  <hr class="divider"/>
+  <div class="switch">Don't have an account? <a href="/signup">Sign up free</a></div>
+  <div class="switch" style="margin-top:10px"><a href="/app">Continue without account →</a></div>
+</div>
+
+<script>
+  const emailEl = document.getElementById('email');
+  const passEl  = document.getElementById('password');
+  const btn     = document.getElementById('btn-login');
+  const errEl   = document.getElementById('error-msg');
+
+  function showError(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+  }
+
+  async function doLogin() {
+    const email    = emailEl.value.trim();
+    const password = passEl.value;
+    if (!email || !password) return showError('Please enter your email and password.');
+    btn.disabled = true;
+    btn.textContent = 'Logging in…';
+    errEl.style.display = 'none';
+    try {
+      const r = await fetch('/user/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await r.json();
+      if (!r.ok) { showError(data.error || 'Login failed.'); btn.disabled = false; btn.textContent = 'Log In'; return; }
+      window.location.href = '/app';
+    } catch {
+      showError('Network error. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Log In';
+    }
+  }
+
+  btn.addEventListener('click', doLogin);
+  passEl.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  emailEl.addEventListener('keydown', e => { if (e.key === 'Enter') passEl.focus(); });
+</script>
+</body>
+</html>
