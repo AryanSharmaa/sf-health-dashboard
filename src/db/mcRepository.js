@@ -38,10 +38,12 @@ async function saveMcOrg({ subdomain, mid, eid, orgName, clientId, clientSecret,
   const now     = new Date().toISOString();
   const scopeId = sfOrgId || null;  // historically sf_org_id, now used as app-user scope
 
-  // Upsert keyed on sf_org_id + subdomain + mid so each user has their own set
+  // Upsert keyed on sf_org_id + subdomain + mid so each user has their own set.
+  // IS NOT DISTINCT FROM handles NULL equality without a bare $n IS NULL (which
+  // causes "could not determine data type of parameter $n" in PostgreSQL).
   const { rows: existing } = await db.query(
-    `SELECT id FROM mc_orgs WHERE sf_org_id = ? AND subdomain = ? AND (mid = ? OR (mid IS NULL AND ? IS NULL))`,
-    [scopeId, subdomain, mid || null, mid || null]
+    `SELECT id FROM mc_orgs WHERE sf_org_id = ? AND subdomain = ? AND mid IS NOT DISTINCT FROM ?`,
+    [scopeId, subdomain, mid || null]
   );
 
   const clientIdEnc     = encrypt(clientId);
