@@ -381,9 +381,11 @@ async function collectTechDebt(conn) {
     totalApexClasses: apexClasses.length,
     totalVFPages: vfPages.length,
     staleApiVersionClasses: oldApiVersionClasses[0]?.cnt || staleClassList.length,
-    staleClassNames: staleClassList.slice(0, 50).map((c) => ({ name: c.Name, apiVersion: c.ApiVersion })),
+    staleClassNames:    staleClassList.slice(0, 50).map((c) => ({ name: c.Name, apiVersion: c.ApiVersion })),
+    allApexClassNames:  apexClasses.slice(0, 200).map((c) => ({ name: c.Name, apiVersion: c.ApiVersion })),
     legacyVFPages: legacyVFList.length,
-    legacyVFPageNames: legacyVFList.slice(0, 20).map((p) => ({ name: p.Name, apiVersion: p.ApiVersion })),
+    legacyVFPageNames:  legacyVFList.slice(0, 50).map((p) => ({ name: p.Name, apiVersion: p.ApiVersion })),
+    allVFPageNames:     vfPages.slice(0, 100).map((p) => ({ name: p.Name, apiVersion: p.ApiVersion })),
   };
 }
 

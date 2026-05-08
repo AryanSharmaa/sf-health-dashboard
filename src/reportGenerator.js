@@ -255,7 +255,11 @@ function generateJSON(healthScore, metadata = {}) {
     ...healthScore,
     metadata: {
       unusedFields:        metadata?.unusedFields        || {},
-      techDebt:            metadata?.techDebt            || {},
+      techDebt: {
+        ...(metadata?.techDebt || {}),
+        allApexClassNames: metadata?.techDebt?.allApexClassNames || [],
+        allVFPageNames:    metadata?.techDebt?.allVFPageNames    || [],
+      },
       governorLimits:      metadata?.apiUsage?.governorLimits || {},
       proactiveMonitoring: metadata?.proactiveMonitoring || {},
       // Name lists for drilldowns

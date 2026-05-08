@@ -1885,16 +1885,36 @@ function renderAuditResults(data, jobId) {
   const crit   = top5RecommendedActions.filter(a => a.priority==="critical").length;
   const high   = top5RecommendedActions.filter(a => a.priority==="high").length;
   const unused = meta.unusedFields?.unusedFieldCount || 0;
+  const td     = meta.techDebt || {};
+
+  function sfStatBox(id, val, label, color, names) {
+    const hasNames = names && names.length > 0;
+    const chips = hasNames ? nameChips(names) : "";
+    const btn   = hasNames
+      ? `<button class="drilldown-toggle" onclick="toggleDrilldown('${id}-panel',this)" style="margin-top:6px" aria-expanded="false">${CHEVRON_SVG}View names <strong>(${names.length})</strong></button>` : "";
+    const panel = hasNames ? `<div class="drilldown-panel" id="${id}-panel">${chips}</div>` : "";
+    return `<div class="stat-box">
+      <div class="val" style="color:${color}">${val}</div>
+      <div class="lbl">${label}</div>
+      ${btn}${panel}
+    </div>`;
+  }
+
+  const critNames  = top5RecommendedActions.filter(a => a.priority==="critical").map(a => ({ name: a.action.slice(0,60)+(a.action.length>60?"…":"") }));
+  const highNames  = top5RecommendedActions.filter(a => a.priority==="high").map(a => ({ name: a.action.slice(0,60)+(a.action.length>60?"…":"") }));
+  const unusedNames = (meta.unusedFields?.unusedFields || []).map(f => ({ name: f.fieldName, meta: f.object }));
+  const apexNames  = (td.allApexClassNames || []).map(c => ({ name: c.name, meta: `v${c.apiVersion}` }));
+  const staleNames = (td.staleClassNames   || []).map(c => ({ name: c.name, meta: `v${c.apiVersion}` }));
+  const vfNames    = (td.allVFPageNames    || []).map(p => ({ name: p.name, meta: `v${p.apiVersion}` }));
+
   document.getElementById("stats-grid").innerHTML = [
-    [crit,   "Critical",      scoreColor(crit>0?0:100)],
-    [high,   "High Issues",   scoreColor(high>0?59:100)],
-    [unused, "Unused Fields", "#718096"],
-    [meta.techDebt?.totalApexClasses      || "—", "Apex Classes",  "#718096"],
-    [meta.techDebt?.staleApiVersionClasses|| "—", "Stale Classes", "#718096"],
-    [meta.techDebt?.totalVFPages          || "—", "VF Pages",      "#718096"],
-  ].map(([v,l,c]) =>
-    `<div class="stat-box"><div class="val" style="color:${c}">${v}</div><div class="lbl">${l}</div></div>`
-  ).join("");
+    sfStatBox("sf-stat-crit",   crit,                                  "Critical",      scoreColor(crit>0?0:100),   critNames),
+    sfStatBox("sf-stat-high",   high,                                  "High Issues",   scoreColor(high>0?59:100),  highNames),
+    sfStatBox("sf-stat-unused", unused,                                "Unused Fields", "#718096",                  unusedNames),
+    sfStatBox("sf-stat-apex",   td.totalApexClasses       || "—",     "Apex Classes",  "#718096",                  apexNames),
+    sfStatBox("sf-stat-stale",  td.staleApiVersionClasses || "—",     "Stale Classes", "#718096",                  staleNames),
+    sfStatBox("sf-stat-vf",     td.totalVFPages           || "—",     "VF Pages",      "#718096",                  vfNames),
+  ].join("");
 
   // Radar chart
   renderRadarChart(categories);
