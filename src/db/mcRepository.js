@@ -34,13 +34,14 @@ function decrypt(stored) {
 // ─── Save or update MC org credentials ───────────────────────────────────────
 
 async function saveMcOrg({ subdomain, mid, eid, orgName, clientId, clientSecret, sfOrgId }) {
-  const db   = await getDb();
-  const now  = new Date().toISOString();
+  const db      = await getDb();
+  const now     = new Date().toISOString();
+  const scopeId = sfOrgId || null;  // historically sf_org_id, now used as app-user scope
 
-  // Upsert keyed on sf_org_id + subdomain + mid so each SF org has its own set
+  // Upsert keyed on sf_org_id + subdomain + mid so each user has their own set
   const { rows: existing } = await db.query(
     `SELECT id FROM mc_orgs WHERE sf_org_id = ? AND subdomain = ? AND (mid = ? OR (mid IS NULL AND ? IS NULL))`,
-    [sfOrgId || null, subdomain, mid || null, mid || null]
+    [scopeId, subdomain, mid || null, mid || null]
   );
 
   const clientIdEnc     = encrypt(clientId);
@@ -59,7 +60,7 @@ async function saveMcOrg({ subdomain, mid, eid, orgName, clientId, clientSecret,
   await db.query(
     `INSERT INTO mc_orgs (id, sf_org_id, subdomain, mid, eid, org_name, client_id_enc, client_secret_enc, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, sfOrgId || null, subdomain, mid || null, eid || null, orgName || subdomain,
+    [id, scopeId, subdomain, mid || null, eid || null, orgName || subdomain,
      clientIdEnc, clientSecretEnc, now, now]
   );
   return id;

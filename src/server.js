@@ -162,6 +162,16 @@ async function requireAppAuth(req, res, next) {
   next();
 }
 
+// Attaches req.appUser if logged in, but never rejects — MC routes use this
+// so they work for both authenticated users and guests without an SF session.
+async function optionalAppAuth(req, res, next) {
+  try {
+    const session = await getAppSession(req.cookies?.[APP_SESSION_COOKIE]);
+    if (session) req.appUser = { id: session.user_id, email: session.email, name: session.name };
+  } catch { /* ignore */ }
+  next();
+}
+
 // ─── Auth routes ──────────────────────────────────────────────────────────────
 
 app.use("/auth", authRoutes);
@@ -820,10 +830,10 @@ function requireMcSession(req, res, next) {
   next();
 }
 
-// List saved MC orgs (no secrets) — scoped to current SF org
-app.get("/api/mc/orgs", readLimiter, requireSession, async (req, res) => {
+// List saved MC orgs (no secrets) — scoped to logged-in user; guests see nothing
+app.get("/api/mc/orgs", readLimiter, optionalAppAuth, async (req, res) => {
   try {
-    const orgs = await listMcOrgs(req.sfSession.orgId);
+    const orgs = req.appUser ? await listMcOrgs(req.appUser.id) : [];
     res.json({ orgs });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -833,8 +843,9 @@ app.get("/api/mc/orgs", readLimiter, requireSession, async (req, res) => {
 // Connect — two modes:
 //   Full:  { subdomain, clientId, clientSecret, mid?, eid? }  — saves credentials, starts session
 //   Quick: { mid } or { eid }                                 — looks up saved credentials, starts session
-app.post("/api/mc/connect", auditLimiter, requireSession, async (req, res) => {
+app.post("/api/mc/connect", auditLimiter, optionalAppAuth, async (req, res) => {
   const { subdomain, clientId, clientSecret, mid, eid } = req.body || {};
+  const scopeId = req.appUser?.id || null;  // null for guests — credentials won't be persisted
 
   let resolvedSubdomain = subdomain;
   let resolvedClientId  = clientId;
@@ -848,7 +859,7 @@ app.post("/api/mc/connect", auditLimiter, requireSession, async (req, res) => {
     if (!mid && !eid) {
       return res.status(400).json({ error: "Provide clientId + clientSecret for a new org, or a saved MID / EID to reconnect." });
     }
-    const saved = mid ? await getMcOrgByMid(mid, req.sfSession.orgId) : await getMcOrgByEid(eid, req.sfSession.orgId);
+    const saved = mid ? await getMcOrgByMid(mid, scopeId) : await getMcOrgByEid(eid, scopeId);
     if (!saved) {
       return res.status(404).json({ error: "No saved credentials found for that MID/EID. Connect with full credentials first." });
     }
@@ -874,8 +885,8 @@ app.post("/api/mc/connect", auditLimiter, requireSession, async (req, res) => {
       eid: resolvedEid,
     });
 
-    // Persist credentials on a successful full connect (or re-save on reconnect to refresh)
-    if (clientId && clientSecret) {
+    // Persist credentials for logged-in users only; guests connect ephemerally
+    if (clientId && clientSecret && scopeId) {
       savedOrgId = await saveMcOrg({
         subdomain:    resolvedSubdomain,
         mid:          resolvedMid,
@@ -883,7 +894,7 @@ app.post("/api/mc/connect", auditLimiter, requireSession, async (req, res) => {
         orgName:      resolvedSubdomain,
         clientId:     resolvedClientId,
         clientSecret: resolvedSecret,
-        sfOrgId:      req.sfSession.orgId,
+        sfOrgId:      scopeId,
       });
     } else if (savedOrgId) {
       await touchMcOrg(savedOrgId);
