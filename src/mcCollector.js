@@ -243,21 +243,50 @@ async function collectAutomationStudio(subdomain, token) {
 // ─── Data Extensions hygiene ──────────────────────────────────────────────────
 
 async function collectDataExtensions(subdomain, token) {
-  const data = await safeGet(
-    subdomain,
-    "/data/v1/customobjects?$pageSize=200",
-    token,
-    { items: [] }
-  );
+  // Try three endpoints in order — different MC configs expose different ones
+  // 1. Asset API (most orgs) — lists all DEs as content assets (type 330)
+  // 2. /data/v1/customobjects — Contact Builder / synchronized DEs only
+  // 3. Empty fallback
+  let des = [];
 
-  const des    = data?.items || data?.definitions || [];
+  const assetData = await safeGet(
+    subdomain,
+    "/asset/v1/content/assets?$filter=assetType.id%20eq%20330&$pageSize=200&$orderBy=id%20DESC",
+    token, null
+  );
+  if (assetData?.items?.length > 0) {
+    des = assetData.items.map(a => ({
+      name:              a.name,
+      customerKey:       a.customerKey || a.name,
+      retentionPeriod:   a.dataExtension?.retentionPeriod ?? null,
+      dataRetentionPeriod: a.dataExtension?.dataRetentionPeriod ?? null,
+      isSendable:        a.dataExtension?.isSendable ?? false,
+      rowCount:          a.dataExtension?.rowCount ?? 0,
+    }));
+  } else {
+    // Fallback: Contact Builder / synchronized DEs
+    const syncData = await safeGet(
+      subdomain,
+      "/data/v1/customobjects?$pageSize=200",
+      token, { items: [] }
+    );
+    des = (syncData?.items || []).map(d => ({
+      name:              d.name,
+      customerKey:       d.customerKey,
+      retentionPeriod:   d.retentionPeriod ?? null,
+      dataRetentionPeriod: d.dataRetentionPeriod ?? null,
+      isSendable:        d.isSendable ?? false,
+      rowCount:          d.rowCount ?? 0,
+    }));
+  }
+
   const noRetention = des.filter(d => !d.retentionPeriod && !d.dataRetentionPeriod);
   const sendable    = des.filter(d => d.isSendable === true);
 
   return {
-    total:        des.length,
-    sendable:     sendable.length,
-    noRetention:  noRetention.length,
+    total:             des.length,
+    sendable:          sendable.length,
+    noRetention:       noRetention.length,
     allNames:          des.map(d => d.name || d.customerKey).filter(Boolean).slice(0, 50),
     noRetentionNames:  noRetention.map(d => d.name || d.customerKey).filter(Boolean).slice(0, 50),
   };
@@ -295,16 +324,17 @@ async function collectOperationalHealth(subdomain, token) {
     const autoLongRun = automations.filter(a => (a.avgRunTime || a.averageRunTime || 0) > 7200);
     const autoOverdue = automations.filter(a => { const lr = new Date(a.lastRunTime || a.lastRunDate || 0).getTime(); return lr > 0 && (now - lr) > 2 * 86400000; });
     const criticalSendAutos = automations.filter(a => (a.name || "").toLowerCase().includes("send") && (a.automationType === "scheduled" || a.scheduleTypeId === 1));
+    const n = a => (a.name || a.key || "").trim();
     return {
-      lockedUsers:       { count: lockedUserCount,         status: s(lockedUserCount, 1, 5) },
-      largeDEs:          { count: largeDEs.length,         status: s(largeDEs.length, 1, 5), names: largeDEs.map(d => d.name).slice(0, 3) },
-      autoNotOnSchedule: { count: autoOverdue.length,      status: s(autoOverdue.length, 1, 5) },
-      autoLongRunning:   { count: autoLongRun.length,      status: s(autoLongRun.length, 1, 3) },
-      autoErrored:       { count: autoErrored.length,      status: s(autoErrored.length, 1, 5), names: autoErrored.map(a => a.name).slice(0, 3) },
-      autoSkipped:       { count: autoSkipped.length,      status: s(autoSkipped.length, 1, 5) },
-      autoStopped:       { count: autoStopped.length,      status: s(autoStopped.length, 3, 10) },
-      autoPaused:        { count: autoPaused.length,       status: s(autoPaused.length, 3, 10) },
-      criticalSendAutos: { count: criticalSendAutos.length, status: criticalSendAutos.some(a => a.status === 3) ? "critical" : "ok" },
+      lockedUsers:       { count: lockedUserCount,          status: s(lockedUserCount, 1, 5) },
+      largeDEs:          { count: largeDEs.length,          status: s(largeDEs.length, 1, 5),   names: largeDEs.map(d => d.name).filter(Boolean).slice(0, 50) },
+      autoNotOnSchedule: { count: autoOverdue.length,       status: s(autoOverdue.length, 1, 5), names: autoOverdue.map(n).filter(Boolean).slice(0, 50) },
+      autoLongRunning:   { count: autoLongRun.length,       status: s(autoLongRun.length, 1, 3), names: autoLongRun.map(n).filter(Boolean).slice(0, 50) },
+      autoErrored:       { count: autoErrored.length,       status: s(autoErrored.length, 1, 5), names: autoErrored.map(n).filter(Boolean).slice(0, 50) },
+      autoSkipped:       { count: autoSkipped.length,       status: s(autoSkipped.length, 1, 5), names: autoSkipped.map(n).filter(Boolean).slice(0, 50) },
+      autoStopped:       { count: autoStopped.length,       status: s(autoStopped.length, 3, 10), names: autoStopped.map(n).filter(Boolean).slice(0, 50) },
+      autoPaused:        { count: autoPaused.length,        status: s(autoPaused.length, 3, 10), names: autoPaused.map(n).filter(Boolean).slice(0, 50) },
+      criticalSendAutos: { count: criticalSendAutos.length, status: criticalSendAutos.some(a => a.status === 3) ? "critical" : "ok", names: criticalSendAutos.map(n).filter(Boolean).slice(0, 50) },
     };
   });
 
@@ -322,7 +352,7 @@ async function collectOperationalHealth(subdomain, token) {
     return {
       sendSpeed:          { activeDefs, totalDefs, status: totalDefs > 0 && activeDefs / totalDefs < 0.5 ? "warning" : "ok" },
       highPrioritySends:  { count: highPrioritySends.length, status: "ok" },
-      triggeredErrored:   { count: tsErrored.length, status: s(tsErrored.length, 1, 10), names: tsErrored.map(d => d.name).slice(0, 3) },
+      triggeredErrored:   { count: tsErrored.length, status: s(tsErrored.length, 1, 10), names: tsErrored.map(d => d.name).filter(Boolean).slice(0, 50) },
       triggeredThreshold: { count: activeDefs, status: activeDefs > 500 ? "warning" : "ok", threshold: 500 },
       deliverability:     { status: sendSummary ? "ok" : "warning", available: !!sendSummary },
     };
@@ -335,7 +365,7 @@ async function collectOperationalHealth(subdomain, token) {
     const mobileErrored = mobileSends.filter(d => d.status === "error" || d.status === "inactive");
     const mobileActive  = mobileSends.filter(d => d.status === "active");
     return {
-      sendsErrored:  { count: mobileErrored.length, status: s(mobileErrored.length, 1, 5), names: mobileErrored.map(d => d.name).slice(0, 3) },
+      sendsErrored:  { count: mobileErrored.length, status: s(mobileErrored.length, 1, 5), names: mobileErrored.map(d => d.name).filter(Boolean).slice(0, 50) },
       sendThreshold: { count: mobileActive.length,  status: mobileActive.length > 200 ? "warning" : "ok", threshold: 200 },
       zeroSends:     { count: mobileSends.length === 0 ? 1 : 0, status: mobileSends.length === 0 ? "warning" : "ok" },
     };
@@ -350,10 +380,10 @@ async function collectOperationalHealth(subdomain, token) {
     const jbEmailErrored = journeys.filter(j => (j.activities || []).some(a => a.type === "EMAILV2" && a.outcomes?.some(o => o.invalid > 0)));
     const zeroInjection  = jbActive.filter(j => { const pop = j.stats?.currentPopulation ?? j.statistics?.currentPopulation; return pop !== undefined && pop === 0; });
     return {
-      emailErrored:  { count: jbEmailErrored.length, status: s(jbEmailErrored.length, 1, 5), names: jbEmailErrored.map(j => j.name).slice(0, 3) },
-      sendThreshold: { count: jbActive.length,       status: jbActive.length > 100 ? "warning" : "ok", threshold: 100 },
-      zeroInjection: { count: zeroInjection.length,  status: s(zeroInjection.length, 1, 5), names: zeroInjection.map(j => j.name).slice(0, 3) },
-      errored:       { count: jbErrored.length,      status: s(jbErrored.length, 1, 5) },
+      emailErrored:  { count: jbEmailErrored.length, status: s(jbEmailErrored.length, 1, 5), names: jbEmailErrored.map(j => j.name).filter(Boolean).slice(0, 50) },
+      sendThreshold: { count: jbActive.length,       status: jbActive.length > 100 ? "warning" : "ok", threshold: 100, names: jbActive.map(j => j.name).filter(Boolean).slice(0, 50) },
+      zeroInjection: { count: zeroInjection.length,  status: s(zeroInjection.length, 1, 5), names: zeroInjection.map(j => j.name).filter(Boolean).slice(0, 50) },
+      errored:       { count: jbErrored.length,      status: s(jbErrored.length, 1, 5), names: jbErrored.map(j => j.name).filter(Boolean).slice(0, 50) },
     };
   });
 

@@ -2057,13 +2057,19 @@ function renderMcOperationalHealth(oh) {
   function dot(status)  { return `<div class="pm-dot ${status||'ok'}"></div>`; }
   function clr(s)       { return s === "critical" ? "#dc2626" : s === "warning" ? "#ca8a04" : "#16a34a"; }
 
+  let _ohItemIdx = 0;
   function item(label, stat, extra) {
     if (!stat) return "";
-    const names = stat.names?.length ? `<div style="font-size:10px;color:#6b7280;margin-top:2px">${stat.names.join(", ")}</div>` : "";
-    const val   = stat.count !== undefined
-      ? `<div class="pm-value" style="color:${clr(stat.status)};font-weight:${stat.count>0?'700':'400'}">${stat.count} ${extra||""}</div>`
+    const idx = _ohItemIdx++;
+    const id  = `oh-dd-${idx}`;
+    const val = stat.count !== undefined
+      ? `<div class="pm-value" style="color:${clr(stat.status)};font-weight:${stat.count>0?'700':'400'}">${stat.count}${extra ? " "+extra : ""}</div>`
       : `<div class="pm-value" style="color:${clr(stat.status)}">${stat.available === false ? "Unavailable" : "OK"}</div>`;
-    return `<div class="pm-item">${dot(stat.status)}<div><div class="pm-label">${label}</div>${val}${names}</div></div>`;
+    const dd = (stat.names?.length)
+      ? `<button class="drilldown-toggle" onclick="toggleDrilldown('${id}',this)" aria-expanded="false" style="margin-top:5px">${CHEVRON_SVG}View names <strong>(${stat.names.length})</strong></button>
+         <div class="drilldown-panel" id="${id}">${nameChips(stat.names.map(n=>({name:n})))}</div>`
+      : "";
+    return `<div class="pm-item">${dot(stat.status)}<div><div class="pm-label">${label}</div>${val}${dd}</div></div>`;
   }
 
   const A = oh.apiDataAutomations || {};
@@ -3159,17 +3165,14 @@ function renderMcResults(data) {
   function mcStatBox(id, count, label, color, names) {
     const hasNames = names && names.length > 0;
     const chips = hasNames ? nameChips(names.map(n => ({ name: n }))) : "";
+    const btn   = hasNames
+      ? `<button class="drilldown-toggle" onclick="toggleDrilldown('${id}-panel',this)" style="margin-top:6px" aria-expanded="false">${CHEVRON_SVG}View names <strong>(${names.length})</strong></button>` : "";
     const panel = hasNames
       ? `<div class="drilldown-panel" id="${id}-panel">${chips}</div>` : "";
-    const toggle = hasNames
-      ? ` style="cursor:pointer" onclick="toggleDrilldown('${id}-panel', document.getElementById('${id}-btn'))"` : "";
-    const btn = hasNames
-      ? `<button class="drilldown-toggle" id="${id}-btn" onclick="toggleDrilldown('${id}-panel',this)" style="margin-top:6px" aria-expanded="false">${CHEVRON_SVG}View names</button>` : "";
-    return `<div class="stat-box"${toggle}>
+    return `<div class="stat-box">
       <div class="val" style="color:${color}">${count}</div>
       <div class="lbl">${label}</div>
-      ${btn}
-      ${panel}
+      ${btn}${panel}
     </div>`;
   }
 
