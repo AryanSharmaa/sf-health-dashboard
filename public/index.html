@@ -1319,6 +1319,7 @@ async function checkSession() {
   const appRes  = await fetch("/user/me", { credentials: "include" });
   const appData = await appRes.json();
   _isLoggedIn = !!appData.loggedIn;
+  _userId     = appData.loggedIn ? (appData.user.id || null) : null;
   renderAppUserNav(appData.loggedIn ? appData.user : null);
 
   // Always show connect page first — user must explicitly choose an org
@@ -1384,25 +1385,33 @@ function proceedToAudit() {
   showPage("audit");
 }
 
-// ── Per-browser org history (localStorage, never shared across users) ─────────
+// ── Per-browser org history (localStorage, scoped per user account) ───────────
 
-const PREV_ORGS_KEY = "sfh_prev_orgs_v2";
+function prevOrgsKey() {
+  // Each account gets its own key — prevents cross-user history leakage
+  return _userId ? `sfh_prev_orgs_v2_u${_userId}` : null;
+}
 
 function savePrevOrg(org) {
-  // org = { id, name, isSandbox, env, lastScore }
+  const key = prevOrgsKey();
+  if (!key) return;
   try {
     const existing = getPrevOrgs().filter(o => o.id !== org.id);
     existing.unshift(org);
-    localStorage.setItem(PREV_ORGS_KEY, JSON.stringify(existing.slice(0, 5)));
+    localStorage.setItem(key, JSON.stringify(existing.slice(0, 5)));
   } catch {}
 }
 
 function getPrevOrgs() {
-  try { return JSON.parse(localStorage.getItem(PREV_ORGS_KEY) || "[]"); } catch { return []; }
+  const key = prevOrgsKey();
+  if (!key) return [];
+  try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
 }
 
 function clearPrevOrgs() {
-  try { localStorage.removeItem(PREV_ORGS_KEY); } catch {}
+  const key = prevOrgsKey();
+  if (!key) return;
+  try { localStorage.removeItem(key); } catch {}
 }
 
 function loadPrevOrgs() {
@@ -1659,6 +1668,7 @@ function getApexDrilldown(category, actionText, meta) {
 let _dismissedKeys = new Set();
 let _currentOrgId  = null;
 let _isLoggedIn    = false;
+let _userId        = null;
 let _pendingDismiss = null;
 
 async function loadDismissed(orgId) {
@@ -1690,7 +1700,7 @@ function renderAuditResults(data, jobId) {
     if (idx >= 0) {
       orgs[idx].lastScore = data.report.overallScore;
       orgs[idx].lastAudit = new Date().toISOString();
-      try { localStorage.setItem(PREV_ORGS_KEY, JSON.stringify(orgs)); } catch {}
+      try { const k = prevOrgsKey(); if (k) localStorage.setItem(k, JSON.stringify(orgs)); } catch {}
     }
   }
 
