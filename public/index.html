@@ -654,6 +654,18 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
             Consulting Report
           </a>
+          <a class="dl-btn" id="dl-gdpr" href="#" target="_blank" style="background:#f0fdf4;border-color:#bbf7d0;color:#166534">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+            GDPR / DPDP
+          </a>
+          <a class="dl-btn" id="dl-soc2" href="#" target="_blank" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            SOC 2 Checklist
+          </a>
+          <a class="dl-btn" id="dl-isv" href="#" target="_blank" style="background:#faf5ff;border-color:#e9d5ff;color:#6b21a8">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            ISV Security
+          </a>
           <button class="dl-btn share" id="btn-share-report">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
             Share Link
@@ -2110,6 +2122,9 @@ function renderAuditResults(data, jobId) {
   document.getElementById("dl-json").href            = "/api/audit/"+jobId+"/report.json";
   document.getElementById("dl-pdf").href             = "/api/audit/"+jobId+"/report.pdf";
   document.getElementById("dl-consulting-pdf").href  = "/api/audit/"+jobId+"/report-pdf";
+  document.getElementById("dl-gdpr").href            = "/api/audit/"+jobId+"/compliance/gdpr";
+  document.getElementById("dl-soc2").href            = "/api/audit/"+jobId+"/compliance/soc2";
+  document.getElementById("dl-isv").href             = "/api/audit/"+jobId+"/compliance/isv";
 
   // Evaluate custom rules against this audit's metadata
   evalCustomRulesForAudit(data.report);

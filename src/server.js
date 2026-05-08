@@ -16,6 +16,7 @@ const crypto  = require("crypto");
 const { collectOrgMetadataFromToken, collectOrgMetadata } = require("./sfCollector");
 const { scoreOrgHealth }           = require("../sfHealthScore");
 const { generateHTML, generateJSON, generateConsultingHTML } = require("./reportGenerator");
+const { generateComplianceReport } = require("./complianceReport");
 const repo       = require("./db/auditRepository");
 const authRoutes = require("./authRoutes");
 const userRoutes = require("./userRoutes");
@@ -1074,6 +1075,33 @@ app.get("/api/audit/:jobId/report-pdf", readLimiter, async (req, res) => {
   const html = generateConsultingHTML(dbAudit.rawScore, dbAudit.rawMetadata || {}, brandName);
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.send(html);
+});
+
+// ─── Compliance reports ───────────────────────────────────────────────────────
+
+app.get("/api/audit/:jobId/compliance/:type", readLimiter, async (req, res) => {
+  const { jobId, type } = req.params;
+  if (!["gdpr", "soc2", "isv"].includes(type)) {
+    return res.status(400).json({ error: "Invalid type. Use gdpr, soc2, or isv." });
+  }
+  let metadata, healthScore;
+  const job = runningJobs.get(jobId);
+  if (job?.status === "complete" && job.report) {
+    metadata    = job.report.metadata || {};
+    healthScore = job.report;
+  } else {
+    const dbAudit = await repo.getAudit(jobId).catch(() => null);
+    if (!dbAudit) return res.status(404).json({ error: "Audit not found." });
+    metadata    = dbAudit.rawMetadata || {};
+    healthScore = dbAudit.rawScore   || {};
+  }
+  try {
+    const html = generateComplianceReport(type, metadata, healthScore);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── Custom rules ─────────────────────────────────────────────────────────────
