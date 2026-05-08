@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="description" content="SFHealth Docs — Everything you need to know about the Salesforce & Marketing Cloud health audit platform."/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+  <title>SFHealth Docs — Knowledge Base</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0f172a;background:#fff;min-height:100vh}
+
+    /* ── Top nav ── */
+    .topnav{height:60px;background:linear-gradient(135deg,#0a1628 0%,#0d3a6e 60%,#0a4a9e 100%);display:flex;align-items:center;padding:0 32px;gap:16px;position:sticky;top:0;z-index:200;box-shadow:0 1px 0 rgba(255,255,255,.07)}
+    .topnav-logo{color:white;font-size:20px;font-weight:900;letter-spacing:-.5px;text-decoration:none}
+    .topnav-logo span{color:#7dd3fc}
+    .topnav-tag{color:rgba(255,255,255,.4);font-size:12px;font-weight:600;background:rgba(255,255,255,.08);padding:3px 10px;border-radius:99px;margin-left:4px}
+    .topnav-links{margin-left:auto;display:flex;align-items:center;gap:8px}
+    .topnav-links a{color:rgba(255,255,255,.7);font-size:13px;font-weight:600;text-decoration:none;padding:6px 14px;border-radius:8px;transition:all .15s}
+    .topnav-links a:hover{background:rgba(255,255,255,.12);color:white}
+    .topnav-links a.cta{background:rgba(255,255,255,.18);color:white;border:1px solid rgba(255,255,255,.25)}
+    .topnav-links a.cta:hover{background:rgba(255,255,255,.28)}
+
+    /* ── Search bar ── */
+    .search-bar{background:#f1f5f9;border-bottom:1px solid #e2e8f0;padding:14px 32px;display:flex;align-items:center;gap:12px}
+    .search-wrap{position:relative;max-width:520px;width:100%}
+    .search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:#94a3b8}
+    #docs-search{width:100%;padding:9px 14px 9px 38px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:14px;background:white;color:#0f172a;outline:none;transition:border-color .15s}
+    #docs-search:focus{border-color:#0070d2;box-shadow:0 0 0 3px rgba(0,112,210,.1)}
+    #docs-search::placeholder{color:#94a3b8}
+    #search-count{font-size:12px;color:#94a3b8;white-space:nowrap}
+
+    /* ── Layout ── */
+    .layout{display:flex;min-height:calc(100vh - 60px - 53px)}
+
+    /* ── Sidebar ── */
+    .sidebar{width:260px;flex-shrink:0;background:#f8fafc;border-right:1px solid #e2e8f0;padding:24px 0;position:sticky;top:113px;height:calc(100vh - 113px);overflow-y:auto}
+    .sidebar::-webkit-scrollbar{width:4px}
+    .sidebar::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:4px}
+    .sb-section{margin-bottom:4px}
+    .sb-section-label{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;padding:10px 20px 6px}
+    .sb-link{display:flex;align-items:center;gap:8px;padding:7px 20px;font-size:13px;font-weight:500;color:#475569;text-decoration:none;border-left:3px solid transparent;transition:all .12s;cursor:pointer}
+    .sb-link:hover{background:#f1f5f9;color:#0070d2}
+    .sb-link.active{background:#eff6ff;color:#0070d2;font-weight:700;border-left-color:#0070d2}
+    .sb-link .sb-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+
+    /* ── Content ── */
+    .content{flex:1;padding:48px 64px;max-width:860px;min-width:0}
+    @media(max-width:900px){.content{padding:32px 24px}.sidebar{display:none}}
+
+    /* ── Article styles ── */
+    .doc-section{display:none}
+    .doc-section.active{display:block}
+    .doc-section h1{font-size:32px;font-weight:900;color:#0f172a;margin-bottom:10px;letter-spacing:-.5px}
+    .doc-section .subtitle{font-size:16px;color:#64748b;margin-bottom:36px;line-height:1.6}
+    .doc-section h2{font-size:20px;font-weight:800;color:#0f172a;margin:36px 0 14px;padding-bottom:10px;border-bottom:1.5px solid #f1f5f9}
+    .doc-section h3{font-size:16px;font-weight:700;color:#1e293b;margin:24px 0 10px}
+    .doc-section p{font-size:15px;color:#374151;line-height:1.75;margin-bottom:14px}
+    .doc-section ul,.doc-section ol{padding-left:22px;margin-bottom:14px}
+    .doc-section li{font-size:15px;color:#374151;line-height:1.75;margin-bottom:6px}
+    .doc-section strong{color:#0f172a;font-weight:700}
+    .doc-section code{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:5px;padding:1px 7px;font-size:13px;font-family:'SF Mono',Consolas,monospace;color:#0070d2}
+    .doc-section pre{background:#0f172a;border-radius:10px;padding:20px 24px;margin:16px 0;overflow-x:auto}
+    .doc-section pre code{background:none;border:none;color:#e2e8f0;font-size:13px;padding:0}
+
+    /* callout boxes */
+    .callout{border-radius:10px;padding:16px 20px;margin:20px 0;display:flex;gap:14px;align-items:flex-start}
+    .callout.info{background:#eff6ff;border:1px solid #bfdbfe}
+    .callout.warn{background:#fffbeb;border:1px solid #fde68a}
+    .callout.success{background:#f0fdf4;border:1px solid #bbf7d0}
+    .callout.danger{background:#fef2f2;border:1px solid #fecaca}
+    .callout-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+    .callout-body{font-size:14px;line-height:1.65;color:#374151}
+    .callout-body strong{display:block;margin-bottom:4px;font-size:14px}
+
+    /* step cards */
+    .steps{display:flex;flex-direction:column;gap:0;margin:20px 0}
+    .step{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid #f1f5f9}
+    .step:last-child{border-bottom:none}
+    .step-num{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#0a1628,#0070d2);color:white;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+    .step-body h4{font-size:15px;font-weight:700;color:#0f172a;margin-bottom:5px}
+    .step-body p{font-size:14px;color:#475569;line-height:1.6;margin:0}
+
+    /* feature grid */
+    .feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin:20px 0}
+    .feat-card{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px}
+    .feat-card .fc-icon{font-size:24px;margin-bottom:10px}
+    .feat-card h4{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px}
+    .feat-card p{font-size:13px;color:#64748b;line-height:1.55;margin:0}
+
+    /* score table */
+    .score-table{width:100%;border-collapse:collapse;margin:16px 0;border-radius:10px;overflow:hidden;border:1.5px solid #e2e8f0}
+    .score-table th{background:#f8fafc;padding:10px 14px;font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;text-align:left;border-bottom:1.5px solid #e2e8f0}
+    .score-table td{padding:10px 14px;font-size:14px;color:#374151;border-bottom:1px solid #f3f4f6}
+    .score-table tr:last-child td{border-bottom:none}
+    .score-table tr:hover td{background:#f8fafc}
+
+    /* breadcrumb */
+    .breadcrumb{font-size:12px;color:#94a3b8;margin-bottom:18px;display:flex;align-items:center;gap:6px}
+    .breadcrumb a{color:#94a3b8;text-decoration:none}
+    .breadcrumb a:hover{color:#0070d2}
+
+    /* search highlight */
+    mark{background:#fef9c3;color:#0f172a;border-radius:2px;padding:0 2px}
+
+    /* no results */
+    #no-results{display:none;text-align:center;padding:60px 20px;color:#94a3b8}
+    #no-results svg{margin-bottom:14px;opacity:.4}
+
+    /* footer */
+    footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:24px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+    footer p{font-size:13px;color:#94a3b8}
+    footer a{color:#0070d2;text-decoration:none;font-size:13px}
+  </style>
+</head>
+<body>
+
+<!-- Top nav -->
+<nav class="topnav">
+  <a href="/" class="topnav-logo">SF<span>Health</span></a>
+  <span class="topnav-tag">Docs</span>
+  <div class="topnav-links">
+    <a href="/">Home</a>
+    <a href="/app" class="cta">Open App →</a>
+  </div>
+</nav>
+
+<!-- Search -->
+<div class="search-bar">
+  <div class="search-wrap">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="docs-search" type="search" placeholder="Search documentation…" autocomplete="off" spellcheck="false"/>
+  </div>
+  <span id="search-count"></span>
+</div>
+
+<!-- Layout -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-section">
+      <div class="sb-section-label">Getting Started</div>
+      <a class="sb-link active" data-section="overview" onclick="nav(this)"><span class="sb-icon">🏠</span>What is SFHealth?</a>
+      <a class="sb-link" data-section="vision" onclick="nav(this)"><span class="sb-icon">🎯</span>Vision & Mission</a>
+      <a class="sb-link" data-section="quickstart" onclick="nav(this)"><span class="sb-icon">⚡</span>Quick Start</a>
+      <a class="sb-link" data-section="faq" onclick="nav(this)"><span class="sb-icon">❓</span>FAQ</a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">The Audit Engine</div>
+      <a class="sb-link" data-section="scoring" onclick="nav(this)"><span class="sb-icon">📊</span>How Scoring Works</a>
+      <a class="sb-link" data-section="categories" onclick="nav(this)"><span class="sb-icon">🗂️</span>Audit Categories</a>
+      <a class="sb-link" data-section="salesforce" onclick="nav(this)"><span class="sb-icon">☁️</span>Salesforce Audit</a>
+      <a class="sb-link" data-section="marketing-cloud" onclick="nav(this)"><span class="sb-icon">✉️</span>Marketing Cloud Audit</a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Features</div>
+      <a class="sb-link" data-section="history" onclick="nav(this)"><span class="sb-icon">📈</span>History & Trends</a>
+      <a class="sb-link" data-section="portfolio" onclick="nav(this)"><span class="sb-icon">🗃️</span>Portfolio View</a>
+      <a class="sb-link" data-section="custom-rules" onclick="nav(this)"><span class="sb-icon">📝</span>Custom Rules</a>
+      <a class="sb-link" data-section="reports" onclick="nav(this)"><span class="sb-icon">📄</span>Reports & Exports</a>
+      <a class="sb-link" data-section="sharing" onclick="nav(this)"><span class="sb-icon">🔗</span>Sharing Reports</a>
+      <a class="sb-link" data-section="schedules" onclick="nav(this)"><span class="sb-icon">🕐</span>Scheduled Audits</a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Security & Privacy</div>
+      <a class="sb-link" data-section="security" onclick="nav(this)"><span class="sb-icon">🔒</span>Security Model</a>
+      <a class="sb-link" data-section="data-privacy" onclick="nav(this)"><span class="sb-icon">🛡️</span>Data & Privacy</a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">For Consultants</div>
+      <a class="sb-link" data-section="white-label" onclick="nav(this)"><span class="sb-icon">🏷️</span>White-Label / Branding</a>
+      <a class="sb-link" data-section="consulting" onclick="nav(this)"><span class="sb-icon">💼</span>Consulting Use Cases</a>
+    </div>
+    <div class="sb-section">
+      <div class="sb-section-label">Reference</div>
+      <a class="sb-link" data-section="glossary" onclick="nav(this)"><span class="sb-icon">📖</span>Glossary</a>
+      <a class="sb-link" data-section="roadmap" onclick="nav(this)"><span class="sb-icon">🗺️</span>Roadmap</a>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="content" id="content">
+
+    <div id="no-results">
+      <svg width="48" height="48" fill="none" stroke="#94a3b8" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <p style="font-size:15px;font-weight:600;color:#64748b">No results found</p>
+      <p style="font-size:13px;margin-top:6px">Try different keywords or <a href="#" onclick="clearSearch();return false" style="color:#0070d2">clear the search</a></p>
+    </div>
+
+    <!-- ══ OVERVIEW ══ -->
+    <article class="doc-section active" id="sec-overview">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Getting Started</div>
+      <h1>What is SFHealth?</h1>
+      <p class="subtitle">SFHealth is a free, automated health audit platform for Salesforce and Marketing Cloud orgs — no setup, no agents, actionable results in under 2 minutes.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><strong>The one-line pitch</strong>Think of SFHealth as an MOT check for your Salesforce org — it scans 38+ areas, scores each one, and tells you exactly what to fix and why.</div>
+      </div>
+
+      <h2>The problem we solve</h2>
+      <p>Most Salesforce orgs accumulate technical debt silently. Admins are busy, consultants are expensive, and there's no built-in dashboard that says "here's what's actually wrong." Orgs end up with:</p>
+      <ul>
+        <li>Hundreds of unused custom fields bloating every page layout</li>
+        <li>Workflow rules and Process Builders that should have been migrated to Flow years ago</li>
+        <li>Apex classes with no test coverage sitting one deployment away from a failed release</li>
+        <li>Profiles with "Modify All" access that nobody remembers creating</li>
+        <li>Marketing Cloud automations quietly erroring out with no alert</li>
+      </ul>
+      <p>SFHealth surfaces all of it — automatically, in one report, with a prioritised fix list.</p>
+
+      <h2>What we check</h2>
+      <div class="feat-grid">
+        <div class="feat-card"><div class="fc-icon">🤖</div><h4>Automation</h4><p>Workflow rules, Process Builders, Flows — checks what's active vs deprecated vs broken.</p></div>
+        <div class="feat-card"><div class="fc-icon">🔐</div><h4>Security</h4><p>Profiles with excessive permissions, password policies, MFA adoption, guest user exposure.</p></div>
+        <div class="feat-card"><div class="fc-icon">🗄️</div><h4>Data Quality</h4><p>Duplicate rules, validation rules, empty required fields, unused record types.</p></div>
+        <div class="feat-card"><div class="fc-icon">⚡</div><h4>API & Limits</h4><p>Governor limit usage, API call patterns, daily request headroom.</p></div>
+        <div class="feat-card"><div class="fc-icon">💻</div><h4>Code Quality</h4><p>Apex test coverage, hardcoded IDs, inactive triggers, stale API versions.</p></div>
+        <div class="feat-card"><div class="fc-icon">👥</div><h4>User Adoption</h4><p>Login rates, inactive users, licence utilisation, last activity dates.</p></div>
+      </div>
+
+      <h2>Who it's for</h2>
+      <ul>
+        <li><strong>Salesforce Admins</strong> — get a clear picture of org debt and a fix priority list</li>
+        <li><strong>Developers</strong> — catch stale Apex, missing test coverage, and deprecated APIs before they cause deploy failures</li>
+        <li><strong>Architects</strong> — benchmark orgs, track improvement over time, compare across clients</li>
+        <li><strong>Consultants</strong> — run a professional health check on day one of every engagement, generate a branded PDF for the client</li>
+        <li><strong>Leadership / CTO</strong> — see portfolio-level fleet scores and grade distributions without reading code</li>
+      </ul>
+    </article>
+
+    <!-- ══ VISION ══ -->
+    <article class="doc-section" id="sec-vision">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Getting Started</div>
+      <h1>Vision & Mission</h1>
+      <p class="subtitle">Why we built SFHealth, what we believe, and where we're going.</p>
+
+      <h2>The vision</h2>
+      <p>Every Salesforce org in the world should have a health score — just like a credit score or a code coverage percentage. A single number that everyone from the intern to the CTO can understand, backed by 38+ automated checks that never need a consultant to interpret.</p>
+      <p>We believe that <strong>org health should be continuous, not a once-a-year engagement deliverable.</strong> The best time to fix a problem is before it causes a production incident, not after.</p>
+
+      <h2>Why we built it</h2>
+      <p>The founders spent years doing Salesforce implementations and repeatedly saw the same pattern: orgs that looked fine on the surface were quietly accumulating debt. Admins had no automated way to audit themselves. Consultants charged thousands for health checks that were largely manual. And when something finally broke — a governor limit breach, a failed deployment, a security audit — the cleanup cost far more than prevention would have.</p>
+      <p>SFHealth exists to make the "what's wrong with my org" question free, instant, and repeatable.</p>
+
+      <h2>Our principles</h2>
+      <ul>
+        <li><strong>Read-only always.</strong> We never write a single record to your org. Not one. If it can't be done read-only, we don't do it.</li>
+        <li><strong>No password, ever.</strong> We use Salesforce's official OAuth 2.0 + PKCE flow. Your password never touches our servers.</li>
+        <li><strong>Transparency over black boxes.</strong> Every score, every flag, every recommendation comes with a plain-English explanation of why.</li>
+        <li><strong>Actionable, not decorative.</strong> We don't produce vanity dashboards. Every finding maps to a specific fix.</li>
+        <li><strong>Free tier that's actually useful.</strong> The core audit is and will always be free. Power features (scheduling, portfolio, white-label) are premium.</li>
+      </ul>
+
+      <h2>The roadmap vision</h2>
+      <p>Long-term, SFHealth is the <strong>Datadog for Salesforce ecosystems</strong> — a continuous monitoring platform that catches regressions the moment they happen, not months later. That means scheduled audits, real-time alerts, delta tracking between deployments, and a consultant marketplace where certified partners can offer remediation directly inside the platform.</p>
+    </article>
+
+    <!-- ══ QUICK START ══ -->
+    <article class="doc-section" id="sec-quickstart">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Getting Started</div>
+      <h1>Quick Start</h1>
+      <p class="subtitle">Run your first audit in under 2 minutes — no setup, no agents, no code.</p>
+
+      <div class="callout success">
+        <span class="callout-icon">✅</span>
+        <div class="callout-body"><strong>What you need</strong>A Salesforce org (Production or Sandbox) and System Administrator profile — or a profile with API Enabled and View All Data permissions. That's it.</div>
+      </div>
+
+      <h2>Salesforce Audit</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Open the app</h4><p>Go to <a href="/app" style="color:#0070d2">/app</a> and you'll see the connect screen.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Choose your environment</h4><p>Click <strong>Salesforce Production</strong> for a live org, or <strong>Salesforce Sandbox</strong> for a developer/sandbox org. You'll be redirected to Salesforce's official login page.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Log in to Salesforce</h4><p>Enter your Salesforce credentials on Salesforce's own login page. We never see your password — Salesforce issues us a temporary read-only token.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Click "Run SF Audit"</h4><p>Back in the app, click the blue Run button. The audit runs 38+ checks across 6 categories. It takes 30–90 seconds depending on org size.</p></div></div>
+        <div class="step"><div class="step-num">5</div><div class="step-body"><h4>Read your results</h4><p>You'll see an overall score (0–100), a grade (A–F), category breakdowns, and a prioritised fix list. Click any finding to expand details and see which specific records are affected.</p></div></div>
+      </div>
+
+      <h2>Marketing Cloud Audit</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Click "Marketing Cloud" on the connect screen</h4><p>This opens the MC credentials form. MC uses its own OAuth — it's independent of your Salesforce login.</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Enter your MC credentials</h4><p>You'll need: <strong>Subdomain</strong> (the part before <code>.rest.marketingcloudapis.com</code>), <strong>Client ID</strong>, <strong>Client Secret</strong>, and optionally a <strong>MID</strong> for multi-business-unit accounts.</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Where to find these</h4><p>In Marketing Cloud: <strong>Setup → Platform Tools → Apps → Installed Packages</strong>. Create a new package, add a Server-to-Server component, and give it these scopes: <code>email_read</code>, <code>automations_read</code>, <code>journeys_read</code>, <code>data_extensions_read</code>.</p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Click "Run MC Audit"</h4><p>The audit checks Email Studio, Journey Builder, Automation Studio, Sender Authentication, operational health, and more.</p></div></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body"><strong>Permission tip</strong>The MC connected app only needs read scopes. Never grant write permissions — we don't need them, and you shouldn't give them to any third-party tool.</div>
+      </div>
+    </article>
+
+    <!-- ══ FAQ ══ -->
+    <article class="doc-section" id="sec-faq">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Getting Started</div>
+      <h1>Frequently Asked Questions</h1>
+      <p class="subtitle">Answers to the most common questions about SFHealth.</p>
+
+      <h2>General</h2>
+      <h3>Is it really free?</h3>
+      <p>Yes. The core Salesforce and Marketing Cloud audits, score history, and basic trend charts are free. Advanced features like scheduled audits, portfolio management, white-label PDF reports, and custom rules are premium.</p>
+
+      <h3>Does it write anything to my org?</h3>
+      <p>No. SFHealth is strictly read-only. We use a read-only OAuth token and never attempt to insert, update, or delete any data. The Salesforce token we receive has <code>api</code> scope only — no <code>write</code> or <code>full</code> scope is requested.</p>
+
+      <h3>How long does an audit take?</h3>
+      <p>Typically 30–90 seconds for a standard Salesforce org. Larger orgs with thousands of Apex classes, custom objects, or users may take up to 3 minutes. Marketing Cloud audits typically complete in 60–120 seconds.</p>
+
+      <h3>How often should I run an audit?</h3>
+      <p>We recommend after every major release or deployment, and at minimum monthly for production orgs. Use scheduled audits (weekly or monthly) to automate this.</p>
+
+      <h3>Do I need a Salesforce account to use SFHealth?</h3>
+      <p>No. You can run a Salesforce audit as a guest — just connect your org via OAuth and run the audit. Creating an SFHealth account unlocks history, trend tracking, schedules, and portfolio features.</p>
+
+      <h2>Security</h2>
+      <h3>Where is my data stored?</h3>
+      <p>Audit results are stored in our database (PostgreSQL on Render). Your Salesforce password is never stored — we only store the OAuth access token temporarily in memory for the duration of the audit session.</p>
+
+      <h3>Can SFHealth see my data?</h3>
+      <p>SFHealth reads metadata and aggregate counts — not your actual records. For example, we count how many users are inactive, but we don't read their names into our database. Unused field detection reads field API names, not field values.</p>
+
+      <h3>How do I disconnect?</h3>
+      <p>Click "Disconnect SF" in the nav. This revokes the OAuth token at Salesforce's end via the <code>/services/oauth2/revoke</code> endpoint — the token is immediately invalidated.</p>
+    </article>
+
+    <!-- ══ SCORING ══ -->
+    <article class="doc-section" id="sec-scoring">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › The Audit Engine</div>
+      <h1>How Scoring Works</h1>
+      <p class="subtitle">A transparent breakdown of how your org's health score is calculated — no black boxes.</p>
+
+      <h2>The overall score</h2>
+      <p>Your org's overall score is a <strong>weighted average</strong> of six category scores, each scored 0–100. The weights reflect the relative importance of each category to production org health:</p>
+
+      <table class="score-table">
+        <thead><tr><th>Category</th><th>Weight</th><th>What poor scores indicate</th></tr></thead>
+        <tbody>
+          <tr><td>🔐 Security</td><td><strong>20%</strong></td><td>Exposed data, over-privileged users, weak password policies</td></tr>
+          <tr><td>🤖 Automation</td><td><strong>20%</strong></td><td>Deprecated tech (WFR/PB), conflicting automation, inactive flows</td></tr>
+          <tr><td>🗄️ Data Quality</td><td><strong>15%</strong></td><td>Missing validation, duplicate records, no duplicate rules</td></tr>
+          <tr><td>⚡ API & Limits</td><td><strong>15%</strong></td><td>Governor limit proximity, API abuse patterns</td></tr>
+          <tr><td>💻 Code Quality</td><td><strong>15%</strong></td><td>Low test coverage, hardcoded IDs, stale API versions</td></tr>
+          <tr><td>👥 User Adoption</td><td><strong>15%</strong></td><td>Inactive licensed users, low login rates</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Grade bands</h2>
+      <table class="score-table">
+        <thead><tr><th>Grade</th><th>Score range</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><strong style="color:#16a34a">A</strong></td><td>90–100</td><td>Excellent — org is in great shape, minimal attention needed</td></tr>
+          <tr><td><strong style="color:#65a30d">B</strong></td><td>80–89</td><td>Good — minor issues present, address in next sprint</td></tr>
+          <tr><td><strong style="color:#ca8a04">C</strong></td><td>70–79</td><td>Average — several issues to address, plan a cleanup sprint</td></tr>
+          <tr><td><strong style="color:#ea580c">D</strong></td><td>60–69</td><td>Poor — significant debt, risk of incidents without action</td></tr>
+          <tr><td><strong style="color:#dc2626">F</strong></td><td>0–59</td><td>Critical — immediate attention required</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Issue priorities</h2>
+      <p>Every finding is tagged with a priority. The priority affects both the score deduction and the recommended actions list:</p>
+      <ul>
+        <li><strong style="color:#dc2626">Critical</strong> — immediate fix required, significant score impact</li>
+        <li><strong style="color:#ea580c">High</strong> — address within this sprint</li>
+        <li><strong style="color:#ca8a04">Medium</strong> — address in next planning cycle</li>
+        <li><strong style="color:#16a34a">Low</strong> — nice to fix, minimal score impact</li>
+      </ul>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body"><strong>Partial scans</strong>If some API calls fail (permission issues, API limits), SFHealth completes the audit with what it could collect and marks the result as a "Partial scan." Scores may be slightly lower than actual in partial scans.</div>
+      </div>
+    </article>
+
+    <!-- ══ CATEGORIES ══ -->
+    <article class="doc-section" id="sec-categories">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › The Audit Engine</div>
+      <h1>Audit Categories</h1>
+      <p class="subtitle">A detailed look at what each of the six Salesforce audit categories checks.</p>
+
+      <h2>🤖 Automation</h2>
+      <p>Checks the state of your org's declarative automation layer.</p>
+      <ul>
+        <li><strong>Active Workflow Rules</strong> — Salesforce is sunsetting Workflow Rules. Active WFRs are flagged as High priority.</li>
+        <li><strong>Active Process Builders</strong> — Same as WFR. Any active PBs should be migrated to Flow.</li>
+        <li><strong>Inactive Flows</strong> — Flows that were created but never activated, or were deactivated without being deleted.</li>
+        <li><strong>Flow version sprawl</strong> — Excessive inactive versions of the same flow indicate poor lifecycle management.</li>
+      </ul>
+
+      <h2>🔐 Security</h2>
+      <p>Checks access control, authentication policies, and exposure risks.</p>
+      <ul>
+        <li><strong>Profiles with Modify All</strong> — Any profile (other than System Administrator) that has "Modify All Data" is flagged Critical.</li>
+        <li><strong>Password policy strength</strong> — Checks minimum password length, complexity, expiry, and lockout settings.</li>
+        <li><strong>MFA enforcement</strong> — Whether multi-factor authentication is enforced at org level.</li>
+        <li><strong>Guest user access</strong> — Over-permissioned guest profiles are a common attack vector.</li>
+        <li><strong>Session security settings</strong> — Session timeout, IP restrictions, and login IP ranges.</li>
+      </ul>
+
+      <h2>🗄️ Data Quality</h2>
+      <ul>
+        <li><strong>Duplicate rules</strong> — Whether duplicate matching rules exist on standard and custom objects.</li>
+        <li><strong>Validation rules</strong> — Coverage of required business rules via validation rules.</li>
+        <li><strong>Unused custom fields</strong> — Custom fields with no data in them across the entire org.</li>
+        <li><strong>Record types in use</strong> — Inactive or unused record types that add complexity.</li>
+      </ul>
+
+      <h2>⚡ API & Limits</h2>
+      <ul>
+        <li><strong>Daily API request usage</strong> — Percentage of daily API call limit consumed.</li>
+        <li><strong>Bulk API usage</strong> — Whether the org is close to Bulk API limits.</li>
+        <li><strong>Governor limits proximity</strong> — Any limits approaching 80% consumption trigger a warning.</li>
+      </ul>
+
+      <h2>💻 Code Quality</h2>
+      <ul>
+        <li><strong>Apex test coverage</strong> — Org-wide Apex test coverage. Below 75% is High priority; below 60% is Critical (and will fail deployments).</li>
+        <li><strong>Hardcoded IDs</strong> — Apex classes containing hardcoded Salesforce record IDs — a common migration-breaking anti-pattern.</li>
+        <li><strong>Stale API versions</strong> — Apex classes and Visualforce pages using API versions older than 3 releases.</li>
+        <li><strong>Inactive triggers</strong> — Triggers that exist but are not active.</li>
+        <li><strong>VF page count</strong> — High Visualforce page counts may indicate legacy UI that should be migrated to LWC.</li>
+      </ul>
+
+      <h2>👥 User Adoption</h2>
+      <ul>
+        <li><strong>Inactive users with licences</strong> — Users who haven't logged in for 90+ days but still hold active licences.</li>
+        <li><strong>Login rate</strong> — Percentage of licensed users who logged in during the past 30 days.</li>
+        <li><strong>Last activity</strong> — Org-wide last-activity recency check.</li>
+      </ul>
+    </article>
+
+    <!-- ══ SALESFORCE ══ -->
+    <article class="doc-section" id="sec-salesforce">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › The Audit Engine</div>
+      <h1>Salesforce Audit</h1>
+      <p class="subtitle">How the Salesforce org audit works under the hood.</p>
+
+      <h2>Authentication</h2>
+      <p>SFHealth uses <strong>OAuth 2.0 Authorization Code Flow with PKCE</strong> (Proof Key for Code Exchange). This is the same flow used by Salesforce's own first-party apps and is the most secure OAuth flow for web applications.</p>
+      <p>What happens step by step:</p>
+      <ol>
+        <li>You click "Connect" — we generate a random <code>code_verifier</code> and its SHA-256 hash (<code>code_challenge</code>)</li>
+        <li>You're redirected to <code>login.salesforce.com</code> with the code challenge</li>
+        <li>Salesforce authenticates you and redirects back with an authorisation code</li>
+        <li>We exchange the code + verifier for an access token — <strong>your password is never involved</strong></li>
+        <li>The access token is stored in server memory only for the duration of your session</li>
+      </ol>
+
+      <h2>What data is accessed</h2>
+      <p>The audit uses only read API calls — primarily SOQL queries via the REST API, Tooling API, and SOAP API. Examples:</p>
+      <pre><code>SELECT Id, Name, ApiVersion FROM ApexClass LIMIT 500
+SELECT Id, Name, IsActive FROM WorkflowRule
+SELECT DailyApiRequests FROM OrgLimits</code></pre>
+      <p>No record data (Contacts, Accounts, Opportunities, etc.) is ever read or stored.</p>
+
+      <h2>Required permissions</h2>
+      <ul>
+        <li>API Enabled (on the profile)</li>
+        <li>View Setup and Configuration</li>
+        <li>View All Data (for unused field detection — optional but improves accuracy)</li>
+        <li>Modify Metadata (not required — we never modify anything)</li>
+      </ul>
+    </article>
+
+    <!-- ══ MARKETING CLOUD ══ -->
+    <article class="doc-section" id="sec-marketing-cloud">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › The Audit Engine</div>
+      <h1>Marketing Cloud Audit</h1>
+      <p class="subtitle">How the Marketing Cloud audit works and what it checks.</p>
+
+      <h2>Authentication</h2>
+      <p>Marketing Cloud uses a <strong>Server-to-Server OAuth 2.0</strong> flow with a Client ID and Client Secret from a Connected App (Installed Package). Unlike Salesforce, there's no browser redirect — you enter credentials directly.</p>
+
+      <h2>Setting up a Connected App</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><h4>Go to Setup in Marketing Cloud</h4><p>Platform Tools → Apps → Installed Packages → New Package</p></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><h4>Add a component</h4><p>Click "Add Component" → "API Integration" → "Server-to-Server"</p></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><h4>Set scopes</h4><p>Enable: <code>email_read</code>, <code>automations_read</code>, <code>journeys_read</code>, <code>data_extensions_read</code>, <code>tracking_events_read</code></p></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><h4>Copy credentials</h4><p>Copy the <strong>Client ID</strong>, <strong>Client Secret</strong>, and your account's <strong>Subdomain</strong> (visible in the installed package details)</p></div></div>
+      </div>
+
+      <h2>What the MC audit checks</h2>
+      <ul>
+        <li><strong>Email Studio</strong> — Triggered send definitions, send speeds, high-priority sends, deliverability</li>
+        <li><strong>Journey Builder</strong> — Active journeys, errored journeys, zero-injection journeys, send threshold</li>
+        <li><strong>Automation Studio</strong> — Running, errored, paused, stopped, and skipped automations</li>
+        <li><strong>Data Extensions</strong> — Total count, large DEs (&gt;5M rows), retention policy gaps</li>
+        <li><strong>Sender Authentication</strong> — SAP, private domain configuration, reply mail management</li>
+        <li><strong>Operational Health</strong> — API user lockouts, mobile sends, MC Connector sync status</li>
+      </ul>
+    </article>
+
+    <!-- ══ HISTORY ══ -->
+    <article class="doc-section" id="sec-history">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Features</div>
+      <h1>History & Trends</h1>
+      <p class="subtitle">Track how your org's health changes over time.</p>
+
+      <h2>Score over time chart</h2>
+      <p>Every audit you run is saved to the history. The History page shows a trend chart plotting your overall score across all audits, so you can see if your org is improving or deteriorating.</p>
+
+      <h2>Category trends</h2>
+      <p>Each of the six categories has its own trend line, letting you pinpoint which specific area is dragging your score down or improving after a cleanup sprint.</p>
+
+      <h2>Audit comparison</h2>
+      <p>Select any two audits of the same org to run a side-by-side comparison. The comparison shows score delta per category, highlighting which areas improved and which regressed between the two dates.</p>
+
+      <h2>Chronic issues</h2>
+      <p>Issues that appear in 3 or more consecutive audits are flagged as "Chronic Issues." These are the problems that have been ignored the longest and should be the highest cleanup priority.</p>
+
+      <h2>Score delta</h2>
+      <p>At the top of each org's history view, you'll see a delta indicator (e.g. <strong style="color:#16a34a">▲ +8</strong> or <strong style="color:#dc2626">▼ -3</strong>) showing the change from the previous audit.</p>
+    </article>
+
+    <!-- ══ PORTFOLIO ══ -->
+    <article class="doc-section" id="sec-portfolio">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Features</div>
+      <h1>Portfolio View</h1>
+      <p class="subtitle">Manage and compare multiple orgs from a single dashboard.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">🔑</span>
+        <div class="callout-body"><strong>Requires login</strong>The Portfolio tab is only visible when you're logged into an SFHealth account. Guest users see individual org results only.</div>
+      </div>
+
+      <h2>Fleet score</h2>
+      <p>The <strong>Fleet Score</strong> is the average health score across all orgs you've audited. It's the single number you'd show a CTO or VP to summarise the health of the entire Salesforce estate.</p>
+
+      <h2>Orgs needing attention</h2>
+      <p>Any org with a grade of D or F is automatically surfaced in a red "Needs Attention" section at the top of the portfolio page.</p>
+
+      <h2>Multi-org comparison</h2>
+      <p>Check two or more orgs in the all-orgs table, then click <strong>Compare Selected</strong>. The comparison view shows:</p>
+      <ul>
+        <li>Overview bars — overall score per org, colour-coded</li>
+        <li>Score summary cards per org with grade and audit date</li>
+        <li>Category breakdown — bar chart for every category with Best/Lowest badges</li>
+        <li>Issues by category table — colour-coded counts with a total row</li>
+      </ul>
+
+      <h2>Export</h2>
+      <p>Click <strong>Print / PDF</strong> to open your browser's print dialog. The portfolio page uses a print stylesheet that removes navigation and renders cleanly as a PDF.</p>
+    </article>
+
+    <!-- ══ CUSTOM RULES ══ -->
+    <article class="doc-section" id="sec-custom-rules">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Features</div>
+      <h1>Custom Rules</h1>
+      <p class="subtitle">Write your own audit rules that fire against every audit result.</p>
+
+      <h2>What are custom rules?</h2>
+      <p>Custom rules let power users define their own health thresholds in a simple <code>if … then flag as …</code> syntax. Once saved, they're evaluated against every audit you run and surface findings in a "Custom Rule Findings" card.</p>
+
+      <h2>Rule syntax</h2>
+      <pre><code>if &lt;field&gt; &lt;operator&gt; &lt;value&gt; then flag as &lt;PRIORITY&gt;</code></pre>
+      <p>Examples:</p>
+      <pre><code>if apexTestCoverage &lt; 80 then flag as CRITICAL
+if activeWorkflowRules &gt; 0 then flag as HIGH
+if unusedFieldCount &gt;= 50 then flag as MEDIUM
+if criticalIssues &gt; 0 then flag as CRITICAL</code></pre>
+
+      <h2>Supported fields</h2>
+      <table class="score-table">
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>apexTestCoverage</code></td><td>Org-wide Apex test coverage percentage (0–100)</td></tr>
+          <tr><td><code>activeWorkflowRules</code></td><td>Number of active Workflow Rules</td></tr>
+          <tr><td><code>unusedFieldCount</code></td><td>Number of custom fields with no data</td></tr>
+          <tr><td><code>totalApexClasses</code></td><td>Total Apex class count</td></tr>
+          <tr><td><code>criticalIssues</code></td><td>Number of critical-priority findings in this audit</td></tr>
+          <tr><td><code>highIssues</code></td><td>Number of high-priority findings</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Supported operators</h2>
+      <p><code>&gt;</code>, <code>&lt;</code>, <code>&gt;=</code>, <code>&lt;=</code>, <code>=</code>, <code>!=</code></p>
+
+      <h2>Supported priorities</h2>
+      <p><code>CRITICAL</code>, <code>HIGH</code>, <code>MEDIUM</code>, <code>LOW</code></p>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body"><strong>Evaluation is client-side</strong>Custom rules are evaluated in your browser using the audit data already on screen — no additional API calls are made. Rules are stored server-side per user account.</div>
+      </div>
+    </article>
+
+    <!-- ══ REPORTS ══ -->
+    <article class="doc-section" id="sec-reports">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Features</div>
+      <h1>Reports & Exports</h1>
+      <p class="subtitle">Three ways to export your audit results.</p>
+
+      <h2>HTML Report</h2>
+      <p>Download a self-contained HTML file with the full audit dashboard — score, categories, recommendations, unused fields. Open it in any browser, share it by email, or attach it to a Jira ticket.</p>
+      <p>Available from the audit results page via the <strong>Download Report</strong> button → <strong>HTML Report</strong>.</p>
+
+      <h2>JSON Data Export</h2>
+      <p>Download the raw audit data as JSON. Useful for importing into BI tools, building custom dashboards, or writing scripts that process the findings programmatically.</p>
+
+      <h2>Consulting PDF (White-Label)</h2>
+      <p>A print-ready HTML page formatted for client handover. Open it in a browser and use Ctrl+P / Cmd+P to save as PDF. Features:</p>
+      <ul>
+        <li>Your brand name at the top (set via <code>BRAND_NAME</code> environment variable — contact us to configure)</li>
+        <li>Executive summary in plain language — no Salesforce jargon</li>
+        <li>SVG score gauge, category breakdown table, top recommended actions</li>
+        <li>"Prepared by [Brand] · Confidential" footer</li>
+      </ul>
+      <p>Access it at <code>/api/audit/&lt;jobId&gt;/report-pdf</code> — linked from the Download Report button.</p>
+    </article>
+
+    <!-- ══ SHARING ══ -->
+    <article class="doc-section" id="sec-sharing">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Features</div>
+      <h1>Sharing Reports</h1>
+      <p class="subtitle">Share a read-only link to an audit result with anyone — no login required for recipients.</p>
+
+      <h2>How it works</h2>
+      <p>From any completed audit result, click <strong>Share Report</strong>. SFHealth generates a unique token-based URL that anyone can open to view the report. The link is:</p>
+      <ul>
+        <li>Read-only — recipients can view but not re-run or modify</li>
+        <li>Time-limited — expires after 30 days by default</li>
+        <li>No login required for the recipient</li>
+      </ul>
+
+      <h2>Use cases</h2>
+      <ul>
+        <li>Send audit results to a client before the kickoff meeting</li>
+        <li>Share findings with a developer team without giving them app access</li>
+        <li>Attach to a support ticket or internal wiki page</li>
+        <li>Include in a proposal to demonstrate org knowledge</li>
+      </ul>
+    </article>
+
+    <!-- ══ SCHEDULES ══ -->
+    <article class="doc-section" id="sec-schedules">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Features</div>
+      <h1>Scheduled Audits</h1>
+      <p class="subtitle">Automatically run audits on a weekly or monthly schedule and receive results by email.</p>
+
+      <h2>Setting up a schedule</h2>
+      <p>From the audit results page, click <strong>Schedule Audits</strong>. Configure:</p>
+      <ul>
+        <li><strong>Frequency</strong> — Weekly, Monthly, or Daily</li>
+        <li><strong>Day/time</strong> — Which day of the week and hour (UTC) to run</li>
+        <li><strong>Email</strong> — Where to send the results</li>
+      </ul>
+      <p>Scheduled audits use the stored OAuth token. If the token expires, the next scheduled run will fail and you'll receive an error email prompting you to reconnect.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">ℹ️</span>
+        <div class="callout-body"><strong>Token refresh</strong>Salesforce OAuth access tokens typically expire after a few hours. SFHealth automatically attempts to refresh them using the stored refresh token. If refresh fails (e.g. connected app settings changed), you'll be notified by email.</div>
+      </div>
+    </article>
+
+    <!-- ══ SECURITY ══ -->
+    <article class="doc-section" id="sec-security">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Security & Privacy</div>
+      <h1>Security Model</h1>
+      <p class="subtitle">How SFHealth keeps your org data secure.</p>
+
+      <h2>OAuth 2.0 + PKCE</h2>
+      <p>We use the Authorization Code flow with PKCE — the industry-standard secure OAuth flow. PKCE prevents authorisation code interception attacks. No client secret is exposed to the browser. The code verifier is stored in a short-lived cookie that expires in 10 minutes.</p>
+
+      <h2>Token handling</h2>
+      <ul>
+        <li>Access tokens are stored <strong>in server memory only</strong> — never in a database, never in a cookie</li>
+        <li>Tokens are scoped to <code>api</code> only — no write access is ever requested</li>
+        <li>On logout, the token is immediately revoked at Salesforce's endpoint</li>
+        <li>Session cookies are <code>httpOnly</code>, <code>sameSite: lax</code>, and <code>secure</code> in production</li>
+      </ul>
+
+      <h2>Infrastructure</h2>
+      <ul>
+        <li>Hosted on Render — SOC 2 compliant infrastructure</li>
+        <li>All traffic over HTTPS — TLS 1.2+</li>
+        <li>Rate limiting on all API endpoints</li>
+        <li>Helmet.js security headers on every response</li>
+        <li>No third-party analytics or tracking scripts</li>
+      </ul>
+
+      <h2>MC credentials</h2>
+      <p>Marketing Cloud Client IDs and Secrets are encrypted with AES-256-GCM before being stored in the database. The encryption key is an environment variable that never touches the database.</p>
+    </article>
+
+    <!-- ══ DATA PRIVACY ══ -->
+    <article class="doc-section" id="sec-data-privacy">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Security & Privacy</div>
+      <h1>Data & Privacy</h1>
+      <p class="subtitle">What data we collect, what we store, and what we never touch.</p>
+
+      <h2>What we store</h2>
+      <ul>
+        <li>Aggregate counts and scores (e.g. "42 unused fields", "security score: 68")</li>
+        <li>Metadata names — Apex class names, Flow names, field API names</li>
+        <li>Your SFHealth account email and hashed password (bcrypt)</li>
+        <li>Audit timestamps and history</li>
+      </ul>
+
+      <h2>What we never store</h2>
+      <ul>
+        <li>Your Salesforce password (we never see it)</li>
+        <li>Record data — Contacts, Accounts, Leads, Opportunities, custom object records</li>
+        <li>PII from your Salesforce org</li>
+        <li>OAuth access tokens (in-memory only, gone on restart)</li>
+      </ul>
+
+      <h2>Data retention</h2>
+      <p>Audit history is retained indefinitely unless you delete it. You can delete your account and all associated data from the Profile settings page.</p>
+
+      <h2>Subprocessors</h2>
+      <ul>
+        <li><strong>Render</strong> — Hosting and database (PostgreSQL)</li>
+        <li><strong>OpenRouter / Groq</strong> — AI remediation guide (only the audit findings summary is sent, never org credentials)</li>
+      </ul>
+    </article>
+
+    <!-- ══ WHITE LABEL ══ -->
+    <article class="doc-section" id="sec-white-label">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › For Consultants</div>
+      <h1>White-Label / Branding</h1>
+      <p class="subtitle">Present audit results under your own brand for client engagements.</p>
+
+      <h2>Consulting PDF</h2>
+      <p>The consulting PDF report replaces "SF HEALTH" with your agency or practice name. It's designed to be handed to non-technical stakeholders — executives, project sponsors, budget holders — and includes:</p>
+      <ul>
+        <li>Your brand name at the top</li>
+        <li>Plain-English executive summary (no Salesforce jargon)</li>
+        <li>Visual score gauge and category breakdown</li>
+        <li>Top recommended actions numbered and prioritised</li>
+        <li>"Prepared by [Your Brand] · Confidential" footer</li>
+      </ul>
+
+      <h2>How to configure</h2>
+      <p>Contact us to set your <code>BRAND_NAME</code> on your account. Once configured, all consulting PDFs generated from your account will show your brand name.</p>
+
+      <div class="callout success">
+        <span class="callout-icon">💼</span>
+        <div class="callout-body"><strong>Consultant tip</strong>Run the health check before your first client meeting. Walk in with a scored report, a grade, and a prioritised fix list. Clients consistently describe this as "the most organised first meeting we've ever had."</div>
+      </div>
+    </article>
+
+    <!-- ══ CONSULTING ══ -->
+    <article class="doc-section" id="sec-consulting">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › For Consultants</div>
+      <h1>Consulting Use Cases</h1>
+      <p class="subtitle">How Salesforce consultants and SI partners use SFHealth.</p>
+
+      <h2>Discovery & scoping</h2>
+      <p>Run SFHealth on day zero of every engagement. The audit gives you an objective baseline — you know the org's actual state before the client tells you what they think the state is. This prevents scope surprises mid-project.</p>
+
+      <h2>Health check as a service</h2>
+      <p>Offer org health checks as a standalone service. Run the audit, customise the consulting PDF with your branding, and deliver a professional report. Typical consulting rates for a manual health check are $2,000–$5,000. SFHealth does it in 2 minutes.</p>
+
+      <h2>Multi-client portfolio management</h2>
+      <p>Use the Portfolio view to track the health of all your clients' orgs in one place. The fleet score and attention filter let you prioritise which clients need proactive outreach this month.</p>
+
+      <h2>Post-deployment validation</h2>
+      <p>Run an audit before and after every major deployment. The comparison view shows exactly what changed — which categories improved, which regressed, and what new issues were introduced.</p>
+
+      <h2>QBR reporting</h2>
+      <p>Schedule monthly audits and export portfolio summaries as PDF for Quarterly Business Reviews. Leadership can track org health trajectory without needing to understand Salesforce.</p>
+    </article>
+
+    <!-- ══ GLOSSARY ══ -->
+    <article class="doc-section" id="sec-glossary">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Reference</div>
+      <h1>Glossary</h1>
+      <p class="subtitle">Key terms used throughout SFHealth.</p>
+
+      <h2>A</h2>
+      <p><strong>API Enabled</strong> — A Salesforce profile permission required to make REST/SOAP API calls. Required for SFHealth to run an audit.</p>
+
+      <h2>F</h2>
+      <p><strong>Fleet Score</strong> — The average health score across all orgs in your portfolio.</p>
+      <p><strong>Flow</strong> — Salesforce's current-generation declarative automation tool. Replaces Workflow Rules and Process Builder.</p>
+
+      <h2>G</h2>
+      <p><strong>Governor Limits</strong> — Salesforce's execution guardrails — limits on SOQL queries, DML operations, CPU time, heap size, and API calls per 24-hour period.</p>
+      <p><strong>Grade</strong> — A letter grade (A–F) derived from the overall score. A = 90–100, B = 80–89, C = 70–79, D = 60–69, F = below 60.</p>
+
+      <h2>M</h2>
+      <p><strong>MID</strong> — Marketing Cloud Account ID. Used to identify a specific business unit in a multi-BU Marketing Cloud account.</p>
+
+      <h2>O</h2>
+      <p><strong>OAuth 2.0 PKCE</strong> — Proof Key for Code Exchange. A security extension to OAuth that prevents authorisation code interception. Used by SFHealth for all Salesforce connections.</p>
+      <p><strong>Org</strong> — A Salesforce environment instance. A company may have multiple orgs: production, sandboxes, developer orgs.</p>
+
+      <h2>P</h2>
+      <p><strong>Partial Scan</strong> — An audit where some API calls returned errors (permission issues, rate limits). The score is calculated from available data and may be lower than the actual score.</p>
+      <p><strong>PKCE</strong> — See OAuth 2.0 PKCE.</p>
+      <p><strong>Process Builder</strong> — A deprecated Salesforce automation tool. Salesforce recommends migrating all Process Builders to Flow.</p>
+
+      <h2>S</h2>
+      <p><strong>SAP</strong> — Sender Authentication Package. A Marketing Cloud configuration that sets up a private domain, dedicated IP, and reply mail management for email sending.</p>
+      <p><strong>Score</strong> — A 0–100 number representing org health. Calculated as a weighted average of six category scores.</p>
+
+      <h2>W</h2>
+      <p><strong>Workflow Rule</strong> — A legacy Salesforce automation tool, predecessor to Process Builder and Flow. Being retired by Salesforce.</p>
+    </article>
+
+    <!-- ══ ROADMAP ══ -->
+    <article class="doc-section" id="sec-roadmap">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Reference</div>
+      <h1>Roadmap</h1>
+      <p class="subtitle">What's coming to SFHealth — in order of priority.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">💬</span>
+        <div class="callout-body"><strong>Have a request?</strong>Use the feedback button inside the app or open a support ticket. User requests directly shape what we build next.</div>
+      </div>
+
+      <h2>In progress</h2>
+      <ul>
+        <li>Real-time audit progress indicator with per-check status</li>
+        <li>AI-powered remediation guide (currently in beta via OpenRouter)</li>
+        <li>Scheduled audit email digest improvements</li>
+      </ul>
+
+      <h2>Coming soon</h2>
+      <ul>
+        <li><strong>Revenue Cloud audit</strong> — CPQ/billing configuration checks</li>
+        <li><strong>Experience Cloud audit</strong> — Community site performance and security</li>
+        <li><strong>Field Service audit</strong> — FSL configuration and dispatcher settings</li>
+        <li><strong>Slack notifications</strong> — Get audit results posted to a Slack channel</li>
+        <li><strong>SFDX / CLI integration</strong> — Run audits as part of a CI/CD pipeline</li>
+      </ul>
+
+      <h2>Longer term</h2>
+      <ul>
+        <li><strong>Consultant marketplace</strong> — Book certified partners for remediation directly inside the platform</li>
+        <li><strong>Real-time monitoring</strong> — Continuous health checks, not just point-in-time audits</li>
+        <li><strong>Deployment delta tracking</strong> — Automatically compare org health before and after each deployment</li>
+        <li><strong>Benchmark database</strong> — Anonymous cross-org comparison ("your security score is in the top 20% of orgs your size")</li>
+      </ul>
+    </article>
+
+  </main>
+</div>
+
+<footer>
+  <p>© 2025 SFHealth · <a href="/app">Open App</a> · <a href="/docs">Docs</a></p>
+  <p>Built for Salesforce admins, developers, and consultants.</p>
+</footer>
+
+<script>
+  // ── Navigation ──────────────────────────────────────────────────────────────
+  function nav(linkEl) {
+    if (!linkEl) return;
+    const section = linkEl.dataset.section;
+    if (!section) return;
+
+    document.querySelectorAll(".sb-link").forEach(l => l.classList.remove("active"));
+    linkEl.classList.add("active");
+
+    document.querySelectorAll(".doc-section").forEach(s => s.classList.remove("active"));
+    const target = document.getElementById("sec-" + section);
+    if (target) target.classList.add("active");
+
+    clearSearch();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ── Search ──────────────────────────────────────────────────────────────────
+  const searchInput  = document.getElementById("docs-search");
+  const searchCount  = document.getElementById("search-count");
+  const noResults    = document.getElementById("no-results");
+  let searchTimeout;
+
+  searchInput.addEventListener("input", () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(doSearch, 160);
+  });
+
+  function doSearch() {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) { clearSearch(); return; }
+
+    // Show all sections during search
+    document.querySelectorAll(".doc-section").forEach(s => {
+      s.classList.add("active");
+      removeHighlights(s);
+    });
+    document.querySelectorAll(".sb-link").forEach(l => l.classList.remove("active"));
+    noResults.style.display = "none";
+
+    // Walk text nodes, highlight matches
+    let totalMatches = 0;
+    document.querySelectorAll(".doc-section").forEach(sec => {
+      const matches = highlightText(sec, q);
+      if (matches === 0) {
+        sec.classList.remove("active");
+      } else {
+        totalMatches += matches;
+      }
+    });
+
+    if (totalMatches === 0) {
+      noResults.style.display = "block";
+      searchCount.textContent = "No results";
+    } else {
+      searchCount.textContent = totalMatches + " match" + (totalMatches !== 1 ? "es" : "");
+    }
+  }
+
+  function highlightText(node, q) {
+    let count = 0;
+    // Use TreeWalker to find text nodes
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        const tag = n.parentNode?.tagName?.toLowerCase();
+        if (["script","style","code","pre"].includes(tag)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+    const matches = [];
+    let n;
+    while ((n = walker.nextNode())) {
+      const lower = n.textContent.toLowerCase();
+      if (lower.includes(q)) {
+        matches.push(n);
+        count += (lower.match(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), "g")) || []).length;
+      }
+    }
+    for (const textNode of matches) {
+      const parts = textNode.textContent.split(new RegExp("(" + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ")", "gi"));
+      const frag  = document.createDocumentFragment();
+      for (const part of parts) {
+        if (part.toLowerCase() === q) {
+          const mark = document.createElement("mark");
+          mark.textContent = part;
+          frag.appendChild(mark);
+        } else {
+          frag.appendChild(document.createTextNode(part));
+        }
+      }
+      textNode.parentNode.replaceChild(frag, textNode);
+    }
+    return count;
+  }
+
+  function removeHighlights(el) {
+    el.querySelectorAll("mark").forEach(m => {
+      m.replaceWith(document.createTextNode(m.textContent));
+    });
+    // Normalise split text nodes
+    el.normalize();
+  }
+
+  function clearSearch() {
+    searchInput.value = "";
+    searchCount.textContent = "";
+    noResults.style.display = "none";
+    document.querySelectorAll(".doc-section").forEach(s => {
+      removeHighlights(s);
+      s.classList.remove("active");
+    });
+    // Re-activate the current active sidebar link's section
+    const active = document.querySelector(".sb-link.active");
+    const section = active ? active.dataset.section : "overview";
+    const target = document.getElementById("sec-" + section);
+    if (target) target.classList.add("active");
+  }
+
+  // Handle hash on load
+  const hash = location.hash.replace("#","");
+  if (hash) {
+    const link = document.querySelector(`[data-section="${hash}"]`);
+    if (link) nav(link);
+  }
+</script>
+</body>
+</html>

@@ -97,6 +97,14 @@ app.get("/mc-setup", (_req, res) => {
   res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   res.sendFile(path.join(__dirname, "../public/mc-setup.html"));
 });
+app.get("/docs", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/docs.html"));
+});
+app.get("/docs/*", (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.join(__dirname, "../public/docs.html"));
+});
 app.use(express.static(path.join(__dirname, "../public"), { maxAge: "1h" }));
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
