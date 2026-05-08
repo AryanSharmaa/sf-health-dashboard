@@ -247,6 +247,10 @@ function generateHTML(healthScore, metadata = {}) {
 }
 
 function generateJSON(healthScore, metadata = {}) {
+  const cq = metadata?.codeQuality  || {};
+  const au = metadata?.automation   || {};
+  const sc = metadata?.security     || {};
+
   return {
     ...healthScore,
     metadata: {
@@ -254,6 +258,23 @@ function generateJSON(healthScore, metadata = {}) {
       techDebt:            metadata?.techDebt            || {},
       governorLimits:      metadata?.apiUsage?.governorLimits || {},
       proactiveMonitoring: metadata?.proactiveMonitoring || {},
+      // Name lists for drilldowns
+      codeQuality: {
+        hardcodedIdClassNames: cq.hardcodedIdClassNames   || [],
+        classesNoTestNames:    cq.classesNoTestNames      || [],
+        inactiveTriggerNames:  cq.inactiveTriggerNames    || [],
+      },
+      automation: {
+        inactiveFlows: (au.flows || [])
+          .filter(f => !f.isActive)
+          .map(f => ({ name: f.label || f.apiName }))
+          .slice(0, 50),
+        activeWorkflowNames: [],   // collector returns count only; names not queried
+        activeProcessBuilderNames: [],
+      },
+      security: {
+        profilesWithModifyAllNames: sc.profilesWithModifyAllNames || [],
+      },
     },
   };
 }

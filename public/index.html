@@ -162,8 +162,6 @@
     .cat-layout{display:grid;grid-template-columns:260px 1fr;gap:28px;align-items:start}
     .radar-wrap{background:#f8fafc;border-radius:14px;padding:16px 12px;text-align:center;border:1px solid #e8edf2}
     .radar-wrap .radar-title{font-size:11px;font-weight:600;color:#a0aec0;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px}
-    .cat-row{display:grid;grid-template-columns:118px 1fr 40px;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f7fafc}
-    .cat-row:last-child{border-bottom:none}
     .cat-label{font-size:13px;font-weight:500;color:#4a5568}
     .bar-track{background:#e2e8f0;border-radius:99px;height:9px}
     .bar-fill{height:9px;border-radius:99px;transition:width 0.9s ease}
@@ -181,12 +179,21 @@
     .btn-dismiss:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca}
     .action-item.dismissed{opacity:0.45;transition:opacity 0.4s}
     .dismissed-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#6b7280;background:#f3f4f6;border:1px solid #e2e8f0;border-radius:99px;padding:2px 8px}
-    .class-names-toggle{font-size:11px;color:#0070d2;cursor:pointer;margin-top:6px;display:inline-flex;align-items:center;gap:4px;font-weight:600;background:none;border:none;padding:0}
-    .class-names-toggle:hover{text-decoration:underline}
-    .class-names-list{display:none;margin-top:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;max-height:160px;overflow-y:auto}
-    .class-names-list.open{display:block}
-    .class-chip{display:inline-block;font-size:11px;font-family:monospace;background:#fff;border:1px solid #e2e8f0;border-radius:5px;padding:2px 7px;margin:2px;color:#1a202c}
-    .class-chip .cv{font-size:10px;color:#a0aec0;margin-left:3px}
+    .drilldown-toggle{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#0070d2;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:3px 9px;margin-top:7px;cursor:pointer;transition:background .15s}
+    .drilldown-toggle:hover{background:#dbeafe}
+    .drilldown-toggle svg{transition:transform .2s}
+    .drilldown-toggle.open svg{transform:rotate(180deg)}
+    .drilldown-panel{display:none;margin-top:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;max-height:200px;overflow-y:auto}
+    .drilldown-panel.open{display:block}
+    .name-chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-family:ui-monospace,monospace;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 8px;margin:3px;color:#1e293b;line-height:1.4}
+    .name-chip .chip-meta{font-size:10px;color:#94a3b8;margin-left:2px}
+    .name-chip-field{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+    .name-chip-warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+    .name-chip-more{background:#f1f5f9;border-color:#e2e8f0;color:#64748b;font-family:inherit;font-style:italic}
+    /* inline drilldown on category bars */
+    .cat-row{display:grid;grid-template-columns:118px 1fr 40px;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f7fafc}
+    .cat-row:last-child{border-bottom:none}
+    .cat-drilldown-wrap{grid-column:1/-1;padding-bottom:4px}
     .ai-guide{display:none;margin-top:12px;background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:16px 18px;font-size:13px;line-height:1.7;color:#374151}
     .ai-guide.visible{display:block}
     .ai-guide strong{color:#1a202c}
@@ -1623,19 +1630,7 @@ async function pollJob(jobId) {
   }
 }
 
-// ── Apex class name drill-down helpers ───────────────────────────────────────
-
-function classChips(classes, limit) {
-  if (!classes || classes.length === 0) return "";
-  const shown = classes.slice(0, limit || 20);
-  const chips  = shown.map(c =>
-    `<span class="class-chip">${escHtml(c.name)}<span class="cv">v${c.apiVersion}</span></span>`
-  ).join("");
-  const more = classes.length > shown.length
-    ? `<span class="class-chip" style="background:#e2e8f0;color:#6b7280">+${classes.length - shown.length} more</span>`
-    : "";
-  return `<div class="class-names-list">${chips}${more}</div>`;
-}
+// ── Drilldown helpers ─────────────────────────────────────────────────────────
 
 function escHtml(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -1647,20 +1642,165 @@ function findingKey(category, action) {
   return category + ":" + Math.abs(h).toString(16);
 }
 
-function getApexDrilldown(category, actionText, meta) {
-  const cq = meta.codeQuality || {};
-  const td = meta.techDebt || {};
+const CHEVRON_SVG = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+
+// Render a list of name items into chips inside a collapsible panel.
+// items: array of { name, meta? }  (meta is an optional secondary label e.g. api version, object)
+// chipClass: optional extra CSS class on each chip
+function nameChips(items, chipClass) {
+  if (!items || !items.length) return "";
+  const LIMIT = 25;
+  const shown = items.slice(0, LIMIT);
+  const chips = shown.map(it => {
+    const metaSpan = it.meta ? `<span class="chip-meta">${escHtml(it.meta)}</span>` : "";
+    return `<span class="name-chip${chipClass ? " "+chipClass : ""}">${escHtml(it.name)}${metaSpan}</span>`;
+  }).join("");
+  const more = items.length > LIMIT
+    ? `<span class="name-chip name-chip-more">+${items.length - LIMIT} more</span>`
+    : "";
+  return chips + more;
+}
+
+// Build a toggle button + hidden panel containing chips.
+// id must be unique per call-site. label = button text. items = array of {name, meta?}
+function drilldownBlock(id, label, items, chipClass) {
+  if (!items || !items.length) return "";
+  const chips = nameChips(items, chipClass);
+  return `<button class="drilldown-toggle" onclick="toggleDrilldown('${id}',this)" aria-expanded="false">${CHEVRON_SVG}${escHtml(label)} <strong>(${items.length})</strong></button>
+<div class="drilldown-panel" id="${id}">${chips}</div>`;
+}
+
+function toggleDrilldown(id, btn) {
+  const panel = document.getElementById(id);
+  if (!panel) return;
+  const isOpen = panel.classList.toggle("open");
+  btn.classList.toggle("open", isOpen);
+  btn.setAttribute("aria-expanded", isOpen);
+}
+
+// Returns drilldown HTML for a single SF recommended action card, or "" if nothing to show.
+function getDrilldown(index, category, actionText, meta) {
+  const cq = meta.codeQuality  || {};
+  const td = meta.techDebt     || {};
+  const au = meta.automation   || {};
+  const sc = meta.security     || {};
+  const uf = meta.unusedFields || {};
+  const id = `dd-action-${index}`;
+
+  // Code Quality
   if (category === "codeQuality") {
     if (/hardcoded/i.test(actionText) && cq.hardcodedIdClassNames?.length)
-      return { label: "Classes with hardcoded IDs", classes: cq.hardcodedIdClassNames };
-    if (/test coverage|classesNoTest/i.test(actionText) && cq.classesNoTestNames?.length)
-      return { label: "Classes needing tests (sample)", classes: cq.classesNoTestNames };
+      return drilldownBlock(id, "Classes with hardcoded IDs",
+        cq.hardcodedIdClassNames.map(c => ({ name: c.name, meta: `v${c.apiVersion}` })), "name-chip-warn");
+    if (/test coverage|no test/i.test(actionText) && cq.classesNoTestNames?.length)
+      return drilldownBlock(id, "Classes without tests (sample)",
+        cq.classesNoTestNames.map(c => ({ name: c.name, meta: `v${c.apiVersion}` })));
+    if (/inactive trigger/i.test(actionText) && cq.inactiveTriggerNames?.length)
+      return drilldownBlock(id, "Inactive triggers",
+        cq.inactiveTriggerNames.map(t => ({ name: t.name, meta: t.object })));
   }
+
+  // Tech Debt
   if (category === "codeQuality" || category === "techDebt") {
-    if (/stale|api version|old version/i.test(actionText) && td.staleClassNames?.length)
-      return { label: "Stale API version classes", classes: td.staleClassNames };
+    if (/stale|old api version|api version/i.test(actionText) && td.staleClassNames?.length)
+      return drilldownBlock(id, "Stale API version classes",
+        td.staleClassNames.map(c => ({ name: c.name, meta: `v${c.apiVersion}` })), "name-chip-warn");
+    if (/visualforce|vf page/i.test(actionText) && td.legacyVFPageNames?.length)
+      return drilldownBlock(id, "Legacy Visualforce pages",
+        td.legacyVFPageNames.map(p => ({ name: p.name, meta: `v${p.apiVersion}` })), "name-chip-warn");
   }
-  return null;
+
+  // Automation
+  if (category === "automation") {
+    if (/inactive flow/i.test(actionText) && au.inactiveFlows?.length)
+      return drilldownBlock(id, "Inactive flows",
+        au.inactiveFlows.map(f => ({ name: f.name })));
+  }
+
+  // Security
+  if (category === "security") {
+    if (/modify all/i.test(actionText) && sc.profilesWithModifyAllNames?.length)
+      return drilldownBlock(id, "Profiles with Modify All Data",
+        sc.profilesWithModifyAllNames.map(n => ({ name: n })), "name-chip-warn");
+  }
+
+  // Unused fields
+  if (category === "unusedFields" || /unused field/i.test(actionText)) {
+    const fields = uf.unusedFields || [];
+    if (fields.length)
+      return drilldownBlock(id, "Unused custom fields",
+        fields.map(f => ({ name: f.fieldName, meta: f.object })), "name-chip-field");
+  }
+
+  return "";
+}
+
+// Returns drilldown HTML for an MC recommended action card, or "".
+function getMcDrilldown(index, category, actionText, mcMeta) {
+  const jb = mcMeta?.journeyBuilder    || {};
+  const as = mcMeta?.automationStudio  || {};
+  const id = `dd-mc-action-${index}`;
+
+  if (category === "journeyHealth") {
+    if (/error|system.stopped/i.test(actionText) && jb.erroredNames?.length)
+      return drilldownBlock(id, "Journeys in error",
+        jb.erroredNames.map(n => ({ name: n })), "name-chip-warn");
+    if (/paused/i.test(actionText) && jb.pausedNames?.length)
+      return drilldownBlock(id, "Paused journeys",
+        jb.pausedNames.map(n => ({ name: n })));
+  }
+  if (category === "automationHealth") {
+    if (/error/i.test(actionText) && as.erroredNames?.length)
+      return drilldownBlock(id, "Automations in error",
+        as.erroredNames.map(n => ({ name: n })), "name-chip-warn");
+  }
+  return "";
+}
+
+// Returns drilldown HTML for a SF category score bar row, or "".
+function getCategoryDrilldown(catKey, meta) {
+  const cq = meta.codeQuality  || {};
+  const td = meta.techDebt     || {};
+  const au = meta.automation   || {};
+  const sc = meta.security     || {};
+  const uf = meta.unusedFields || {};
+  const id = `dd-cat-${catKey}`;
+
+  if (catKey === "codeQuality") {
+    const items = [
+      ...(cq.hardcodedIdClassNames || []).map(c => ({ name: c.name, meta: `v${c.apiVersion}` })),
+      ...(cq.classesNoTestNames    || []).map(c => ({ name: c.name, meta: "no tests" })),
+      ...(cq.inactiveTriggerNames  || []).map(t => ({ name: t.name, meta: t.object })),
+      ...(td.staleClassNames       || []).map(c => ({ name: c.name, meta: `stale v${c.apiVersion}` })),
+    ];
+    if (items.length)
+      return drilldownBlock(id, "View affected classes & triggers", items);
+  }
+  if (catKey === "techDebt") {
+    const items = [
+      ...(td.staleClassNames    || []).map(c => ({ name: c.name, meta: `v${c.apiVersion}` })),
+      ...(td.legacyVFPageNames  || []).map(p => ({ name: p.name, meta: `VF v${p.apiVersion}` })),
+    ];
+    if (items.length)
+      return drilldownBlock(id, "View stale classes & VF pages", items, "name-chip-warn");
+  }
+  if (catKey === "automation") {
+    const items = (au.inactiveFlows || []).map(f => ({ name: f.name }));
+    if (items.length)
+      return drilldownBlock(id, "View inactive flows", items);
+  }
+  if (catKey === "security") {
+    const items = (sc.profilesWithModifyAllNames || []).map(n => ({ name: n }));
+    if (items.length)
+      return drilldownBlock(id, "View over-permissioned profiles", items, "name-chip-warn");
+  }
+  if (catKey === "unusedFields") {
+    const fields = (uf.unusedFields || []);
+    if (fields.length)
+      return drilldownBlock(id, "View unused fields",
+        fields.map(f => ({ name: f.fieldName, meta: f.object })), "name-chip-field");
+  }
+  return "";
 }
 
 // ── Main render ───────────────────────────────────────────────────────────────
@@ -1760,13 +1900,15 @@ function renderAuditResults(data, jobId) {
   renderRadarChart(categories);
 
   // Category bars
-  document.getElementById("categories").innerHTML = Object.entries(categories).map(([k,v]) =>
-    `<div class="cat-row">
+  document.getElementById("categories").innerHTML = Object.entries(categories).map(([k,v]) => {
+    const dd = getCategoryDrilldown(k, meta);
+    return `<div class="cat-row">
       <div class="cat-label">${CAT_LABELS[k]||k}</div>
       <div class="bar-track"><div class="bar-fill" style="width:${v.score}%;background:${scoreColor(v.score)}"></div></div>
       <div class="cat-score-val" style="color:${scoreColor(v.score)}">${v.score}</div>
-    </div>`
-  ).join("");
+      ${dd ? `<div class="cat-drilldown-wrap">${dd}</div>` : ""}
+    </div>`;
+  }).join("");
 
   // Actions with AI guide + Dismiss + Class-name drill-down
   if (top5RecommendedActions.length === 0) {
@@ -1774,12 +1916,8 @@ function renderAuditResults(data, jobId) {
       '<p style="color:#16a34a;font-weight:600;padding:8px 0">No issues — this org is in excellent health!</p>';
   } else {
     document.getElementById("actions").innerHTML = top5RecommendedActions.map((a, i) => {
-      const key      = findingKey(a.category, a.action);
-      const drill    = getApexDrilldown(a.category, a.action, meta);
-      const drillId  = `drill-${i}`;
-      const drillHtml = drill
-        ? `<button class="class-names-toggle" onclick="document.getElementById('${drillId}').classList.toggle('open');this.textContent=document.getElementById('${drillId}').classList.contains('open')?'▲ Hide ${drill.label}':'▼ ${drill.label} (${drill.classes.length})'">▼ ${drill.label} (${drill.classes.length})</button>${classChips(drill.classes)}`
-        : "";
+      const key       = findingKey(a.category, a.action);
+      const drillHtml = getDrilldown(i, a.category, a.action, meta);
       return `<div class="action-item" id="action-${i}" data-key="${escHtml(key)}" data-priority="${escHtml(a.priority)}">
         <div class="action-top">
           <div class="action-num">${i+1}</div>
@@ -3026,20 +3164,25 @@ function renderMcResults(data) {
     </div>`
   ).join("");
 
-  // Actions with AI guide buttons
+  // Actions with AI guide buttons + drilldowns
+  const mcMeta = data.report.metadata || {};
   document.getElementById("mc-actions").innerHTML = topRecommendedActions.length === 0
     ? '<p style="color:#16a34a;font-weight:600;padding:8px 0">No issues — this MC instance is in excellent health!</p>'
-    : topRecommendedActions.map((a, i) =>
-        `<div class="action-item" id="mc-action-${i}">
+    : topRecommendedActions.map((a, i) => {
+        const drillHtml = getMcDrilldown(i, a.category, a.action, mcMeta);
+        return `<div class="action-item" id="mc-action-${i}">
           <div class="action-top">
             <div class="action-num">${i + 1}</div>
             <span class="badge ${priorityClass(a.priority)}">${a.priority}</span>
-            <div style="font-size:13px;color:#2d3748;line-height:1.55">${a.action}</div>
+            <div>
+              <div style="font-size:13px;color:#2d3748;line-height:1.55">${escHtml(a.action)}</div>
+              ${drillHtml}
+            </div>
             <button class="btn-ai" id="mc-ai-btn-${i}" data-index="${i}">✦ AI Fix Guide</button>
           </div>
           <div class="ai-guide" id="mc-ai-guide-${i}"></div>
-        </div>`
-      ).join("");
+        </div>`;
+      }).join("");
 
   // Wire MC AI buttons
   topRecommendedActions.forEach((a, i) => {
