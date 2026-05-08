@@ -160,6 +160,27 @@ CREATE TABLE IF NOT EXISTS custom_rules (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS debt_items (
+  id                  TEXT        PRIMARY KEY,
+  org_id              TEXT        NOT NULL,
+  audit_id            TEXT,
+  category            TEXT        NOT NULL,
+  action_text         TEXT        NOT NULL,
+  priority            TEXT        NOT NULL DEFAULT 'medium',
+  status              TEXT        NOT NULL DEFAULT 'open',
+  assignee            TEXT,
+  notes               TEXT,
+  jira_issue_key      TEXT,
+  linear_issue_id     TEXT,
+  source_finding_key  TEXT,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  resolved_at         TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_debt_org        ON debt_items(org_id, status);
+CREATE INDEX IF NOT EXISTS idx_debt_created    ON debt_items(org_id, created_at);
+
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
 CREATE INDEX IF NOT EXISTS idx_cat_scores_org    ON category_scores(org_id, category, created_at);

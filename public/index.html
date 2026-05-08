@@ -2466,7 +2466,10 @@ document.getElementById("dismiss-backdrop").addEventListener("click", e => {
 });
 
 document.getElementById("btn-confirm-dismiss").addEventListener("click", async () => {
-  if (!_pendingDismiss || !_currentOrgId) return;
+  if (!_pendingDismiss) return;
+  // MC findings use client-side localStorage dismiss (no SF org required)
+  if (_pendingDismiss.isMc) { confirmMcDismiss(_pendingDismiss.index, _pendingDismiss.action); return; }
+  if (!_currentOrgId) return;
   const { index, action } = _pendingDismiss;
   const selectEl = document.getElementById("dismiss-reason-select");
   const customEl = document.getElementById("dismiss-reason-custom");
@@ -2511,6 +2514,75 @@ function reapplyDismissed() {
   document.querySelectorAll(".action-item[data-key]").forEach(el => {
     if (_dismissedKeys.has(el.dataset.key)) el.style.display = "none";
   });
+}
+
+// ─── MC Acknowledge (client-side hide, localStorage) ─────────────────────────
+
+function openMcDismissModal(index, action) {
+  // Reuse the same dismiss modal; store mc flag so confirm handler knows
+  _pendingDismiss = { index, action, isMc: true };
+  document.getElementById("dismiss-finding-text").textContent = action.action;
+  document.getElementById("dismiss-reason-select").value = "";
+  document.getElementById("dismiss-reason-custom").style.display = "none";
+  document.getElementById("dismiss-reason-custom").value = "";
+  document.getElementById("btn-confirm-dismiss").disabled = false;
+  document.getElementById("btn-confirm-dismiss").textContent = "Acknowledge & Hide";
+  document.getElementById("dismiss-backdrop").classList.add("open");
+}
+
+function confirmMcDismiss(index, action) {
+  // Hide MC action item client-side and persist to localStorage
+  const key = findingKey(action.category, action.action);
+  const stored = JSON.parse(localStorage.getItem("sfh_mc_dismissed") || "[]");
+  if (!stored.includes(key)) { stored.push(key); localStorage.setItem("sfh_mc_dismissed", JSON.stringify(stored)); }
+  const el = document.getElementById("mc-action-" + index);
+  if (el) el.style.display = "none";
+  document.getElementById("dismiss-backdrop").classList.remove("open");
+  _pendingDismiss = null;
+}
+
+// ─── MC Debt Tracker — Track button ──────────────────────────────────────────
+
+async function addMcToDebtTracker(btn, action) {
+  // MC findings are tracked against the connected SF org (if any)
+  const orgId = window._liveSession?.orgId;
+  if (!orgId) {
+    alert("Connect a Salesforce org first to use the Debt Tracker.\n\nThe Debt Tracker is scoped to a Salesforce org session.");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Adding…";
+  try {
+    const r = await fetch(`/api/orgs/${encodeURIComponent(orgId)}/debt`, {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        auditId:          null,
+        category:         action.category,
+        actionText:       action.action,
+        priority:         action.priority,
+        sourceFindingKey: btn.dataset.key,
+        notes:            "Source: Marketing Cloud Audit",
+      }),
+    });
+    if (r.status === 409) {
+      btn.textContent = "✓ Already tracked";
+      btn.classList.add("tracked");
+      btn.disabled = false;
+      return;
+    }
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.error || "Failed");
+    }
+    btn.textContent = "✓ Tracked";
+    btn.classList.add("tracked");
+    btn.disabled = false;
+  } catch (err) {
+    btn.textContent = "⊕ Track";
+    btn.disabled = false;
+    alert("Could not add to tracker: " + err.message);
+  }
 }
 
 // ─── Share report ─────────────────────────────────────────────────────────────
@@ -3515,8 +3587,9 @@ function renderMcResults(data) {
   document.getElementById("mc-actions").innerHTML = topRecommendedActions.length === 0
     ? '<p style="color:#16a34a;font-weight:600;padding:8px 0">No issues — this MC instance is in excellent health!</p>'
     : topRecommendedActions.map((a, i) => {
+        const key      = findingKey(a.category, a.action);
         const drillHtml = getMcDrilldown(i, a.category, a.action, mcMeta);
-        return `<div class="action-item" id="mc-action-${i}">
+        return `<div class="action-item" id="mc-action-${i}" data-key="${escHtml(key)}" data-priority="${escHtml(a.priority)}">
           <div class="action-top">
             <div class="action-num">${i + 1}</div>
             <span class="badge ${priorityClass(a.priority)}">${a.priority}</span>
@@ -3524,17 +3597,24 @@ function renderMcResults(data) {
               <div style="font-size:13px;color:#2d3748;line-height:1.55">${escHtml(a.action)}</div>
               ${drillHtml}
             </div>
-            <button class="btn-ai" id="mc-ai-btn-${i}" data-index="${i}">✦ AI Fix Guide</button>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+              <button class="btn-ai" id="mc-ai-btn-${i}" data-index="${i}">✦ AI Fix Guide</button>
+              <button class="btn-dismiss" id="mc-dismiss-btn-${i}" data-index="${i}" data-key="${escHtml(key)}" data-action="${escHtml(a.action)}" data-cat="${escHtml(a.category)}">✓ Acknowledge</button>
+              <button class="btn-debt" id="mc-debt-btn-${i}" data-key="${escHtml(key)}" data-action="${escHtml(a.action)}" data-cat="${escHtml(a.category)}" data-priority="${escHtml(a.priority)}" title="Add to Debt Tracker">⊕ Track</button>
+            </div>
           </div>
           <div class="ai-guide" id="mc-ai-guide-${i}"></div>
         </div>`;
       }).join("");
 
-  // Wire MC AI buttons
+  // Wire MC AI + Acknowledge + Track buttons
   topRecommendedActions.forEach((a, i) => {
-    const btn = document.getElementById("mc-ai-btn-" + i);
-    if (!btn) return;
-    btn.addEventListener("click", () => fetchMcAiGuide(mcJobId, a, i));
+    const aiBtn = document.getElementById("mc-ai-btn-" + i);
+    if (aiBtn) aiBtn.addEventListener("click", () => fetchMcAiGuide(mcJobId, a, i));
+    const dimBtn = document.getElementById("mc-dismiss-btn-" + i);
+    if (dimBtn) dimBtn.addEventListener("click", () => openMcDismissModal(i, a));
+    const debtBtn = document.getElementById("mc-debt-btn-" + i);
+    if (debtBtn) debtBtn.addEventListener("click", () => addMcToDebtTracker(debtBtn, a));
   });
 
   // MC Operational Health
