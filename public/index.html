@@ -1366,7 +1366,7 @@ function showContinueAsBanner(session) {
     </div>
     <div style="display:flex;gap:8px">
       <button onclick="proceedToAudit()" style="padding:7px 18px;background:#16a34a;color:white;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">Continue →</button>
-      <button onclick="document.getElementById('continue-as-banner').remove();fetch('/auth/logout',{method:'POST',credentials:'include'})" style="padding:7px 12px;background:white;color:#6b7280;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;cursor:pointer">Switch Org</button>
+      <button onclick="switchOrg()" style="padding:7px 12px;background:white;color:#6b7280;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;cursor:pointer">Switch Org</button>
     </div>`;
   errBanner.after(banner);
   window._liveSession = session;
@@ -1382,6 +1382,19 @@ function showContinueAsBanner(session) {
     });
     loadPrevOrgs();
   }
+}
+
+function switchOrg() {
+  // Remove the "connected as" banner
+  const banner = document.getElementById("continue-as-banner");
+  if (banner) banner.remove();
+  // Revoke the SF session server-side
+  fetch("/auth/logout", { method: "POST", credentials: "include" });
+  // Show the connect cards again and hide the saved-orgs list
+  const hero = document.getElementById("connect-hero-section");
+  if (hero) hero.style.display = "";
+  const prevSection = document.getElementById("prev-orgs-section");
+  if (prevSection) prevSection.style.display = "none";
 }
 
 function proceedToAudit() {
