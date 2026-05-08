@@ -313,7 +313,8 @@ async function collectOperationalHealth(subdomain, token) {
       safeGet(subdomain, "/data/v1/customobjects?$pageSize=200", token, { items: [] }),
       safeGet(subdomain, "/automation/v1/automations?$pageSize=200", token, { items: [] }),
     ]);
-    const lockedUserCount = (lockedUsersRes?.items || []).length;
+    const lockedUsers = lockedUsersRes?.items || [];
+    const lockedUserCount = lockedUsers.length;
     const des = deData?.items || [];
     const largeDEs = des.filter(d => (d.rowCount || d.rowcount || 0) > 5000000);
     const automations = autoData?.items || autoData?.automation || [];
@@ -326,14 +327,14 @@ async function collectOperationalHealth(subdomain, token) {
     const criticalSendAutos = automations.filter(a => (a.name || "").toLowerCase().includes("send") && (a.automationType === "scheduled" || a.scheduleTypeId === 1));
     const n = a => (a.name || a.key || "").trim();
     return {
-      lockedUsers:       { count: lockedUserCount,          status: s(lockedUserCount, 1, 5) },
-      largeDEs:          { count: largeDEs.length,          status: s(largeDEs.length, 1, 5),   names: largeDEs.map(d => d.name).filter(Boolean).slice(0, 50) },
-      autoNotOnSchedule: { count: autoOverdue.length,       status: s(autoOverdue.length, 1, 5), names: autoOverdue.map(n).filter(Boolean).slice(0, 50) },
-      autoLongRunning:   { count: autoLongRun.length,       status: s(autoLongRun.length, 1, 3), names: autoLongRun.map(n).filter(Boolean).slice(0, 50) },
-      autoErrored:       { count: autoErrored.length,       status: s(autoErrored.length, 1, 5), names: autoErrored.map(n).filter(Boolean).slice(0, 50) },
-      autoSkipped:       { count: autoSkipped.length,       status: s(autoSkipped.length, 1, 5), names: autoSkipped.map(n).filter(Boolean).slice(0, 50) },
+      lockedUsers:       { count: lockedUserCount, status: s(lockedUserCount, 1, 5), names: lockedUsers.map(u => u.name || u.email || u.userName || u.userId).filter(Boolean).slice(0, 50) },
+      largeDEs:          { count: largeDEs.length,          status: s(largeDEs.length, 1, 5),    names: largeDEs.map(d => d.name).filter(Boolean).slice(0, 50) },
+      autoNotOnSchedule: { count: autoOverdue.length,       status: s(autoOverdue.length, 1, 5),  names: autoOverdue.map(n).filter(Boolean).slice(0, 50) },
+      autoLongRunning:   { count: autoLongRun.length,       status: s(autoLongRun.length, 1, 3),  names: autoLongRun.map(n).filter(Boolean).slice(0, 50) },
+      autoErrored:       { count: autoErrored.length,       status: s(autoErrored.length, 1, 5),  names: autoErrored.map(n).filter(Boolean).slice(0, 50) },
+      autoSkipped:       { count: autoSkipped.length,       status: s(autoSkipped.length, 1, 5),  names: autoSkipped.map(n).filter(Boolean).slice(0, 50) },
       autoStopped:       { count: autoStopped.length,       status: s(autoStopped.length, 3, 10), names: autoStopped.map(n).filter(Boolean).slice(0, 50) },
-      autoPaused:        { count: autoPaused.length,        status: s(autoPaused.length, 3, 10), names: autoPaused.map(n).filter(Boolean).slice(0, 50) },
+      autoPaused:        { count: autoPaused.length,        status: s(autoPaused.length, 3, 10),  names: autoPaused.map(n).filter(Boolean).slice(0, 50) },
       criticalSendAutos: { count: criticalSendAutos.length, status: criticalSendAutos.some(a => a.status === 3) ? "critical" : "ok", names: criticalSendAutos.map(n).filter(Boolean).slice(0, 50) },
     };
   });
@@ -347,13 +348,14 @@ async function collectOperationalHealth(subdomain, token) {
     const tsDefs = triggeredSends?.definitions || triggeredSends?.items || [];
     const tsErrored = tsDefs.filter(d => d.status === "error" || d.status === "inactive");
     const highPrioritySends = tsDefs.filter(d => (d.options?.priority || "").toLowerCase() === "high");
-    const activeDefs = tsDefs.filter(d => d.status === "active").length;
+    const activeDefsList = tsDefs.filter(d => d.status === "active");
+    const activeDefs = activeDefsList.length;
     const totalDefs  = tsDefs.length;
     return {
-      sendSpeed:          { activeDefs, totalDefs, status: totalDefs > 0 && activeDefs / totalDefs < 0.5 ? "warning" : "ok" },
-      highPrioritySends:  { count: highPrioritySends.length, status: "ok" },
+      sendSpeed:          { activeDefs, totalDefs, status: totalDefs > 0 && activeDefs / totalDefs < 0.5 ? "warning" : "ok", names: tsDefs.map(d => d.name).filter(Boolean).slice(0, 50) },
+      highPrioritySends:  { count: highPrioritySends.length, status: "ok", names: highPrioritySends.map(d => d.name).filter(Boolean).slice(0, 50) },
       triggeredErrored:   { count: tsErrored.length, status: s(tsErrored.length, 1, 10), names: tsErrored.map(d => d.name).filter(Boolean).slice(0, 50) },
-      triggeredThreshold: { count: activeDefs, status: activeDefs > 500 ? "warning" : "ok", threshold: 500 },
+      triggeredThreshold: { count: activeDefs, status: activeDefs > 500 ? "warning" : "ok", threshold: 500, names: activeDefsList.map(d => d.name).filter(Boolean).slice(0, 50) },
       deliverability:     { status: sendSummary ? "ok" : "warning", available: !!sendSummary },
     };
   });
@@ -365,9 +367,9 @@ async function collectOperationalHealth(subdomain, token) {
     const mobileErrored = mobileSends.filter(d => d.status === "error" || d.status === "inactive");
     const mobileActive  = mobileSends.filter(d => d.status === "active");
     return {
-      sendsErrored:  { count: mobileErrored.length, status: s(mobileErrored.length, 1, 5), names: mobileErrored.map(d => d.name).filter(Boolean).slice(0, 50) },
-      sendThreshold: { count: mobileActive.length,  status: mobileActive.length > 200 ? "warning" : "ok", threshold: 200 },
-      zeroSends:     { count: mobileSends.length === 0 ? 1 : 0, status: mobileSends.length === 0 ? "warning" : "ok" },
+      sendsErrored:  { count: mobileErrored.length, status: s(mobileErrored.length, 1, 5),        names: mobileErrored.map(d => d.name).filter(Boolean).slice(0, 50) },
+      sendThreshold: { count: mobileActive.length,  status: mobileActive.length > 200 ? "warning" : "ok", threshold: 200, names: mobileActive.map(d => d.name).filter(Boolean).slice(0, 50) },
+      zeroSends:     { count: mobileSends.length,   status: mobileSends.length === 0 ? "warning" : "ok", names: mobileSends.map(d => d.name).filter(Boolean).slice(0, 50) },
     };
   });
 

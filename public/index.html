@@ -2140,7 +2140,7 @@ function renderMcOperationalHealth(oh) {
 
   // Email
   const emailItems = [
-    item("Send Speed",                  E.sendSpeed  ? { status: E.sendSpeed.status, count: E.sendSpeed.activeDefs } : null, "active defs"),
+    item("Send Speed",                  E.sendSpeed  ? { status: E.sendSpeed.status, count: E.sendSpeed.activeDefs, names: E.sendSpeed.names } : null, "active defs"),
     item("High Priority Sends",         E.highPrioritySends),
     item("Triggered Sends Errored",     E.triggeredErrored),
     item("Triggered Send Threshold",    E.triggeredThreshold, `/ ${E.triggeredThreshold?.threshold||500}`),
@@ -2152,7 +2152,7 @@ function renderMcOperationalHealth(oh) {
   const mobileItems = [
     item("Mobile Sends Errored",        M.sendsErrored),
     item("Mobile Send Threshold",       M.sendThreshold, `/ ${M.sendThreshold?.threshold||200}`),
-    item("Zero Mobile Sends",           M.zeroSends),
+    item("Mobile Send Defs",            M.zeroSends),
   ].filter(Boolean);
   if (mobileItems.length) html += `<div class="pm-section"><div class="pm-section-title">Mobile</div><div class="pm-grid">${mobileItems.join("")}</div></div>`;
 
