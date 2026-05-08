@@ -1647,18 +1647,21 @@ const CHEVRON_SVG = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none"
 // Render a list of name items into chips inside a collapsible panel.
 // items: array of { name, meta? }  (meta is an optional secondary label e.g. api version, object)
 // chipClass: optional extra CSS class on each chip
+let _chipExpandIdx = 0;
 function nameChips(items, chipClass) {
   if (!items || !items.length) return "";
   const LIMIT = 25;
-  const shown = items.slice(0, LIMIT);
-  const chips = shown.map(it => {
+  const cls = chipClass ? " " + chipClass : "";
+  const renderChip = it => {
     const metaSpan = it.meta ? `<span class="chip-meta">${escHtml(it.meta)}</span>` : "";
-    return `<span class="name-chip${chipClass ? " "+chipClass : ""}">${escHtml(it.name)}${metaSpan}</span>`;
-  }).join("");
-  const more = items.length > LIMIT
-    ? `<span class="name-chip name-chip-more">+${items.length - LIMIT} more</span>`
-    : "";
-  return chips + more;
+    return `<span class="name-chip${cls}">${escHtml(it.name)}${metaSpan}</span>`;
+  };
+  const shown = items.slice(0, LIMIT).map(renderChip).join("");
+  if (items.length <= LIMIT) return shown;
+  const rest   = items.slice(LIMIT).map(renderChip).join("");
+  const uid    = `chip-expand-${_chipExpandIdx++}`;
+  return `${shown}<button class="name-chip name-chip-more" style="cursor:pointer;border:none"
+    onclick="(function(b){var p=document.getElementById('${uid}');var open=p.style.display==='inline';p.style.display=open?'none':'inline';b.textContent=open?'+${items.length - LIMIT} more':'Show less';})(this)">+${items.length - LIMIT} more</button><span id="${uid}" style="display:none">${rest}</span>`;
 }
 
 // Build a toggle button + hidden panel containing chips.
