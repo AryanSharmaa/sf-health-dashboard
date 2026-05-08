@@ -542,6 +542,89 @@ async function deleteCustomRule(id, userId) {
   await db.query(`DELETE FROM custom_rules WHERE id = ? AND user_id = ?`, [id, userId]);
 }
 
+// ─── Technical Debt Items ─────────────────────────────────────────────────────
+
+async function listDebtItems(orgId, { status, priority, category } = {}) {
+  const db = await getDb();
+  let sql = `SELECT * FROM debt_items WHERE org_id = ?`;
+  const params = [orgId];
+  if (status)   { sql += ` AND status = ?`;   params.push(status); }
+  if (priority) { sql += ` AND priority = ?`; params.push(priority); }
+  if (category) { sql += ` AND category = ?`; params.push(category); }
+  sql += ` ORDER BY CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END, created_at DESC`;
+  const { rows } = await db.query(sql, params);
+  return rows;
+}
+
+async function getDebtItem(id) {
+  const db = await getDb();
+  const { rows } = await db.query(`SELECT * FROM debt_items WHERE id = ?`, [id]);
+  return rows[0] || null;
+}
+
+async function createDebtItem({ id, orgId, auditId, category, actionText, priority, assignee, notes, sourceFindingKey }) {
+  const db  = await getDb();
+  const now = new Date().toISOString();
+  await db.query(
+    `INSERT INTO debt_items (id, org_id, audit_id, category, action_text, priority, status, assignee, notes, source_finding_key, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?)`,
+    [id, orgId, auditId || null, category, actionText, priority,
+     assignee || null, notes || null, sourceFindingKey || null, now, now]
+  );
+}
+
+async function updateDebtItem({ id, orgId, status, assignee, notes, jiraIssueKey, linearIssueId }) {
+  const db  = await getDb();
+  const now = new Date().toISOString();
+  const resolvedAt = status === "resolved" ? now : null;
+  await db.query(
+    `UPDATE debt_items
+     SET status = ?, assignee = ?, notes = ?, jira_issue_key = ?, linear_issue_id = ?,
+         resolved_at = COALESCE(?, resolved_at), updated_at = ?
+     WHERE id = ? AND org_id = ?`,
+    [status, assignee || null, notes || null, jiraIssueKey || null, linearIssueId || null,
+     resolvedAt, now, id, orgId]
+  );
+}
+
+async function deleteDebtItem(id, orgId) {
+  const db = await getDb();
+  await db.query(`DELETE FROM debt_items WHERE id = ? AND org_id = ?`, [id, orgId]);
+}
+
+async function getDebtBurndown(orgId, days = 90) {
+  const db   = await getDb();
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+  // Weekly buckets: count items created up to that week-end that are still open, and resolved
+  const { rows: created } = await db.query(
+    `SELECT strftime('%Y-W%W', created_at) AS week, COUNT(*) AS cnt
+     FROM debt_items WHERE org_id = ? AND created_at >= ?
+     GROUP BY week ORDER BY week`,
+    [orgId, since]
+  );
+  const { rows: resolved } = await db.query(
+    `SELECT strftime('%Y-W%W', resolved_at) AS week, COUNT(*) AS cnt
+     FROM debt_items WHERE org_id = ? AND resolved_at >= ? AND status = 'resolved'
+     GROUP BY week ORDER BY week`,
+    [orgId, since]
+  );
+  // Summary counts
+  const { rows: summary } = await db.query(
+    `SELECT status, priority, COUNT(*) AS cnt FROM debt_items WHERE org_id = ? GROUP BY status, priority`,
+    [orgId]
+  );
+  return { created, resolved, summary };
+}
+
+async function debtItemExistsByFindingKey(orgId, sourceFindingKey) {
+  const db = await getDb();
+  const { rows } = await db.query(
+    `SELECT id FROM debt_items WHERE org_id = ? AND source_finding_key = ? AND status != 'resolved' LIMIT 1`,
+    [orgId, sourceFindingKey]
+  );
+  return rows.length > 0;
+}
+
 module.exports = {
   // Orgs
   upsertOrg, listOrgs, getOrg,
@@ -568,4 +651,7 @@ module.exports = {
   getPortfolioData,
   // Custom rules
   listCustomRules, createCustomRule, updateCustomRule, deleteCustomRule,
+  // Technical Debt
+  listDebtItems, getDebtItem, createDebtItem, updateDebtItem, deleteDebtItem,
+  getDebtBurndown, debtItemExistsByFindingKey,
 };

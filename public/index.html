@@ -177,6 +177,9 @@
     .btn-ai:disabled{opacity:0.6;cursor:not-allowed}
     .btn-dismiss{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#6b7280;background:#f9fafb;border:1px solid #e2e8f0;border-radius:6px;padding:4px 9px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
     .btn-dismiss:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+    .btn-debt{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:4px 9px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+    .btn-debt:hover{background:#e0f2fe;border-color:#7dd3fc}
+    .btn-debt.tracked{color:#16a34a;background:#f0fdf4;border-color:#bbf7d0;cursor:default}
     .action-item.dismissed{opacity:0.45;transition:opacity 0.4s}
     .dismissed-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#6b7280;background:#f3f4f6;border:1px solid #e2e8f0;border-radius:99px;padding:2px 8px}
     .drilldown-toggle{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#0070d2;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:3px 9px;margin-top:7px;cursor:pointer;transition:background .15s}
@@ -215,6 +218,23 @@
     .dl-btn.pdf{background:#fdf2f8;color:#7e22ce;border-color:#e9d5ff}
     .dl-btn.share{background:#fff7ed;color:#c2410c;border-color:#fed7aa;cursor:pointer}
     .dl-btn.schedule{background:#f0f9ff;color:#0369a1;border-color:#bae6fd;cursor:pointer}
+
+    /* ── Debt Tracker ── */
+    .dt-stat-card{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:14px 20px;min-width:120px;text-align:center;color:white}
+    .dt-stat-card .dt-stat-num{font-size:28px;font-weight:900;line-height:1}
+    .dt-stat-card .dt-stat-label{font-size:11px;opacity:.6;margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+    .dt-item{background:white;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 18px;transition:box-shadow .15s}
+    .dt-item:hover{box-shadow:0 2px 12px rgba(0,0,0,.08)}
+    .dt-item.status-in_progress{border-left-color:#f59e0b;border-left-width:4px}
+    .dt-item.status-resolved{border-left-color:#22c55e;border-left-width:4px;opacity:.75}
+    .dt-item.status-open{border-left-color:#ef4444;border-left-width:4px}
+    .dt-status-select{padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;background:white}
+    .dt-btn{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid;transition:all .15s}
+    .dt-btn:hover{transform:translateY(-1px)}
+    .dt-btn-jira{background:#0052cc;color:white;border-color:#0052cc}
+    .dt-btn-linear{background:#5e6ad2;color:white;border-color:#5e6ad2}
+    .dt-btn-delete{background:white;color:#ef4444;border-color:#fecaca}
+    .dt-btn-edit{background:#f8fafc;color:#374151;border-color:#e2e8f0}
 
     /* ── History ── */
     .trend-empty{color:#a0aec0;font-size:14px;text-align:center;padding:40px 0}
@@ -430,6 +450,7 @@
     <button class="nav-link" id="btn-nav-audit">Audit</button>
     <button class="nav-link" id="btn-nav-history">History</button>
     <button class="nav-link" id="btn-nav-portfolio" style="display:none">Portfolio</button>
+    <button class="nav-link" id="btn-nav-debt" style="display:none">Debt Tracker</button>
     <button class="btn-logout" id="btn-logout">Disconnect SF</button>
 
     <!-- Profile icon (shown when app user is logged in) -->
@@ -848,6 +869,77 @@
 
   </div>
 
+  <!-- ══ PAGE: DEBT TRACKER ══ -->
+  <div class="page" id="page-debt">
+
+    <!-- Header + summary stats -->
+    <div class="card" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);color:white;border:none;padding:28px 32px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div>
+          <h2 style="color:white;font-size:22px;font-weight:900;margin-bottom:4px">Technical Debt Tracker</h2>
+          <p style="color:rgba(255,255,255,.6);font-size:13px;margin:0">Turn audit findings into a living backlog — track, assign, and burn down org debt over time.</p>
+        </div>
+        <button id="dt-btn-refresh" style="padding:9px 18px;background:rgba(255,255,255,.12);color:white;border:1px solid rgba(255,255,255,.25);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">⟳ Refresh</button>
+      </div>
+      <div id="dt-stat-row" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:22px">
+        <div class="dt-stat-card" id="dts-open"></div>
+        <div class="dt-stat-card" id="dts-inprog"></div>
+        <div class="dt-stat-card" id="dts-resolved"></div>
+        <div class="dt-stat-card" id="dts-critical"></div>
+      </div>
+    </div>
+
+    <!-- Burndown chart -->
+    <div class="card" id="dt-burndown-card" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <h2 style="font-size:16px;font-weight:800;margin:0">Debt Burndown</h2>
+        <div style="display:flex;gap:10px;align-items:center;font-size:12px">
+          <span style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#ef4444"/></svg> Items Added</span>
+          <span style="display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12"><circle cx="6" cy="6" r="5" fill="#22c55e"/></svg> Resolved</span>
+        </div>
+      </div>
+      <div id="dt-burndown-svg" style="overflow-x:auto"></div>
+    </div>
+
+    <!-- Filter bar + backlog -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+        <h2 style="font-size:16px;font-weight:800;margin:0">Backlog</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <select id="dt-filter-status" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:white;color:#374151">
+            <option value="">All Statuses</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="resolved">Resolved</option>
+          </select>
+          <select id="dt-filter-priority" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:white;color:#374151">
+            <option value="">All Priorities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <select id="dt-filter-category" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;background:white;color:#374151">
+            <option value="">All Categories</option>
+            <option value="security">Security</option>
+            <option value="codeQuality">Code Quality</option>
+            <option value="automation">Automation</option>
+            <option value="dataQuality">Data Quality</option>
+            <option value="apiUsage">API Usage</option>
+            <option value="userAdoption">User Adoption</option>
+            <option value="unusedFields">Unused Fields</option>
+            <option value="techDebt">Tech Debt</option>
+          </select>
+          <button id="dt-filter-apply" style="padding:6px 14px;background:#0f172a;color:white;border:none;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer">Filter</button>
+        </div>
+      </div>
+      <div id="dt-list" style="display:flex;flex-direction:column;gap:10px">
+        <p style="color:#94a3b8;font-size:13px;text-align:center;padding:24px 0">Run an audit and click "Add to Debt Tracker" on any finding to start your backlog.</p>
+      </div>
+    </div>
+
+  </div><!-- /page-debt -->
+
   <!-- ══ PAGE: MARKETING CLOUD ══ -->
   <div class="page" id="page-mc">
 
@@ -1264,6 +1356,45 @@
   </div>
 </div>
 
+<!-- ══ DEBT TRACKER — INTEGRATION MODAL ══ -->
+<div class="modal-backdrop" id="int-modal-backdrop" style="display:none" onclick="if(event.target===this)closeIntModal()">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title" id="int-modal-title">Push to Integration</div>
+      <button class="modal-close" onclick="closeIntModal()">✕</button>
+    </div>
+
+    <!-- Jira fields -->
+    <div id="int-modal-jira">
+      <p style="font-size:12px;color:#64748b;margin:0 0 14px">Enter your Atlassian Cloud credentials. Your token is sent directly to Jira and never stored.</p>
+      <label class="form-label">Jira Base URL</label>
+      <input class="form-input" id="jira-base-url" type="url" placeholder="https://yourorg.atlassian.net"/>
+      <label class="form-label" style="margin-top:10px">Email</label>
+      <input class="form-input" id="jira-email" type="email" placeholder="you@company.com"/>
+      <label class="form-label" style="margin-top:10px">API Token</label>
+      <input class="form-input" id="jira-token" type="password" placeholder="Atlassian API token"/>
+      <label class="form-label" style="margin-top:10px">Project Key</label>
+      <input class="form-input" id="jira-project-key" type="text" placeholder="e.g. SFDEV" style="text-transform:uppercase"/>
+      <p style="font-size:11px;color:#94a3b8;margin-top:8px">Get your API token at <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener" style="color:#0052cc">id.atlassian.com</a></p>
+    </div>
+
+    <!-- Linear fields -->
+    <div id="int-modal-linear" style="display:none">
+      <p style="font-size:12px;color:#64748b;margin:0 0 14px">Enter your Linear API key and the Team ID where the issue should be created. These are not stored.</p>
+      <label class="form-label">Linear API Key</label>
+      <input class="form-input" id="linear-api-key" type="password" placeholder="lin_api_..."/>
+      <label class="form-label" style="margin-top:10px">Team ID</label>
+      <input class="form-input" id="linear-team-id" type="text" placeholder="UUID from Linear team settings"/>
+      <p style="font-size:11px;color:#94a3b8;margin-top:8px">Find your Team ID in Linear → Settings → Team → General.</p>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end">
+      <button onclick="closeIntModal()" style="padding:9px 20px;background:white;color:#374151;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+      <button id="int-modal-submit" class="btn-submit" style="width:auto;margin-top:0;padding:9px 24px" onclick="document.getElementById('int-modal-jira').style.display!=='none'?submitJiraPush():submitLinearPush()">Push</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ PROFILE MODAL ══ -->
 <div class="modal-backdrop" id="profile-modal-backdrop">
   <div class="modal" style="max-width:420px">
@@ -1639,10 +1770,12 @@ function renderAppUserNav(user) {
     authLinks.style.display   = "none";
     navRight.style.display    = "flex";
     document.getElementById("btn-nav-portfolio").style.display = "inline-flex";
+    document.getElementById("btn-nav-debt").style.display      = "inline-flex";
   } else {
     profileWrap.style.display = "none";
     authLinks.style.display   = "flex";
     document.getElementById("btn-nav-portfolio").style.display = "none";
+    document.getElementById("btn-nav-debt").style.display      = "none";
   }
 }
 
@@ -1767,6 +1900,7 @@ async function pollJob(jobId) {
       setTimeout(() => { document.getElementById("status-box").style.display = "none"; }, 400);
       document.getElementById("run-btn").disabled = false;
       renderAuditResults(data, jobId);
+      setDebtJobId(jobId, window._liveSession?.orgId);
       return;
     }
     if (data.status === "error") {
@@ -2100,18 +2234,21 @@ function renderAuditResults(data, jobId) {
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
             <button class="btn-ai" id="ai-btn-${i}" data-index="${i}">✦ AI Fix Guide</button>
             <button class="btn-dismiss" id="dismiss-btn-${i}" data-index="${i}" data-key="${escHtml(key)}" data-action="${escHtml(a.action)}" data-cat="${escHtml(a.category)}">✓ Acknowledge</button>
+            <button class="btn-debt" id="debt-btn-${i}" data-key="${escHtml(key)}" data-action="${escHtml(a.action)}" data-cat="${escHtml(a.category)}" data-priority="${escHtml(a.priority)}" title="Add to Debt Tracker">⊕ Track</button>
           </div>
         </div>
         <div class="ai-guide" id="ai-guide-${i}"></div>
       </div>`;
     }).join("");
 
-    // Wire AI + Dismiss buttons
+    // Wire AI + Dismiss + Debt buttons
     top5RecommendedActions.forEach((a, i) => {
       const aiBtn  = document.getElementById("ai-btn-"+i);
       if (aiBtn) aiBtn.addEventListener("click", () => fetchAiGuide(jobId, a, i));
       const dimBtn = document.getElementById("dismiss-btn-"+i);
       if (dimBtn) dimBtn.addEventListener("click", () => openDismissModal(i, a));
+      const debtBtn = document.getElementById("debt-btn-"+i);
+      if (debtBtn) debtBtn.addEventListener("click", () => addToDebtTracker(debtBtn, jobId, a));
     });
   }
 
@@ -2999,6 +3136,7 @@ function renderRecurringIssues(issues) {
 document.getElementById("run-btn").addEventListener("click", startAudit);
 document.getElementById("btn-nav-audit").addEventListener("click", () => showPage("audit"));
 document.getElementById("btn-nav-history").addEventListener("click", () => { showPage("history"); loadOrgList(); });
+document.getElementById("btn-nav-debt").addEventListener("click", () => { showPage("debt"); loadDebtTracker(); });
 document.getElementById("btn-logout").addEventListener("click", logout);
 
 // ── Profile dropdown ──────────────────────────────────────────────────────────
@@ -4122,6 +4260,316 @@ function evalCustomRulesForAudit(report) {
   }).join("");
   card.style.display = "block";
 }
+
+// ─── Technical Debt Tracker ──────────────────────────────────────────────────
+
+let _debtOrgId  = null;
+let _debtJobId  = null;
+let _debtItems  = [];
+
+// Called after an audit completes — store jobId so "Track" button knows the source audit
+function setDebtJobId(jobId, orgId) {
+  _debtJobId = jobId;
+  _debtOrgId = orgId;
+}
+
+async function addToDebtTracker(btn, jobId, action) {
+  if (!window._liveSession) return;
+  const orgId = window._liveSession.orgId;
+  btn.disabled = true;
+  btn.textContent = "Adding…";
+  try {
+    const r = await fetch(`/api/orgs/${encodeURIComponent(orgId)}/debt`, {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        auditId:          jobId,
+        category:         action.category,
+        actionText:       action.action,
+        priority:         action.priority,
+        sourceFindingKey: btn.dataset.key,
+      }),
+    });
+    if (r.status === 409) {
+      btn.textContent = "✓ Already tracked";
+      btn.classList.add("tracked");
+      return;
+    }
+    if (!r.ok) { const d = await r.json(); throw new Error(d.error || "Failed"); }
+    btn.textContent = "✓ Tracked";
+    btn.classList.add("tracked");
+    btn.disabled = false;
+  } catch (err) {
+    btn.textContent = "⊕ Track";
+    btn.disabled = false;
+    alert("Could not add to tracker: " + err.message);
+  }
+}
+
+async function loadDebtTracker() {
+  if (!window._liveSession) return;
+  const orgId = window._liveSession.orgId;
+  _debtOrgId  = orgId;
+
+  const status   = document.getElementById("dt-filter-status").value;
+  const priority = document.getElementById("dt-filter-priority").value;
+  const category = document.getElementById("dt-filter-category").value;
+
+  const qs = new URLSearchParams();
+  if (status)   qs.set("status",   status);
+  if (priority) qs.set("priority", priority);
+  if (category) qs.set("category", category);
+
+  const [itemsRes, burndownRes] = await Promise.all([
+    fetch(`/api/orgs/${encodeURIComponent(orgId)}/debt?${qs}`, { credentials: "include" }),
+    fetch(`/api/orgs/${encodeURIComponent(orgId)}/debt/burndown`, { credentials: "include" }),
+  ]);
+
+  if (!itemsRes.ok) return;
+  const { items } = await itemsRes.json();
+  _debtItems = items;
+
+  renderDebtStats(items);
+  renderDebtList(items, orgId);
+
+  if (burndownRes.ok) {
+    const bd = await burndownRes.json();
+    renderBurndown(bd);
+  }
+}
+
+function renderDebtStats(items) {
+  const open    = items.filter(i => i.status === "open").length;
+  const inprog  = items.filter(i => i.status === "in_progress").length;
+  const resolved = items.filter(i => i.status === "resolved").length;
+  const critical = items.filter(i => i.priority === "critical" && i.status !== "resolved").length;
+
+  document.getElementById("dts-open").innerHTML    = `<div class="dt-stat-num">${open}</div><div class="dt-stat-label">Open</div>`;
+  document.getElementById("dts-inprog").innerHTML  = `<div class="dt-stat-num" style="color:#fbbf24">${inprog}</div><div class="dt-stat-label">In Progress</div>`;
+  document.getElementById("dts-resolved").innerHTML= `<div class="dt-stat-num" style="color:#4ade80">${resolved}</div><div class="dt-stat-label">Resolved</div>`;
+  document.getElementById("dts-critical").innerHTML= `<div class="dt-stat-num" style="color:#f87171">${critical}</div><div class="dt-stat-label">Critical Open</div>`;
+}
+
+const DT_STATUS_LABELS = { open: "Open", in_progress: "In Progress", resolved: "Resolved" };
+const DT_STATUS_COLORS = { open: "#ef4444", in_progress: "#f59e0b", resolved: "#22c55e" };
+const DT_PRI_COLORS    = { critical: "#dc2626", high: "#ea580c", medium: "#ca8a04", low: "#16a34a" };
+
+function renderDebtList(items, orgId) {
+  const el = document.getElementById("dt-list");
+  if (!items.length) {
+    el.innerHTML = `<p style="color:#94a3b8;font-size:13px;text-align:center;padding:24px 0">No items match the current filters.</p>`;
+    return;
+  }
+  el.innerHTML = items.map(item => {
+    const statusColor = DT_STATUS_COLORS[item.status] || "#64748b";
+    const priColor    = DT_PRI_COLORS[item.priority]  || "#64748b";
+    const jiraLink    = item.jira_issue_key
+      ? `<a href="#" onclick="return false" style="font-size:11px;color:#0052cc;font-weight:600;background:#eff6ff;padding:2px 7px;border-radius:4px;text-decoration:none;border:1px solid #bfdbfe">${escHtml(item.jira_issue_key)}</a>` : "";
+    const linearLink  = item.linear_issue_id
+      ? `<span style="font-size:11px;color:#5e6ad2;font-weight:600;background:#eef2ff;padding:2px 7px;border-radius:4px;border:1px solid #c7d2fe">Linear</span>` : "";
+    const resolvedTag = item.status === "resolved" && item.resolved_at
+      ? `<span style="font-size:11px;color:#16a34a"> · Resolved ${dtFmtDate(item.resolved_at)}</span>` : "";
+    return `<div class="dt-item status-${item.status}" data-id="${escHtml(item.id)}">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px">
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;background:${priColor}1a;color:${priColor};border:1px solid ${priColor}44">${item.priority}</span>
+            <span style="font-size:11px;font-weight:600;color:#6b7280;background:#f1f5f9;padding:2px 8px;border-radius:4px">${escHtml(item.category)}</span>
+            ${jiraLink}${linearLink}${resolvedTag}
+          </div>
+          <div style="font-size:13px;color:#0f172a;line-height:1.5;margin-bottom:8px">${escHtml(item.action_text)}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <label style="font-size:12px;color:#64748b">Status:</label>
+            <select class="dt-status-select" data-id="${escHtml(item.id)}" onchange="patchDebtStatus(this)">
+              ${["open","in_progress","resolved"].map(s => `<option value="${s}" ${item.status===s?"selected":""}>${DT_STATUS_LABELS[s]}</option>`).join("")}
+            </select>
+            <label style="font-size:12px;color:#64748b;margin-left:6px">Assignee:</label>
+            <input type="text" class="dt-assignee-input" data-id="${escHtml(item.id)}"
+              value="${escHtml(item.assignee||"")}" placeholder="email or name"
+              style="font-size:12px;padding:3px 8px;border:1px solid #e2e8f0;border-radius:6px;width:160px"
+              onblur="patchDebtAssignee(this)"/>
+          </div>
+          ${item.notes ? `<div style="margin-top:8px;font-size:12px;color:#64748b;background:#f8fafc;border-radius:6px;padding:7px 10px">${escHtml(item.notes)}</div>` : ""}
+          <div style="font-size:11px;color:#94a3b8;margin-top:6px">Added ${dtFmtDate(item.created_at)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <button class="dt-btn dt-btn-jira" onclick="openJiraModal('${escHtml(item.id)}')">Jira</button>
+          <button class="dt-btn dt-btn-linear" onclick="openLinearModal('${escHtml(item.id)}')">Linear</button>
+          <button class="dt-btn dt-btn-delete" onclick="deleteDebtItem('${escHtml(item.id)}', '${escHtml(orgId)}')">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function dtFmtDate(iso) {
+  if (!iso) return "—";
+  try { return new Date(iso).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }); }
+  catch { return iso; }
+}
+
+async function patchDebtStatus(sel) {
+  const id    = sel.dataset.id;
+  const orgId = _debtOrgId;
+  if (!orgId) return;
+  await fetch(`/api/orgs/${encodeURIComponent(orgId)}/debt/${encodeURIComponent(id)}`, {
+    method: "PATCH", credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: sel.value }),
+  });
+  loadDebtTracker();
+}
+
+async function patchDebtAssignee(inp) {
+  const id    = inp.dataset.id;
+  const orgId = _debtOrgId;
+  if (!orgId) return;
+  await fetch(`/api/orgs/${encodeURIComponent(orgId)}/debt/${encodeURIComponent(id)}`, {
+    method: "PATCH", credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assignee: inp.value.trim() || null }),
+  });
+}
+
+async function deleteDebtItem(id, orgId) {
+  if (!confirm("Delete this debt item?")) return;
+  await fetch(`/api/orgs/${encodeURIComponent(orgId)}/debt/${encodeURIComponent(id)}`, {
+    method: "DELETE", credentials: "include",
+  });
+  loadDebtTracker();
+}
+
+// ── Burndown chart (inline SVG) ───────────────────────────────────────────────
+
+function renderBurndown(bd) {
+  const card = document.getElementById("dt-burndown-card");
+  if (!bd.created?.length && !bd.resolved?.length) { card.style.display = "none"; return; }
+  card.style.display = "block";
+
+  // Merge all weeks
+  const allWeeks = [...new Set([
+    ...(bd.created  || []).map(r => r.week),
+    ...(bd.resolved || []).map(r => r.week),
+  ])].sort();
+
+  if (allWeeks.length < 2) { card.style.display = "none"; return; }
+
+  const createdMap  = Object.fromEntries((bd.created  || []).map(r => [r.week, +r.cnt]));
+  const resolvedMap = Object.fromEntries((bd.resolved || []).map(r => [r.week, +r.cnt]));
+
+  const W=700, H=160, PAD={t:12,r:16,b:36,l:36};
+  const maxVal = Math.max(1, ...allWeeks.map(w => Math.max(createdMap[w]||0, resolvedMap[w]||0)));
+  const xScale = i => PAD.l + (i / (allWeeks.length - 1)) * (W - PAD.l - PAD.r);
+  const yScale = v => H - PAD.b - (v / maxVal) * (H - PAD.t - PAD.b);
+
+  const polylinePoints = (map) =>
+    allWeeks.map((w, i) => `${xScale(i).toFixed(1)},${yScale(map[w]||0).toFixed(1)}`).join(" ");
+
+  const xLabels = allWeeks.map((w, i) => {
+    if (allWeeks.length <= 8 || i % Math.ceil(allWeeks.length / 8) === 0)
+      return `<text x="${xScale(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="9" fill="#94a3b8">${w.slice(5)}</text>`;
+    return "";
+  }).join("");
+
+  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => {
+    const v = Math.round(maxVal * f);
+    const y = yScale(v).toFixed(1);
+    return `<line x1="${PAD.l}" y1="${y}" x2="${W-PAD.r}" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>
+            <text x="${PAD.l-4}" y="${y}" text-anchor="end" font-size="9" fill="#94a3b8" dominant-baseline="middle">${v}</text>`;
+  }).join("");
+
+  document.getElementById("dt-burndown-svg").innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:700px;height:${H}px">
+      ${gridLines}
+      <polyline points="${polylinePoints(createdMap)}"  fill="none" stroke="#ef4444" stroke-width="2" stroke-linejoin="round"/>
+      <polyline points="${polylinePoints(resolvedMap)}" fill="none" stroke="#22c55e" stroke-width="2" stroke-linejoin="round"/>
+      ${allWeeks.map((w, i) => `
+        <circle cx="${xScale(i).toFixed(1)}" cy="${yScale(createdMap[w]||0).toFixed(1)}"  r="3" fill="#ef4444"/>
+        <circle cx="${xScale(i).toFixed(1)}" cy="${yScale(resolvedMap[w]||0).toFixed(1)}" r="3" fill="#22c55e"/>
+      `).join("")}
+      ${xLabels}
+    </svg>`;
+}
+
+// ── Jira / Linear push modals ─────────────────────────────────────────────────
+
+let _intModalItemId = null;
+
+function openJiraModal(itemId) {
+  _intModalItemId = itemId;
+  document.getElementById("int-modal-title").textContent = "Push to Jira";
+  document.getElementById("int-modal-jira").style.display  = "block";
+  document.getElementById("int-modal-linear").style.display = "none";
+  document.getElementById("int-modal-backdrop").style.display = "flex";
+}
+function openLinearModal(itemId) {
+  _intModalItemId = itemId;
+  document.getElementById("int-modal-title").textContent = "Push to Linear";
+  document.getElementById("int-modal-jira").style.display  = "none";
+  document.getElementById("int-modal-linear").style.display = "block";
+  document.getElementById("int-modal-backdrop").style.display = "flex";
+}
+function closeIntModal() {
+  document.getElementById("int-modal-backdrop").style.display = "none";
+  _intModalItemId = null;
+}
+
+async function submitJiraPush() {
+  if (!_intModalItemId || !_debtOrgId) return;
+  const jiraBaseUrl = document.getElementById("jira-base-url").value.trim();
+  const jiraEmail   = document.getElementById("jira-email").value.trim();
+  const jiraToken   = document.getElementById("jira-token").value.trim();
+  const projectKey  = document.getElementById("jira-project-key").value.trim();
+  if (!jiraBaseUrl || !jiraEmail || !jiraToken || !projectKey) { alert("All Jira fields are required."); return; }
+
+  const btn = document.getElementById("int-modal-submit");
+  btn.disabled = true; btn.textContent = "Pushing…";
+  try {
+    const r = await fetch(`/api/orgs/${encodeURIComponent(_debtOrgId)}/debt/${encodeURIComponent(_intModalItemId)}/push-jira`, {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jiraBaseUrl, jiraEmail, jiraToken, projectKey }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Jira push failed");
+    closeIntModal();
+    loadDebtTracker();
+    alert(`✅ Jira issue created: ${d.issueKey}`);
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Push";
+  }
+}
+
+async function submitLinearPush() {
+  if (!_intModalItemId || !_debtOrgId) return;
+  const linearApiKey = document.getElementById("linear-api-key").value.trim();
+  const teamId       = document.getElementById("linear-team-id").value.trim();
+  if (!linearApiKey || !teamId) { alert("Linear API key and Team ID are required."); return; }
+
+  const btn = document.getElementById("int-modal-submit");
+  btn.disabled = true; btn.textContent = "Pushing…";
+  try {
+    const r = await fetch(`/api/orgs/${encodeURIComponent(_debtOrgId)}/debt/${encodeURIComponent(_intModalItemId)}/push-linear`, {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ linearApiKey, teamId }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Linear push failed");
+    closeIntModal();
+    loadDebtTracker();
+    alert(`✅ Linear issue created: ${d.identifier}`);
+  } catch (err) {
+    alert("Error: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "Push";
+  }
+}
+
+document.getElementById("dt-btn-refresh").addEventListener("click", loadDebtTracker);
+document.getElementById("dt-filter-apply").addEventListener("click", loadDebtTracker);
 
 // ─── Print CSS for portfolio ──────────────────────────────────────────────────
 (function() {

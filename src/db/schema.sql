@@ -183,7 +183,28 @@ CREATE TABLE IF NOT EXISTS custom_rules (
   updated_at TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- ─── Technical Debt Items ────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS debt_items (
+  id              TEXT     PRIMARY KEY,
+  org_id          TEXT     NOT NULL,
+  audit_id        TEXT,                          -- source audit (nullable — can be created manually)
+  category        TEXT     NOT NULL,
+  action_text     TEXT     NOT NULL,
+  priority        TEXT     NOT NULL DEFAULT 'medium', -- critical|high|medium|low
+  status          TEXT     NOT NULL DEFAULT 'open',   -- open|in_progress|resolved
+  assignee        TEXT,                          -- free-text email or name
+  notes           TEXT,
+  jira_issue_key  TEXT,                          -- e.g. SFDEV-123
+  linear_issue_id TEXT,                          -- Linear UUID
+  source_finding_key TEXT,                       -- findingKey hash for deduplication
+  created_at      TEXT     NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at      TEXT     NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  resolved_at     TEXT
+);
+
 -- ─── Indexes ──────────────────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_debt_org        ON debt_items(org_id, status);
+CREATE INDEX IF NOT EXISTS idx_debt_created    ON debt_items(org_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
 CREATE INDEX IF NOT EXISTS idx_cat_scores_org    ON category_scores(org_id, category, created_at);

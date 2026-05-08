@@ -1104,6 +1104,174 @@ app.get("/api/audit/:jobId/compliance/:type", readLimiter, async (req, res) => {
   }
 });
 
+// ─── Technical Debt Tracker ───────────────────────────────────────────────────
+
+// List items (scoped to the currently-connected SF org)
+app.get("/api/orgs/:orgId/debt", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+  try {
+    const { status, priority, category } = req.query;
+    const items = await repo.listDebtItems(req.params.orgId, { status, priority, category });
+    res.json({ items });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Burndown data
+app.get("/api/orgs/:orgId/debt/burndown", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+  try {
+    const days = Math.min(parseInt(req.query.days) || 90, 365);
+    res.json(await repo.getDebtBurndown(req.params.orgId, days));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Create item (from audit finding or manually)
+app.post("/api/orgs/:orgId/debt", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+  const { auditId, category, actionText, priority, assignee, notes, sourceFindingKey } = req.body || {};
+  if (!category || !actionText) return res.status(400).json({ error: "category and actionText are required." });
+  // Prevent duplicate open items for the same finding
+  if (sourceFindingKey) {
+    const exists = await repo.debtItemExistsByFindingKey(req.params.orgId, sourceFindingKey);
+    if (exists) return res.status(409).json({ error: "An open debt item already exists for this finding.", code: "DUPLICATE" });
+  }
+  try {
+    const id = uuidv4();
+    await repo.createDebtItem({ id, orgId: req.params.orgId, auditId, category, actionText,
+      priority: priority || "medium", assignee, notes, sourceFindingKey });
+    res.status(201).json({ id });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Update item (status, assignee, notes)
+app.patch("/api/orgs/:orgId/debt/:id", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+  const item = await repo.getDebtItem(req.params.id);
+  if (!item || item.org_id !== req.params.orgId) return res.status(404).json({ error: "Not found." });
+  const { status, assignee, notes, jiraIssueKey, linearIssueId } = req.body || {};
+  const VALID_STATUSES = ["open", "in_progress", "resolved"];
+  if (status && !VALID_STATUSES.includes(status)) return res.status(400).json({ error: "Invalid status." });
+  try {
+    await repo.updateDebtItem({
+      id: req.params.id, orgId: req.params.orgId,
+      status:        status        || item.status,
+      assignee:      assignee      !== undefined ? assignee      : item.assignee,
+      notes:         notes         !== undefined ? notes         : item.notes,
+      jiraIssueKey:  jiraIssueKey  !== undefined ? jiraIssueKey  : item.jira_issue_key,
+      linearIssueId: linearIssueId !== undefined ? linearIssueId : item.linear_issue_id,
+    });
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Delete item
+app.delete("/api/orgs/:orgId/debt/:id", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+  const item = await repo.getDebtItem(req.params.id);
+  if (!item || item.org_id !== req.params.orgId) return res.status(404).json({ error: "Not found." });
+  try {
+    await repo.deleteDebtItem(req.params.id, req.params.orgId);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Push to Jira
+app.post("/api/orgs/:orgId/debt/:id/push-jira", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+  const item = await repo.getDebtItem(req.params.id);
+  if (!item || item.org_id !== req.params.orgId) return res.status(404).json({ error: "Not found." });
+  const { jiraBaseUrl, jiraEmail, jiraToken, projectKey } = req.body || {};
+  if (!jiraBaseUrl || !jiraEmail || !jiraToken || !projectKey) {
+    return res.status(400).json({ error: "jiraBaseUrl, jiraEmail, jiraToken, and projectKey are required." });
+  }
+  const priorityMap = { critical: "Highest", high: "High", medium: "Medium", low: "Low" };
+  const issueTypeMap = { critical: "Bug", high: "Bug", medium: "Task", low: "Task" };
+  const payload = JSON.stringify({
+    fields: {
+      project:     { key: projectKey },
+      summary:     `[SFHealth] ${item.action_text.slice(0, 255)}`,
+      description: {
+        type: "doc", version: 1,
+        content: [{ type: "paragraph", content: [{ type: "text",
+          text: `Category: ${item.category}\nPriority: ${item.priority}\nOrg: ${item.org_id}\n\n${item.notes || "Imported from SFHealth Technical Debt Tracker."}` }] }],
+      },
+      issuetype: { name: issueTypeMap[item.priority] || "Task" },
+      priority:  { name: priorityMap[item.priority]  || "Medium" },
+    },
+  });
+  const https = require("https");
+  const urlParsed = new URL(`${jiraBaseUrl.replace(/\/$/, "")}/rest/api/3/issue`);
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const opts = {
+        hostname: urlParsed.hostname,
+        path:     urlParsed.pathname,
+        method:   "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Basic ${Buffer.from(`${jiraEmail}:${jiraToken}`).toString("base64")}`,
+          "Content-Length": Buffer.byteLength(payload),
+        },
+      };
+      const r = https.request(opts, resp => {
+        let raw = ""; resp.on("data", c => raw += c);
+        resp.on("end", () => {
+          try { resolve({ status: resp.statusCode, body: JSON.parse(raw) }); }
+          catch { resolve({ status: resp.statusCode, body: raw.slice(0, 500) }); }
+        });
+      });
+      r.on("error", reject); r.write(payload); r.end();
+    });
+    if (result.status !== 201) return res.status(502).json({ error: "Jira returned an error.", detail: result.body });
+    const issueKey = result.body.key;
+    await repo.updateDebtItem({ id: item.id, orgId: item.org_id,
+      status: item.status, assignee: item.assignee, notes: item.notes,
+      jiraIssueKey: issueKey, linearIssueId: item.linear_issue_id });
+    res.json({ ok: true, issueKey, url: `${jiraBaseUrl}/browse/${issueKey}` });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Push to Linear
+app.post("/api/orgs/:orgId/debt/:id/push-linear", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+  const item = await repo.getDebtItem(req.params.id);
+  if (!item || item.org_id !== req.params.orgId) return res.status(404).json({ error: "Not found." });
+  const { linearApiKey, teamId } = req.body || {};
+  if (!linearApiKey || !teamId) return res.status(400).json({ error: "linearApiKey and teamId are required." });
+  const priorityMap = { critical: 1, high: 2, medium: 3, low: 4 };
+  const payload = JSON.stringify({
+    query: `mutation CreateIssue($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier url } } }`,
+    variables: {
+      input: {
+        title:       `[SFHealth] ${item.action_text.slice(0, 255)}`,
+        description: `**Category:** ${item.category}\n**Priority:** ${item.priority}\n**Org:** ${item.org_id}\n\n${item.notes || "Imported from SFHealth Technical Debt Tracker."}`,
+        teamId,
+        priority: priorityMap[item.priority] || 3,
+      },
+    },
+  });
+  const https = require("https");
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const opts = {
+        hostname: "api.linear.app", path: "/graphql", method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": linearApiKey,
+          "Content-Length": Buffer.byteLength(payload),
+        },
+      };
+      const r = https.request(opts, resp => {
+        let raw = ""; resp.on("data", c => raw += c);
+        resp.on("end", () => {
+          try { resolve({ status: resp.statusCode, body: JSON.parse(raw) }); }
+          catch { resolve({ status: resp.statusCode, body: raw.slice(0, 500) }); }
+        });
+      });
+      r.on("error", reject); r.write(payload); r.end();
+    });
+    const issue = result.body?.data?.issueCreate?.issue;
+    if (!issue) return res.status(502).json({ error: "Linear returned an error.", detail: result.body });
+    await repo.updateDebtItem({ id: item.id, orgId: item.org_id,
+      status: item.status, assignee: item.assignee, notes: item.notes,
+      jiraIssueKey: item.jira_issue_key, linearIssueId: issue.id });
+    res.json({ ok: true, issueId: issue.id, identifier: issue.identifier, url: issue.url });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ─── Custom rules ─────────────────────────────────────────────────────────────
 
 app.get("/api/custom-rules", readLimiter, requireAppAuth, async (req, res) => {
