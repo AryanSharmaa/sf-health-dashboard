@@ -150,9 +150,10 @@ async function collectJourneyBuilder(subdomain, token) {
     j.entryMode === undefined || j.entryMode === null
   );
 
-  // Error journey names for reporting
-  const erroredNames = errored.map(j => j.name || j.key).slice(0, 5);
-  const pausedNames  = paused.map(j => j.name || j.key).slice(0, 5);
+  const erroredNames  = errored.map(j => j.name || j.key).slice(0, 50);
+  const pausedNames   = paused.map(j => j.name || j.key).slice(0, 50);
+  const activeNames   = active.map(j => j.name || j.key).slice(0, 50);
+  const draftNames    = draft.map(j => j.name || j.key).slice(0, 50);
 
   return {
     total:   journeys.length,
@@ -166,6 +167,8 @@ async function collectJourneyBuilder(subdomain, token) {
     noReentryConfig:     noReentryConfig.length,
     erroredNames,
     pausedNames,
+    activeNames,
+    draftNames,
   };
 }
 
@@ -212,7 +215,11 @@ async function collectAutomationStudio(subdomain, token) {
     return avg > 7200;
   });
 
-  const erroredNames = errored.map(a => a.name || a.key).slice(0, 5);
+  const allNames     = automations.map(a => a.name || a.key).filter(Boolean).slice(0, 50);
+  const erroredNames = errored.map(a => a.name || a.key).slice(0, 50);
+  const runningNames = running.map(a => a.name || a.key).slice(0, 50);
+  const pausedNames  = paused.map(a => a.name || a.key).slice(0, 50);
+  const inactiveNames = inactive.map(a => a.name || a.key).slice(0, 50);
 
   return {
     total:    automations.length,
@@ -225,7 +232,11 @@ async function collectAutomationStudio(subdomain, token) {
     overdue:       overdueAutomations.length,
     noNotification: noNotification.length,
     longRunning:    longRunning.length,
+    allNames,
     erroredNames,
+    runningNames,
+    pausedNames,
+    inactiveNames,
   };
 }
 
@@ -247,6 +258,8 @@ async function collectDataExtensions(subdomain, token) {
     total:        des.length,
     sendable:     sendable.length,
     noRetention:  noRetention.length,
+    allNames:          des.map(d => d.name || d.customerKey).filter(Boolean).slice(0, 50),
+    noRetentionNames:  noRetention.map(d => d.name || d.customerKey).filter(Boolean).slice(0, 50),
   };
 }
 

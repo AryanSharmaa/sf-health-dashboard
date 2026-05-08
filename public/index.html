@@ -142,7 +142,7 @@
     .gauge-sub{font-size:11px;color:#a0aec0;margin-top:2px}
     .gauge-topn{font-size:11px;font-weight:700;color:#0070d2;margin-top:8px;background:#eff6ff;display:inline-block;padding:3px 10px;border-radius:99px;border:1px solid #bfdbfe}
     .score-right{display:flex;flex-direction:column;gap:14px;padding-top:4px}
-    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-items:start}
     .stat-box{background:#f8fafc;border-radius:10px;padding:12px 12px;border:1px solid #e8edf2}
     .stat-box .val{font-size:22px;font-weight:800;line-height:1}
     .stat-box .lbl{font-size:10px;color:#718096;margin-top:3px;font-weight:500}
@@ -3140,20 +3140,36 @@ function renderMcResults(data) {
     document.getElementById("mc-partial-badge").style.display   = "inline";
   }
 
-  // Stats
+  // Stats — clickable when count > 0
   const jb = data.report.metadata?.journeyBuilder || {};
   const as = data.report.metadata?.automationStudio || {};
   const de = data.report.metadata?.dataExtensions || {};
+
+  function mcStatBox(id, count, label, color, names) {
+    const hasNames = names && names.length > 0;
+    const chips = hasNames ? nameChips(names.map(n => ({ name: n }))) : "";
+    const panel = hasNames
+      ? `<div class="drilldown-panel" id="${id}-panel">${chips}</div>` : "";
+    const toggle = hasNames
+      ? ` style="cursor:pointer" onclick="toggleDrilldown('${id}-panel', document.getElementById('${id}-btn'))"` : "";
+    const btn = hasNames
+      ? `<button class="drilldown-toggle" id="${id}-btn" onclick="toggleDrilldown('${id}-panel',this)" style="margin-top:6px" aria-expanded="false">${CHEVRON_SVG}View names</button>` : "";
+    return `<div class="stat-box"${toggle}>
+      <div class="val" style="color:${color}">${count}</div>
+      <div class="lbl">${label}</div>
+      ${btn}
+      ${panel}
+    </div>`;
+  }
+
   document.getElementById("mc-stats-grid").innerHTML = [
-    [jb.active  || 0,  "Active Journeys",   "#0070d2"],
-    [jb.errored || 0,  "Journeys in Error",  jb.errored > 0 ? "#dc2626" : "#16a34a"],
-    [as.total   || 0,  "Automations",        "#0070d2"],
-    [as.errored || 0,  "Automation Errors",  as.errored > 0 ? "#dc2626" : "#16a34a"],
-    [de.total   || 0,  "Data Extensions",    "#718096"],
-    [de.noRetention || 0, "No Retention Policy", de.noRetention > 0 ? "#ca8a04" : "#16a34a"],
-  ].map(([v, l, c]) =>
-    `<div class="stat-box"><div class="val" style="color:${c}">${v}</div><div class="lbl">${l}</div></div>`
-  ).join("");
+    mcStatBox("mc-stat-jb-active",  jb.active  || 0, "Active Journeys",      "#0070d2", jb.activeNames),
+    mcStatBox("mc-stat-jb-errored", jb.errored || 0, "Journeys in Error",    jb.errored > 0 ? "#dc2626" : "#16a34a", jb.erroredNames),
+    mcStatBox("mc-stat-as-total",   as.total   || 0, "Automations",          "#0070d2", as.allNames),
+    mcStatBox("mc-stat-as-errored", as.errored || 0, "Automation Errors",    as.errored > 0 ? "#dc2626" : "#16a34a", as.erroredNames),
+    mcStatBox("mc-stat-de-total",   de.total   || 0, "Data Extensions",      "#718096", de.allNames),
+    mcStatBox("mc-stat-de-noret",   de.noRetention || 0, "No Retention Policy", de.noRetention > 0 ? "#ca8a04" : "#16a34a", de.noRetentionNames),
+  ].join("");
 
   // Category bars
   document.getElementById("mc-categories").innerHTML = Object.entries(categories).map(([k, v]) =>
