@@ -1390,11 +1390,19 @@ function switchOrg() {
   if (banner) banner.remove();
   // Revoke the SF session server-side
   fetch("/auth/logout", { method: "POST", credentials: "include" });
-  // Show the connect cards again and hide the saved-orgs list
+  // Show the hero heading and hide saved-orgs list
   const hero = document.getElementById("connect-hero-section");
   if (hero) hero.style.display = "";
   const prevSection = document.getElementById("prev-orgs-section");
   if (prevSection) prevSection.style.display = "none";
+  // Add switch=1 to force Salesforce login prompt (prevent silent SSO re-auth)
+  const prodCard    = document.querySelector('a[href*="/auth/salesforce?env=production"]');
+  const sandboxCard = document.querySelector('a[href*="/auth/salesforce?env=sandbox"]');
+  if (prodCard)    prodCard.href    = "/auth/salesforce?env=production&switch=1";
+  if (sandboxCard) sandboxCard.href = "/auth/salesforce?env=sandbox&switch=1";
+  // Scroll connect options into view
+  const opts = document.querySelector(".connect-options");
+  if (opts) opts.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function proceedToAudit() {

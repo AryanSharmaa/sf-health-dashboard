@@ -34,7 +34,8 @@ router.get("/salesforce", (req, res) => {
     ? "https://test.salesforce.com"
     : "https://login.salesforce.com";
   const redirectUri   = getRedirectUri(req);
-  const authUrl       = getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge });
+  const forceLogin    = req.query.switch === "1";
+  const authUrl       = getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge, forceLogin });
 
   const cookieOpts = { httpOnly: true, maxAge: 10 * 60 * 1000, sameSite: "lax", secure: process.env.NODE_ENV === "production" };
   res.cookie("sf_env",   loginUrl,     cookieOpts);

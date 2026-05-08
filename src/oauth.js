@@ -58,7 +58,7 @@ function validateState(state, storedState) {
 
 // ─── OAuth URL builder (with PKCE) ───────────────────────────────────────────
 
-function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge }) {
+function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChallenge, forceLogin }) {
   const base   = loginUrl || "https://login.salesforce.com";
   const params = new URLSearchParams({
     response_type:         "code",
@@ -69,6 +69,7 @@ function getAuthorizationUrl({ loginUrl, clientId, redirectUri, state, codeChall
     code_challenge:        codeChallenge,
     code_challenge_method: "S256",
   });
+  if (forceLogin) params.set("prompt", "login");
   return `${base}/services/oauth2/authorize?${params.toString()}`;
 }
 
