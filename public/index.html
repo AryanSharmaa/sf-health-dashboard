@@ -805,8 +805,17 @@
 
     <!-- Compare chart -->
     <div class="card" id="pf-compare-card" style="display:none">
-      <h2>Side-by-Side Comparison</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px;border-bottom:1px solid #f3f4f6;padding-bottom:14px">
+        <h2 style="margin:0;border:none;padding:0">Multi-Org Comparison</h2>
+        <div style="display:flex;gap:8px">
+          <button id="btn-compare-detailed" style="padding:7px 16px;background:linear-gradient(135deg,#0a1628,#0070d2);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Detailed View</button>
+          <button onclick="document.getElementById('pf-compare-card').style.display='none'" style="padding:7px 14px;background:#f1f5f9;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer">Close</button>
+        </div>
+      </div>
+      <!-- Overview bars (always shown) -->
       <div id="pf-compare-chart"></div>
+      <!-- Detailed view (toggled) -->
+      <div id="pf-compare-detailed" style="display:none;margin-top:28px;border-top:2px solid #f1f5f9;padding-top:20px"></div>
     </div>
 
     <!-- Custom Rules -->
@@ -3661,44 +3670,203 @@ document.getElementById("btn-compare-selected").addEventListener("click", () => 
   document.getElementById("pf-compare-card").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
-function renderCompareChart(orgs) {
-  const cats   = ["automation","security","dataQuality","apiUsage","codeQuality","userAdoption"];
-  const labels = { automation:"Automation", security:"Security", dataQuality:"Data Quality", apiUsage:"API & Limits", codeQuality:"Code Quality", userAdoption:"User Adoption" };
-  const colors = ["#0070d2","#7c3aed","#059669","#dc2626","#ea580c","#0891b2"];
+const PF_COLORS = ["#0070d2","#7c3aed","#059669","#dc2626","#ea580c","#0891b2","#be185d","#0f766e"];
 
-  // We only have overall scores in portfolio data — render those as single bars per org
-  const BAR_H   = 36;
-  const GAP     = 10;
+function renderCompareChart(orgs) {
+  const BAR_H   = 38;
+  const GAP     = 12;
   const LABEL_W = 160;
   const BAR_MAX = 380;
-  const ROW_H   = orgs.length * (BAR_H + GAP);
   const TOTAL_H = orgs.length * (BAR_H + GAP);
+  const SVG_W   = LABEL_W + BAR_MAX + 80;
+  const SVG_H   = TOTAL_H + 20;
 
   const bars = orgs.map((o, i) => {
-    const sc    = o.latestScore || 0;
-    const w     = (sc / 100) * BAR_MAX;
-    const y     = i * (BAR_H + GAP);
-    const col   = colors[i % colors.length];
-    const scoreX = LABEL_W + w + 8;
+    const sc  = o.latestScore || 0;
+    const w   = (sc / 100) * BAR_MAX;
+    const y   = i * (BAR_H + GAP);
+    const col = PF_COLORS[i % PF_COLORS.length];
+    const scoreCol = scoreColor(sc);
     return `
-      <text x="${LABEL_W - 8}" y="${y + BAR_H/2 + 5}" text-anchor="end" font-size="12" font-weight="600" fill="#374151">${o.name.length > 18 ? o.name.slice(0,18)+"…" : o.name}</text>
-      <rect x="${LABEL_W}" y="${y}" width="${w.toFixed(1)}" height="${BAR_H}" rx="5" fill="${col}" opacity="0.85"/>
-      <text x="${scoreX.toFixed(1)}" y="${y + BAR_H/2 + 5}" font-size="13" font-weight="800" fill="${col}">${sc} <tspan font-weight="600" opacity=".7">${o.grade}</tspan></text>`;
+      <text x="${LABEL_W - 10}" y="${y + BAR_H/2 + 5}" text-anchor="end" font-size="12" font-weight="600" fill="#374151">${o.name.length > 20 ? o.name.slice(0,20)+"…" : o.name}</text>
+      <rect x="${LABEL_W}" y="${y}" width="${BAR_MAX}" height="${BAR_H}" rx="6" fill="#f1f5f9"/>
+      <rect x="${LABEL_W}" y="${y}" width="${w.toFixed(1)}" height="${BAR_H}" rx="6" fill="${col}" opacity="0.85"/>
+      <text x="${(LABEL_W + w + 10).toFixed(1)}" y="${y + BAR_H/2 + 5}" font-size="14" font-weight="800" fill="${scoreCol}">${sc}</text>
+      <text x="${(LABEL_W + w + 36).toFixed(1)}" y="${y + BAR_H/2 + 5}" font-size="11" font-weight="700" fill="${scoreCol}" opacity="0.7">${o.grade}</text>`;
   }).join("");
 
-  const SVG_W = LABEL_W + BAR_MAX + 80;
-  const SVG_H = TOTAL_H + 16;
-
   document.getElementById("pf-compare-chart").innerHTML =
-    `<svg viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${SVG_W}px">
-      ${[20,40,60,80,100].map(v => {
-        const x = LABEL_W + (v/100)*BAR_MAX;
-        return `<line x1="${x}" y1="0" x2="${x}" y2="${SVG_H}" stroke="#e5e7eb" stroke-width="1"/>
-                <text x="${x}" y="${SVG_H}" text-anchor="middle" font-size="10" fill="#94a3b8">${v}</text>`;
-      }).join("")}
-      ${bars}
-    </svg>
-    <p style="font-size:12px;color:#94a3b8;margin-top:8px;text-align:center">Overall health scores — select orgs from the table above</p>`;
+    `<div style="margin-bottom:16px">
+       <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+         ${orgs.map((o,i) => `<div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#374151">
+           <div style="width:10px;height:10px;border-radius:50%;background:${PF_COLORS[i%PF_COLORS.length]};flex-shrink:0"></div>${escHtml(o.name)}</div>`).join("")}
+       </div>
+       <svg viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${SVG_W}px">
+         ${[20,40,60,80,100].map(v => {
+           const x = LABEL_W + (v/100)*BAR_MAX;
+           return `<line x1="${x}" y1="0" x2="${x}" y2="${TOTAL_H}" stroke="#e5e7eb" stroke-width="1" stroke-dasharray="4 3"/>
+                   <text x="${x}" y="${SVG_H}" text-anchor="middle" font-size="10" fill="#94a3b8">${v}</text>`;
+         }).join("")}
+         ${bars}
+       </svg>
+       <p style="font-size:12px;color:#94a3b8;margin-top:6px;text-align:center">Overall health scores</p>
+     </div>`;
+
+  // Reset detailed view
+  document.getElementById("pf-compare-detailed").style.display = "none";
+  document.getElementById("pf-compare-detailed").innerHTML = "";
+  document.getElementById("btn-compare-detailed").textContent = "Detailed View";
+  document.getElementById("btn-compare-detailed").onclick = () => loadDetailedCompare(orgs.map(o => o.id));
+}
+
+let _detailLoading = false;
+
+async function loadDetailedCompare(orgIds) {
+  if (_detailLoading) return;
+  const detEl = document.getElementById("pf-compare-detailed");
+  const btn   = document.getElementById("btn-compare-detailed");
+
+  if (detEl.style.display !== "none") {
+    detEl.style.display = "none";
+    btn.textContent = "Detailed View";
+    return;
+  }
+
+  _detailLoading = true;
+  btn.textContent = "Loading…";
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch(`/api/portfolio/compare?orgs=${orgIds.join(",")}`, { credentials: "include" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+    renderDetailedCompare(data.orgs);
+    detEl.style.display = "block";
+    btn.textContent = "Hide Details";
+    detEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) {
+    btn.textContent = "Detailed View";
+    detEl.innerHTML = `<p style="color:#dc2626;font-size:13px">Failed to load details: ${escHtml(e.message)}</p>`;
+    detEl.style.display = "block";
+  } finally {
+    _detailLoading = false;
+    btn.disabled = false;
+  }
+}
+
+function renderDetailedCompare(orgs) {
+  const CAT_KEYS   = ["automation","security","dataQuality","apiUsage","codeQuality","userAdoption"];
+  const CAT_LABELS = { automation:"Automation", security:"Security", dataQuality:"Data Quality", apiUsage:"API & Limits", codeQuality:"Code Quality", userAdoption:"User Adoption" };
+  const detEl = document.getElementById("pf-compare-detailed");
+
+  // ── Score summary cards ──────────────────────────────────────────────────────
+  const summaryCards = orgs.map((o, i) => {
+    if (o.overallScore === null) return `
+      <div style="flex:1;min-width:160px;border-radius:12px;padding:18px;background:#f8fafc;border:2px solid #e2e8f0;text-align:center">
+        <div style="width:10px;height:10px;border-radius:50%;background:${PF_COLORS[i%PF_COLORS.length]};margin:0 auto 10px"></div>
+        <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px">${escHtml(o.orgName)}</div>
+        <div style="font-size:12px;color:#94a3b8">No audit data</div>
+      </div>`;
+    const col = scoreColor(o.overallScore);
+    const gc  = gradeColor(o.grade);
+    const badge = o.isSandbox ? '<span style="font-size:10px;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:700;margin-left:6px">SB</span>' : "";
+    return `
+      <div style="flex:1;min-width:160px;border-radius:12px;padding:18px 20px;background:white;border:2.5px solid ${PF_COLORS[i%PF_COLORS.length]}22;text-align:center">
+        <div style="width:10px;height:10px;border-radius:50%;background:${PF_COLORS[i%PF_COLORS.length]};margin:0 auto 10px"></div>
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:2px;line-height:1.3">${escHtml(o.orgName)}${badge}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:12px">${o.auditDate ? fmtDate(o.auditDate) : ""}</div>
+        <div style="font-size:42px;font-weight:900;line-height:1;color:${col}">${o.overallScore}</div>
+        <div style="font-size:20px;font-weight:800;color:${gc};margin-top:4px">Grade ${o.grade}</div>
+      </div>`;
+  }).join("");
+
+  // ── Per-category comparison ─────────────────────────────────────────────────
+  const catRows = CAT_KEYS.map(key => {
+    const scores = orgs.map(o => o.categories?.[key]?.score ?? null);
+    const valid  = scores.filter(s => s !== null);
+    if (!valid.length) return "";
+
+    const best  = Math.max(...valid);
+    const worst = Math.min(...valid);
+
+    // Bar row per org
+    const orgBars = orgs.map((o, i) => {
+      const sc = o.categories?.[key]?.score ?? null;
+      if (sc === null) return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div style="flex:1;height:22px;background:#f1f5f9;border-radius:4px"></div>
+        <span style="font-size:12px;color:#94a3b8;width:28px;text-align:right">—</span></div>`;
+      const col     = PF_COLORS[i % PF_COLORS.length];
+      const barPct  = sc;
+      const isBest  = sc === best && valid.length > 1;
+      const isWorst = sc === worst && valid.length > 1 && best !== worst;
+      const badge   = isBest
+        ? `<span style="font-size:10px;background:#dcfce7;color:#16a34a;border-radius:4px;padding:1px 5px;font-weight:700">Best</span>`
+        : isWorst
+          ? `<span style="font-size:10px;background:#fef2f2;color:#dc2626;border-radius:4px;padding:1px 5px;font-weight:700">Lowest</span>`
+          : "";
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0"></div>
+        <div style="flex:1;height:22px;background:#f1f5f9;border-radius:4px;overflow:hidden">
+          <div style="width:${barPct}%;height:100%;background:${col};opacity:0.8;border-radius:4px;transition:width 0.4s"></div>
+        </div>
+        <span style="font-size:13px;font-weight:800;color:${scoreColor(sc)};width:28px;text-align:right">${sc}</span>
+        ${badge}
+      </div>`;
+    }).join("");
+
+    // Delta between best and worst
+    const spread = best - worst;
+    const spreadBadge = spread > 0
+      ? `<span style="font-size:11px;color:#6b7280;margin-left:8px">Spread: <strong style="color:${spread > 20 ? '#dc2626' : '#ca8a04'}">${spread} pts</strong></span>`
+      : "";
+
+    return `<div style="background:#fafafa;border-radius:10px;padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;display:flex;align-items:center">${CAT_LABELS[key]}${spreadBadge}</div>
+      ${orgBars}
+    </div>`;
+  }).join("");
+
+  // ── Issues summary table ────────────────────────────────────────────────────
+  const issueHeader = orgs.map((o,i) => `<th style="padding:8px 12px;font-size:12px;font-weight:700;color:${PF_COLORS[i%PF_COLORS.length]};text-align:right;white-space:nowrap">${escHtml(o.orgName.length > 16 ? o.orgName.slice(0,16)+"…" : o.orgName)}</th>`).join("");
+  const issueRows = CAT_KEYS.map(key => {
+    const cells = orgs.map((o,i) => {
+      const issues = o.categories?.[key]?.issueCount ?? null;
+      if (issues === null) return `<td style="padding:8px 12px;text-align:right;font-size:13px;color:#94a3b8">—</td>`;
+      const col = issues > 3 ? "#dc2626" : issues > 0 ? "#ca8a04" : "#16a34a";
+      return `<td style="padding:8px 12px;text-align:right;font-size:13px;font-weight:${issues>0?'700':'400'};color:${col}">${issues}</td>`;
+    }).join("");
+    return `<tr style="border-bottom:1px solid #f3f4f6">
+      <td style="padding:8px 12px;font-size:13px;font-weight:600;color:#374151">${CAT_LABELS[key]}</td>
+      ${cells}
+    </tr>`;
+  }).join("");
+
+  detEl.innerHTML = `
+    <!-- Score cards -->
+    <div style="margin-bottom:24px">
+      <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">Overall Scores</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">${summaryCards}</div>
+    </div>
+
+    <!-- Category bars -->
+    <div style="margin-bottom:24px">
+      <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">Category Breakdown</div>
+      ${catRows || '<p style="color:#94a3b8;font-size:13px">No category data available.</p>'}
+    </div>
+
+    <!-- Issues count table -->
+    <div>
+      <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px">Issue Count by Category</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:380px">
+          <thead><tr style="border-bottom:2px solid #f3f4f6">
+            <th style="padding:8px 12px;font-size:11px;font-weight:600;color:#6b7280;text-align:left;text-transform:uppercase;letter-spacing:.05em">Category</th>
+            ${issueHeader}
+          </tr></thead>
+          <tbody>${issueRows}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 // ─── Custom rules ─────────────────────────────────────────────────────────────

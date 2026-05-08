@@ -1012,6 +1012,45 @@ app.get("/api/portfolio", readLimiter, optionalAppAuth, async (_req, res) => {
   }
 });
 
+// Returns latest category scores + overall score for a list of org IDs
+app.get("/api/portfolio/compare", readLimiter, optionalAppAuth, async (req, res) => {
+  const ids = (req.query.orgs || "").split(",").map(s => s.trim()).filter(Boolean).slice(0, 10);
+  if (ids.length < 2) return res.status(400).json({ error: "Provide at least 2 org IDs via ?orgs=id1,id2" });
+  try {
+    const db = await require("./db/db").getDb();
+    const results = await Promise.all(ids.map(async orgId => {
+      // Latest complete audit for this org
+      const { rows: audits } = await db.query(
+        `SELECT id, overall_score, grade, created_at FROM audits WHERE org_id = ? AND status = 'complete' ORDER BY created_at DESC LIMIT 1`,
+        [orgId]
+      );
+      if (!audits[0]) return { orgId, auditId: null, overallScore: null, grade: null, categories: {} };
+      const auditId = audits[0].id;
+      const { rows: cats } = await db.query(
+        `SELECT category, score, weight, issue_count FROM category_scores WHERE audit_id = ?`,
+        [auditId]
+      );
+      const categories = {};
+      for (const c of cats) categories[c.category] = { score: c.score, weight: c.weight, issueCount: c.issue_count };
+      // Org name
+      const { rows: orgRows } = await db.query(`SELECT name, is_sandbox FROM orgs WHERE id = ?`, [orgId]);
+      return {
+        orgId,
+        orgName:      orgRows[0]?.name || orgId,
+        isSandbox:    !!(orgRows[0]?.is_sandbox),
+        auditId,
+        auditDate:    audits[0].created_at,
+        overallScore: audits[0].overall_score,
+        grade:        audits[0].grade,
+        categories,
+      };
+    }));
+    res.json({ orgs: results });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Consulting PDF report ────────────────────────────────────────────────────
 
 app.get("/api/audit/:jobId/report-pdf", readLimiter, async (req, res) => {
