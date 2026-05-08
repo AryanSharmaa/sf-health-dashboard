@@ -2965,8 +2965,19 @@ async function mcQuickConnect(org) {
     document.getElementById("mc-modal-backdrop").classList.remove("open");
     showMcPage(data.subdomain, org.org_name || data.subdomain, data.mid, data.eid);
   } catch (err) {
-    errEl.textContent = err.message; errEl.style.display = "block";
-    btn.innerHTML = orig; btn.disabled = false;
+    btn.innerHTML = orig;
+    btn.disabled  = false;
+    // Credentials missing or expired — switch to the form so user can re-enter them
+    // Pre-fill whatever we know so they don't have to start from scratch
+    document.getElementById("mc-subdomain").value    = org.subdomain || "";
+    document.getElementById("mc-client-id").value    = "";
+    document.getElementById("mc-client-secret").value = "";
+    document.getElementById("mc-mid").value          = org.mid || "";
+    document.getElementById("mc-eid").value          = org.eid || "";
+    showMcModalView("form");
+    const formErr = document.getElementById("mc-connect-error");
+    formErr.textContent = "Could not reconnect automatically — please re-enter your credentials.";
+    formErr.style.display = "block";
   }
 }
 
