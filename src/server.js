@@ -15,7 +15,7 @@ const crypto  = require("crypto");
 
 const { collectOrgMetadataFromToken, collectOrgMetadata } = require("./sfCollector");
 const { scoreOrgHealth }           = require("../sfHealthScore");
-const { generateHTML, generateJSON } = require("./reportGenerator");
+const { generateHTML, generateJSON, generateConsultingHTML } = require("./reportGenerator");
 const repo       = require("./db/auditRepository");
 const authRoutes = require("./authRoutes");
 const userRoutes = require("./userRoutes");
@@ -999,6 +999,80 @@ app.get("/api/mc/audit/:jobId", readLimiter, (req, res) => {
     return res.json({ jobId: req.params.jobId, status: job.status, error: job.error || null });
   }
   res.json({ jobId: req.params.jobId, ...job });
+});
+
+// ─── Portfolio ────────────────────────────────────────────────────────────────
+
+app.get("/api/portfolio", readLimiter, optionalAppAuth, async (_req, res) => {
+  try {
+    const data = await repo.getPortfolioData();
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Consulting PDF report ────────────────────────────────────────────────────
+
+app.get("/api/audit/:jobId/report-pdf", readLimiter, async (req, res) => {
+  const brandName = process.env.BRAND_NAME || "SF HEALTH";
+  const job = runningJobs.get(req.params.jobId);
+  if (job?.status === "complete" && job.report) {
+    const html = generateConsultingHTML(job.report, job.report.metadata || {}, brandName);
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.send(html);
+  }
+  const dbAudit = await repo.getAudit(req.params.jobId).catch(() => null);
+  if (!dbAudit || !dbAudit.rawScore) return res.status(404).json({ error: "Report not found." });
+  const html = generateConsultingHTML(dbAudit.rawScore, dbAudit.rawMetadata || {}, brandName);
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(html);
+});
+
+// ─── Custom rules ─────────────────────────────────────────────────────────────
+
+app.get("/api/custom-rules", readLimiter, requireAppAuth, async (req, res) => {
+  try {
+    const rules = await repo.listCustomRules(req.appUser.id);
+    res.json({ rules });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/custom-rules", readLimiter, requireAppAuth, async (req, res) => {
+  const { name, ruleText } = req.body || {};
+  if (!name || !ruleText) return res.status(400).json({ error: "name and ruleText are required." });
+  try {
+    const id = uuidv4();
+    await repo.createCustomRule({ id, userId: req.appUser.id, name, ruleText });
+    res.status(201).json({ id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put("/api/custom-rules/:id", readLimiter, requireAppAuth, async (req, res) => {
+  const { name, ruleText, enabled } = req.body || {};
+  if (!name || !ruleText) return res.status(400).json({ error: "name and ruleText are required." });
+  try {
+    await repo.updateCustomRule({
+      id: req.params.id, userId: req.appUser.id,
+      name, ruleText, enabled: enabled !== false,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/custom-rules/:id", readLimiter, requireAppAuth, async (req, res) => {
+  try {
+    await repo.deleteCustomRule(req.params.id, req.appUser.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── Admin page ───────────────────────────────────────────────────────────────

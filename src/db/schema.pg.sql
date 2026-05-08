@@ -150,6 +150,16 @@ CREATE TABLE IF NOT EXISTS dismissed_findings (
   dismissed_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS custom_rules (
+  id         TEXT        PRIMARY KEY,
+  user_id    TEXT        NOT NULL,
+  name       TEXT        NOT NULL,
+  rule_text  TEXT        NOT NULL,
+  enabled    BOOLEAN     NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);
 CREATE INDEX IF NOT EXISTS idx_cat_scores_org    ON category_scores(org_id, category, created_at);

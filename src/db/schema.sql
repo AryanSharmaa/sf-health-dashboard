@@ -172,6 +172,17 @@ CREATE TABLE IF NOT EXISTS dismissed_findings (
   dismissed_at  TEXT     NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- ─── Custom Rules ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS custom_rules (
+  id         TEXT        PRIMARY KEY,
+  user_id    TEXT        NOT NULL,
+  name       TEXT        NOT NULL,
+  rule_text  TEXT        NOT NULL,
+  enabled    INTEGER     NOT NULL DEFAULT 1,
+  created_at TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT        NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
 -- ─── Indexes ──────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_audits_org_id     ON audits(org_id);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON audits(created_at);

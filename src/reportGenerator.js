@@ -283,4 +283,172 @@ function generateJSON(healthScore, metadata = {}) {
   };
 }
 
-module.exports = { generateHTML, generateJSON };
+function generateConsultingHTML(healthScore, metadata = {}, brandName = "SF HEALTH") {
+  const { overallScore, grade, categories, top5RecommendedActions, orgName, generatedAt } = healthScore;
+  const arc    = gaugeArc(overallScore);
+  const color  = scoreColor(overallScore);
+  const gColor = gradeColor(grade);
+  const critCount = top5RecommendedActions.filter(a => a.priority === "critical").length;
+  const highCount = top5RecommendedActions.filter(a => a.priority === "high").length;
+  const auditDate = generatedAt ? new Date(generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+  const execSentences = [
+    `Your Salesforce org scored <strong>${overallScore} out of 100</strong>, earning a grade of <strong style="color:${gColor}">${grade}</strong>.`,
+    critCount > 0
+      ? `There ${critCount === 1 ? "is" : "are"} <strong>${critCount} critical issue${critCount !== 1 ? "s" : ""}</strong> that require immediate attention to prevent business risk.`
+      : "No critical issues were detected.",
+    highCount > 0
+      ? `Additionally, ${highCount} high-priority item${highCount !== 1 ? "s" : ""} ${highCount === 1 ? "was" : "were"} identified that should be addressed in the near term.`
+      : "",
+    overallScore >= 80
+      ? "Overall this org is in good health, but continued monitoring is recommended."
+      : overallScore >= 60
+        ? "This org requires attention in several areas to reach a healthy baseline."
+        : "Significant remediation work is needed to bring this org to an acceptable health level.",
+  ].filter(Boolean).join(" ");
+
+  const catRows = Object.entries(categories).map(([k, v]) => {
+    const label = { automation:"Automation", security:"Security", dataQuality:"Data Quality", apiUsage:"API & Limits", codeQuality:"Code Quality", userAdoption:"User Adoption" }[k] || k;
+    const c = scoreColor(v.score);
+    return `<tr>
+      <td style="padding:9px 12px;font-weight:500;color:#374151">${label}</td>
+      <td style="padding:9px 12px">
+        <div style="background:#e5e7eb;border-radius:99px;height:9px;width:160px">
+          <div style="background:${c};width:${v.score}%;height:9px;border-radius:99px"></div>
+        </div>
+      </td>
+      <td style="padding:9px 12px;font-weight:700;color:${c};text-align:right">${v.score}</td>
+      <td style="padding:9px 12px;color:#6b7280;text-align:right">${v.issueCount} issue${v.issueCount !== 1 ? "s" : ""}</td>
+    </tr>`;
+  }).join("");
+
+  const actionRows = top5RecommendedActions.map((a, i) => {
+    const c = priorityColor(a.priority);
+    return `<tr style="border-bottom:1px solid #f3f4f6">
+      <td style="padding:10px 12px;color:#6b7280;font-size:13px">${i+1}</td>
+      <td style="padding:10px 12px">
+        <span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;background:${c}22;color:${c}">${a.priority}</span>
+      </td>
+      <td style="padding:10px 12px;color:#374151;font-size:14px">${a.action}</td>
+      <td style="padding:10px 12px;color:#9ca3af;font-size:12px;text-transform:capitalize">${a.category}</td>
+    </tr>`;
+  }).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>${brandName} — Salesforce Health Report — ${orgName}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9fafb;color:#111827}
+    .header{background:linear-gradient(135deg,#1e3a5f 0%,#0070d2 100%);color:white;padding:28px 48px;display:flex;align-items:center;justify-content:space-between}
+    .header-brand{font-size:22px;font-weight:900;letter-spacing:-0.5px}
+    .header-brand span{opacity:.6;font-size:13px;display:block;font-weight:500;letter-spacing:0;margin-top:2px}
+    .header-meta{text-align:right;font-size:13px;opacity:.85}
+    .header-meta strong{display:block;font-size:16px;font-weight:700;margin-bottom:2px}
+    .container{max-width:960px;margin:28px auto;padding:0 24px}
+    .card{background:white;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:26px;margin-bottom:22px}
+    .card h2{font-size:16px;font-weight:700;color:#111827;margin-bottom:18px;border-bottom:1px solid #f3f4f6;padding-bottom:10px}
+    .exec-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:20px 24px;font-size:14px;line-height:1.7;color:#1e3a5f}
+    .gauge-wrap{text-align:center}
+    .gauge-score{font-size:46px;font-weight:800;color:${color};margin-top:-68px;display:block}
+    .gauge-grade{font-size:20px;font-weight:700;color:${gColor}}
+    .gauge-sub{font-size:12px;color:#6b7280;margin-top:3px}
+    .summary-grid{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center}
+    .stat-mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+    .stat-mini{background:#f9fafb;border-radius:8px;padding:12px 14px}
+    .stat-mini .v{font-size:22px;font-weight:700;color:#111827}
+    .stat-mini .l{font-size:12px;color:#6b7280;margin-top:2px}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;padding:7px 12px;border-bottom:2px solid #f3f4f6}
+    tr:hover td{background:#f9fafb}
+    .footer{text-align:center;color:#9ca3af;font-size:12px;padding:28px 0 44px;border-top:1px solid #e5e7eb;margin-top:8px}
+    @media print{
+      body{background:white}
+      .header{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .exec-box{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .card{box-shadow:none;border:1px solid #e5e7eb}
+      .no-print{display:none!important}
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="background:#1e3a5f;color:white;text-align:center;padding:10px 20px;font-size:13px;font-weight:600">
+    Press <kbd style="background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px">Ctrl+P</kbd> / <kbd style="background:rgba(255,255,255,.2);border-radius:4px;padding:1px 6px">Cmd+P</kbd> to save as PDF
+  </div>
+
+  <div class="header">
+    <div class="header-brand">
+      ${brandName}
+      <span>Salesforce Org Health Report</span>
+    </div>
+    <div class="header-meta">
+      <strong>${orgName}</strong>
+      Prepared ${auditDate}
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Executive Summary -->
+    <div class="card">
+      <h2>Executive Summary</h2>
+      <div class="exec-box">${execSentences}</div>
+    </div>
+
+    <!-- Overall Score -->
+    <div class="card">
+      <h2>Overall Health Score</h2>
+      <div class="summary-grid">
+        <div class="gauge-wrap">
+          <svg width="140" height="100" viewBox="0 0 140 80">
+            <path d="M 14 74 A 56 56 0 0 1 126 74" fill="none" stroke="#e5e7eb" stroke-width="12" stroke-linecap="round"/>
+            <path d="M 14 74 A 56 56 0 0 1 126 74" fill="none" stroke="${color}" stroke-width="12"
+              stroke-linecap="round"
+              stroke-dasharray="${arc.dash} ${arc.gap}"
+              stroke-dashoffset="0"
+              pathLength="${arc.circ}"/>
+          </svg>
+          <span class="gauge-score">${overallScore}</span>
+          <span class="gauge-grade">${grade}</span>
+          <div class="gauge-sub">out of 100</div>
+        </div>
+        <div class="stat-mini-grid">
+          <div class="stat-mini"><div class="v" style="color:${critCount>0?"#dc2626":"#16a34a"}">${critCount}</div><div class="l">Critical Issues</div></div>
+          <div class="stat-mini"><div class="v" style="color:${highCount>0?"#ea580c":"#16a34a"}">${highCount}</div><div class="l">High Issues</div></div>
+          <div class="stat-mini"><div class="v">${top5RecommendedActions.length}</div><div class="l">Total Actions</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    <div class="card">
+      <h2>Category Breakdown</h2>
+      <table>
+        <thead><tr><th>Category</th><th>Score Bar</th><th style="text-align:right">Score</th><th style="text-align:right">Issues</th></tr></thead>
+        <tbody>${catRows}</tbody>
+      </table>
+    </div>
+
+    <!-- Top Actions -->
+    ${top5RecommendedActions.length > 0 ? `
+    <div class="card">
+      <h2>Top Recommended Actions</h2>
+      <table>
+        <thead><tr><th>#</th><th>Priority</th><th>Action</th><th>Category</th></tr></thead>
+        <tbody>${actionRows}</tbody>
+      </table>
+    </div>` : ""}
+
+  </div>
+
+  <div class="footer">
+    Prepared by <strong>${brandName}</strong> &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; ${auditDate}
+  </div>
+</body>
+</html>`;
+}
+
+module.exports = { generateHTML, generateJSON, generateConsultingHTML };

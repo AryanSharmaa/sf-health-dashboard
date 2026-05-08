@@ -452,6 +452,96 @@ async function deleteSchedule(id) {
   await db.query(`DELETE FROM scheduled_audits WHERE id = ?`, [id]);
 }
 
+// ─── Portfolio data ───────────────────────────────────────────────────────────
+
+async function getPortfolioData() {
+  const db   = await getDb();
+  const orgs = await listOrgs();
+
+  if (!orgs.length) {
+    return { fleetScore: null, totalOrgs: 0, worstOrg: null, attentionOrgs: [], orgs: [] };
+  }
+
+  function calcGrade(s) {
+    if (s === null || s === undefined) return "?";
+    if (s >= 90) return "A";
+    if (s >= 80) return "B";
+    if (s >= 70) return "C";
+    if (s >= 60) return "D";
+    return "F";
+  }
+
+  // For each org grab the two most recent complete audits (latest + previous score for trend)
+  const enriched = await Promise.all(orgs.map(async org => {
+    const { rows } = await db.query(
+      `SELECT overall_score, created_at FROM audits
+       WHERE org_id = ? AND status = 'complete'
+       ORDER BY created_at DESC LIMIT 2`,
+      [org.id]
+    );
+    const latest   = rows[0]?.overall_score ?? null;
+    const previous = rows[1]?.overall_score ?? null;
+    return {
+      id:           org.id,
+      name:         org.name,
+      latestScore:  latest,
+      previousScore: previous,
+      grade:        calcGrade(latest),
+      lastAuditAt:  org.last_audit_at || null,
+      isSandbox:    !!org.is_sandbox,
+    };
+  }));
+
+  const scored = enriched.filter(o => o.latestScore !== null);
+  const fleetScore = scored.length
+    ? Math.round(scored.reduce((s, o) => s + o.latestScore, 0) / scored.length)
+    : null;
+
+  const worstOrg = scored.length
+    ? scored.reduce((w, o) => (o.latestScore < w.latestScore ? o : w))
+    : null;
+
+  const attentionOrgs = enriched.filter(o => o.grade === "D" || o.grade === "F");
+
+  return { fleetScore, totalOrgs: enriched.length, worstOrg, attentionOrgs, orgs: enriched };
+}
+
+// ─── Custom rules ─────────────────────────────────────────────────────────────
+
+async function listCustomRules(userId) {
+  const db = await getDb();
+  const { rows } = await db.query(
+    `SELECT * FROM custom_rules WHERE user_id = ? ORDER BY created_at ASC`,
+    [userId]
+  );
+  return rows;
+}
+
+async function createCustomRule({ id, userId, name, ruleText }) {
+  const db  = await getDb();
+  const now = new Date().toISOString();
+  await db.query(
+    `INSERT INTO custom_rules (id, user_id, name, rule_text, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, userId, name, ruleText, now, now]
+  );
+}
+
+async function updateCustomRule({ id, userId, name, ruleText, enabled }) {
+  const db  = await getDb();
+  const now = new Date().toISOString();
+  await db.query(
+    `UPDATE custom_rules SET name = ?, rule_text = ?, enabled = ?, updated_at = ?
+     WHERE id = ? AND user_id = ?`,
+    [name, ruleText, enabled ? 1 : 0, now, id, userId]
+  );
+}
+
+async function deleteCustomRule(id, userId) {
+  const db = await getDb();
+  await db.query(`DELETE FROM custom_rules WHERE id = ? AND user_id = ?`, [id, userId]);
+}
+
 module.exports = {
   // Orgs
   upsertOrg, listOrgs, getOrg,
@@ -474,4 +564,8 @@ module.exports = {
   // Scheduled audits
   createSchedule, getSchedule, listSchedulesForOrg, listAllEnabledSchedules,
   updateScheduleLastRun, updateScheduleEnabled, deleteSchedule,
+  // Portfolio
+  getPortfolioData,
+  // Custom rules
+  listCustomRules, createCustomRule, updateCustomRule, deleteCustomRule,
 };
