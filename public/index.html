@@ -2544,10 +2544,10 @@ function confirmMcDismiss(index, action) {
 // ─── MC Debt Tracker — Track button ──────────────────────────────────────────
 
 async function addMcToDebtTracker(btn, action) {
-  // MC findings are tracked against the connected SF org (if any)
-  const orgId = window._liveSession?.orgId;
+  // MC findings use the MC session's org ID — no SF session required
+  const orgId = window._liveSession?.orgId || (window._mcSubdomain ? `mc:${window._mcSubdomain}` : null);
   if (!orgId) {
-    alert("Connect a Salesforce org first to use the Debt Tracker.\n\nThe Debt Tracker is scoped to a Salesforce org session.");
+    alert("No active session found. Please reconnect to Marketing Cloud.");
     return;
   }
   btn.disabled = true;
@@ -3417,6 +3417,7 @@ async function checkMcSession() {
 }
 
 function wireMcNavButton(subdomain, orgName, mid, eid) {
+  window._mcSubdomain = subdomain;
   if (!document.getElementById("btn-nav-mc")) {
     const btn = document.createElement("button");
     btn.className = "nav-link"; btn.id = "btn-nav-mc"; btn.textContent = "MC Audit";
@@ -3434,6 +3435,8 @@ function wireMcNavButton(subdomain, orgName, mid, eid) {
   if (mid) subParts.push("MID: " + mid);
   if (eid) subParts.push("EID: " + eid);
   document.getElementById("mc-banner-sub").textContent = subParts.join(" · ");
+  // Debt Tracker is available for MC sessions too
+  document.getElementById("btn-nav-debt").style.display = "inline-flex";
 }
 
 function showMcPage(subdomain, orgName, mid, eid) {
@@ -3449,9 +3452,12 @@ function showMcPage(subdomain, orgName, mid, eid) {
 
 document.getElementById("mc-disconnect-btn").addEventListener("click", async () => {
   await fetch("/api/mc/disconnect", { method: "POST", credentials: "include" });
+  window._mcSubdomain = null;
   const mcBtn = document.getElementById("btn-nav-mc");
   if (mcBtn) mcBtn.remove();
   document.getElementById("mc-results").style.display = "none";
+  // Hide debt tracker nav if no SF session either
+  if (!window._liveSession) document.getElementById("btn-nav-debt").style.display = "none";
   showPage("connect");
 });
 
@@ -4387,8 +4393,8 @@ async function addToDebtTracker(btn, jobId, action) {
 }
 
 async function loadDebtTracker() {
-  if (!window._liveSession) return;
-  const orgId = window._liveSession.orgId;
+  const orgId = window._liveSession?.orgId || (window._mcSubdomain ? `mc:${window._mcSubdomain}` : null);
+  if (!orgId) return;
   _debtOrgId  = orgId;
 
   const status   = document.getElementById("dt-filter-status").value;

@@ -154,6 +154,30 @@ function requireSession(req, res, next) {
   next();
 }
 
+// Debt endpoints accept either an SF session or an MC session.
+// MC items are stored with orgId = "mc:<subdomain>" so they never collide with SF org IDs.
+function requireDebtSession(req, res, next) {
+  const sfSession = getSession(req.cookies?.sf_session);
+  if (sfSession) {
+    req.sfSession  = sfSession;
+    req.debtOrgId  = sfSession.orgId;
+    return next();
+  }
+  const mcSession = getMcSession(req.cookies?.mc_session);
+  if (mcSession) {
+    req.debtOrgId = `mc:${mcSession.subdomain}`;
+    return next();
+  }
+  res.status(401).json({ error: "Not connected. Please connect a Salesforce or Marketing Cloud org first.", code: "SESSION_REQUIRED" });
+}
+
+function guardDebtOrgAccess(req, res, next) {
+  if (req.debtOrgId !== req.params.orgId) {
+    return res.status(403).json({ error: "Access denied — org ID does not match your session." });
+  }
+  next();
+}
+
 // In-memory job store for in-flight audits
 const runningJobs = new Map();
 
@@ -1107,7 +1131,7 @@ app.get("/api/audit/:jobId/compliance/:type", readLimiter, async (req, res) => {
 // ─── Technical Debt Tracker ───────────────────────────────────────────────────
 
 // List items (scoped to the currently-connected SF org)
-app.get("/api/orgs/:orgId/debt", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+app.get("/api/orgs/:orgId/debt", readLimiter, requireDebtSession, guardDebtOrgAccess, async (req, res) => {
   try {
     const { status, priority, category } = req.query;
     const items = await repo.listDebtItems(req.params.orgId, { status, priority, category });
@@ -1116,7 +1140,7 @@ app.get("/api/orgs/:orgId/debt", readLimiter, requireSession, guardOrgAccess, as
 });
 
 // Burndown data
-app.get("/api/orgs/:orgId/debt/burndown", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+app.get("/api/orgs/:orgId/debt/burndown", readLimiter, requireDebtSession, guardDebtOrgAccess, async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
     res.json(await repo.getDebtBurndown(req.params.orgId, days));
@@ -1124,7 +1148,7 @@ app.get("/api/orgs/:orgId/debt/burndown", readLimiter, requireSession, guardOrgA
 });
 
 // Create item (from audit finding or manually)
-app.post("/api/orgs/:orgId/debt", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+app.post("/api/orgs/:orgId/debt", readLimiter, requireDebtSession, guardDebtOrgAccess, async (req, res) => {
   const { auditId, category, actionText, priority, assignee, notes, sourceFindingKey } = req.body || {};
   if (!category || !actionText) return res.status(400).json({ error: "category and actionText are required." });
   // Prevent duplicate open items for the same finding
@@ -1141,7 +1165,7 @@ app.post("/api/orgs/:orgId/debt", readLimiter, requireSession, guardOrgAccess, a
 });
 
 // Update item (status, assignee, notes)
-app.patch("/api/orgs/:orgId/debt/:id", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+app.patch("/api/orgs/:orgId/debt/:id", readLimiter, requireDebtSession, guardDebtOrgAccess, async (req, res) => {
   const item = await repo.getDebtItem(req.params.id);
   if (!item || item.org_id !== req.params.orgId) return res.status(404).json({ error: "Not found." });
   const { status, assignee, notes, jiraIssueKey, linearIssueId } = req.body || {};
@@ -1161,7 +1185,7 @@ app.patch("/api/orgs/:orgId/debt/:id", readLimiter, requireSession, guardOrgAcce
 });
 
 // Delete item
-app.delete("/api/orgs/:orgId/debt/:id", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+app.delete("/api/orgs/:orgId/debt/:id", readLimiter, requireDebtSession, guardDebtOrgAccess, async (req, res) => {
   const item = await repo.getDebtItem(req.params.id);
   if (!item || item.org_id !== req.params.orgId) return res.status(404).json({ error: "Not found." });
   try {
@@ -1171,7 +1195,7 @@ app.delete("/api/orgs/:orgId/debt/:id", readLimiter, requireSession, guardOrgAcc
 });
 
 // Push to Jira
-app.post("/api/orgs/:orgId/debt/:id/push-jira", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+app.post("/api/orgs/:orgId/debt/:id/push-jira", readLimiter, requireDebtSession, guardDebtOrgAccess, async (req, res) => {
   const item = await repo.getDebtItem(req.params.id);
   if (!item || item.org_id !== req.params.orgId) return res.status(404).json({ error: "Not found." });
   const { jiraBaseUrl, jiraEmail, jiraToken, projectKey } = req.body || {};
@@ -1226,7 +1250,7 @@ app.post("/api/orgs/:orgId/debt/:id/push-jira", readLimiter, requireSession, gua
 });
 
 // Push to Linear
-app.post("/api/orgs/:orgId/debt/:id/push-linear", readLimiter, requireSession, guardOrgAccess, async (req, res) => {
+app.post("/api/orgs/:orgId/debt/:id/push-linear", readLimiter, requireDebtSession, guardDebtOrgAccess, async (req, res) => {
   const item = await repo.getDebtItem(req.params.id);
   if (!item || item.org_id !== req.params.orgId) return res.status(404).json({ error: "Not found." });
   const { linearApiKey, teamId } = req.body || {};
