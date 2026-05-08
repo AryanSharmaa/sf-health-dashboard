@@ -11,7 +11,7 @@ const COOKIE_OPTS = (prod) => ({
   httpOnly: true,
   secure:   prod,
   sameSite: "lax",
-  maxAge:   8 * 60 * 60 * 1000,
+  // No maxAge/expires — session cookie, cleared when the browser is closed
 });
 
 const isProd = () => process.env.NODE_ENV === "production";

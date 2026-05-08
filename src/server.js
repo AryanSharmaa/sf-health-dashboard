@@ -916,7 +916,7 @@ app.post("/api/mc/connect", auditLimiter, optionalAppAuth, async (req, res) => {
       httpOnly: true,
       secure:   process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge:   8 * 60 * 60 * 1000,
+      // No maxAge — session cookie, cleared on browser close
     });
     res.json({ connected: true, subdomain: resolvedSubdomain, mid: resolvedMid, eid: resolvedEid });
   } catch (err) {
