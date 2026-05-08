@@ -159,6 +159,8 @@
       <a class="sb-link" data-section="history" onclick="nav(this)"><span class="sb-icon">📈</span>History & Trends</a>
       <a class="sb-link" data-section="portfolio" onclick="nav(this)"><span class="sb-icon">🗃️</span>Portfolio View</a>
       <a class="sb-link" data-section="custom-rules" onclick="nav(this)"><span class="sb-icon">📝</span>Custom Rules</a>
+      <a class="sb-link" data-section="debt-tracker" onclick="nav(this)"><span class="sb-icon">🗂️</span>Debt Tracker</a>
+      <a class="sb-link" data-section="compliance" onclick="nav(this)"><span class="sb-icon">🛡️</span>Compliance Reports</a>
       <a class="sb-link" data-section="reports" onclick="nav(this)"><span class="sb-icon">📄</span>Reports & Exports</a>
       <a class="sb-link" data-section="sharing" onclick="nav(this)"><span class="sb-icon">🔗</span>Sharing Reports</a>
       <a class="sb-link" data-section="schedules" onclick="nav(this)"><span class="sb-icon">🕐</span>Scheduled Audits</a>
@@ -585,11 +587,172 @@ if criticalIssues &gt; 0 then flag as CRITICAL</code></pre>
       </div>
     </article>
 
+    <!-- ══ DEBT TRACKER ══ -->
+    <article class="doc-section" id="sec-debt-tracker">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Features</div>
+      <h1>Technical Debt Tracker</h1>
+      <p class="subtitle">Turn one-time audit findings into a living backlog — track, assign, and burn down org debt over time.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">🔑</span>
+        <div class="callout-body"><strong>Requires a connected Salesforce org</strong>The Debt Tracker is scoped to a Salesforce org session. MC findings can also be tracked — they are stored against the currently connected SF org.</div>
+      </div>
+
+      <h2>The problem it solves</h2>
+      <p>Every audit produces a list of findings. Without a tracker, that list is looked at once and forgotten. The same problems reappear in the next audit, and the one after that. The Debt Tracker turns each finding into a persistent work item with an owner, a status, and a history — so debt actually gets resolved instead of re-discovered.</p>
+
+      <h2>Adding items to the backlog</h2>
+      <p>After any audit completes, every recommended action has a <strong>⊕ Track</strong> button. Click it and the finding is instantly added to your backlog. The button turns <strong>✓ Tracked</strong> (green) immediately. If an open item already exists for that exact finding, you get "Already tracked" — no duplicates are ever created.</p>
+      <p>This works for both <strong>Salesforce audit findings</strong> and <strong>Marketing Cloud audit findings</strong>.</p>
+
+      <h2>The backlog</h2>
+      <p>Navigate to <strong>Debt Tracker</strong> in the top navigation. The page shows:</p>
+      <ul>
+        <li><strong>Stat row</strong> — Open, In Progress, Resolved, and Critical Open counts at a glance</li>
+        <li><strong>Burndown chart</strong> — Weekly line chart: red = items added, green = items resolved. When green meets red, you're burning faster than you accumulate</li>
+        <li><strong>Backlog list</strong> — All items sorted Critical → High → Medium → Low</li>
+      </ul>
+
+      <h2>Managing items</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Change status inline</h4>
+            <p>Each item has a <strong>Status</strong> dropdown — click it and select Open, In Progress, or Resolved. Saves immediately. Resolved items show the resolution date.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Assign to a team member</h4>
+            <p>Click the <strong>Assignee</strong> field, type a name or email, and click away. Saves on blur — no submit button needed.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>Filter the backlog</h4>
+            <p>Use the filter bar to narrow by Status, Priority, or Category. Hit <strong>Filter</strong> to apply. Combine filters freely.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>Delete an item</h4>
+            <p>Click <strong>Delete</strong> on any item and confirm. Use this for false positives or items you've decided not to track.</p>
+          </div>
+        </div>
+      </div>
+
+      <h2>Jira integration</h2>
+      <p>Push any debt item directly to Jira as a new issue. Click the <strong>Jira</strong> button on an item and enter:</p>
+      <ul>
+        <li><strong>Jira Base URL</strong> — e.g. <code>https://yourcompany.atlassian.net</code></li>
+        <li><strong>Email</strong> — your Atlassian account email</li>
+        <li><strong>API Token</strong> — from <code>id.atlassian.com → Security → API Tokens</code></li>
+        <li><strong>Project Key</strong> — e.g. <code>SFDEV</code></li>
+      </ul>
+      <p>SFHealth creates the Jira issue with the finding text, category, priority, and org ID pre-populated. The resulting issue key (e.g. <code>SFDEV-42</code>) appears as a blue badge on the debt item.</p>
+      <div class="callout success">
+        <span class="callout-icon">🔒</span>
+        <div class="callout-body"><strong>Credentials are never stored</strong>Your Jira API token is sent directly to Atlassian on the server side and is not saved in SFHealth's database. You enter it fresh each time you push.</div>
+      </div>
+
+      <h2>Linear integration</h2>
+      <p>Push any debt item to Linear. Click the <strong>Linear</strong> button and enter:</p>
+      <ul>
+        <li><strong>Linear API Key</strong> — from Linear → Settings → API → Personal API Keys</li>
+        <li><strong>Team ID</strong> — the UUID from Linear → Settings → Teams → [Your Team] → General</li>
+      </ul>
+      <p>A Linear issue is created with title, description, and priority mapped (Urgent / High / Medium / Low). The same no-storage policy applies — credentials are per-request only.</p>
+
+      <h2>Burndown chart explained</h2>
+      <p>The chart plots two weekly series:</p>
+      <ul>
+        <li><strong>Red line</strong> — new debt items added per week</li>
+        <li><strong>Green line</strong> — items resolved per week</li>
+      </ul>
+      <p>A healthy team's green line trends upward and eventually crosses the red line. If the red line is always higher, debt is growing faster than the team can address it — a signal to either reduce the number of new issues introduced or allocate more remediation capacity.</p>
+    </article>
+
+    <!-- ══ COMPLIANCE ══ -->
+    <article class="doc-section" id="sec-compliance">
+      <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Features</div>
+      <h1>Compliance & Governance Reports</h1>
+      <p class="subtitle">Generate audit-ready exports for GDPR/DPDP, SOC 2, and ISV AppExchange security review — directly from any completed audit.</p>
+
+      <div class="callout warn">
+        <span class="callout-icon">⚠️</span>
+        <div class="callout-body"><strong>Starting point, not a legal opinion</strong>These reports are generated from automated metadata analysis. They are intended to support compliance preparation, not replace a formal assessment by a qualified professional (DPO, CPA firm, or Salesforce security reviewer).</div>
+      </div>
+
+      <h2>How to access</h2>
+      <p>After any completed Salesforce audit, scroll to the <strong>Export &amp; Share</strong> card. You'll see three compliance export buttons:</p>
+      <ul>
+        <li><strong>GDPR / DPDP</strong> — green button</li>
+        <li><strong>SOC 2 Checklist</strong> — blue button</li>
+        <li><strong>ISV Security</strong> — purple button</li>
+      </ul>
+      <p>Each opens a full print-ready report in a new tab. Click <strong>Print / Save as PDF</strong> at the top to export it.</p>
+
+      <h2>GDPR / DPDP Report</h2>
+      <p>Covers data protection controls relevant to GDPR (EU) and India's Digital Personal Data Protection Act. Three sections:</p>
+      <table class="score-table">
+        <thead><tr><th>Section</th><th>Checks</th></tr></thead>
+        <tbody>
+          <tr><td>Access Control &amp; Least Privilege</td><td>Guest user profiles, Modify All Data profiles, MFA enforcement, password policy strength</td></tr>
+          <tr><td>Data Retention &amp; Minimisation</td><td>Ownerless Account records, Contact email completeness, duplicate prevention rules, unused custom fields, inactive licensed users</td></tr>
+          <tr><td>Data Integrity &amp; Accuracy</td><td>Storage utilisation, legacy Workflow Rules</td></tr>
+        </tbody>
+      </table>
+      <p>The report also includes a detail table of all unused custom fields — these represent data collected but never used, which violates data minimisation principles under both GDPR and DPDP.</p>
+
+      <h2>SOC 2 Readiness Checklist</h2>
+      <p>Maps your Salesforce configuration controls to AICPA Trust Service Criteria:</p>
+      <table class="score-table">
+        <thead><tr><th>Criterion</th><th>Checks</th></tr></thead>
+        <tbody>
+          <tr><td><strong>CC6</strong> — Logical Access Controls</td><td>MFA, password policy, least-privilege profiles, guest user exposure</td></tr>
+          <tr><td><strong>CC7</strong> — System Operations</td><td>Login failure rate (7d), async Apex error rate, API limit headroom</td></tr>
+          <tr><td><strong>CC8</strong> — Change Management</td><td>Apex test coverage, hardcoded IDs, deprecated automation (Process Builder), stale API versions</td></tr>
+          <tr><td><strong>A1</strong> — Availability</td><td>Monthly active user ratio</td></tr>
+        </tbody>
+      </table>
+      <p>The report also includes a <strong>Manual Evidence Checklist</strong> — a list of SOC 2 controls that cannot be verified by automated metadata scanning (written security policy, incident response plan, vendor contracts, background checks, etc.).</p>
+
+      <h2>ISV / AppExchange Security Review</h2>
+      <p>A self-assessment aligned to Salesforce's AppExchange Security Review requirements. Three sections:</p>
+      <table class="score-table">
+        <thead><tr><th>Section</th><th>Checks</th></tr></thead>
+        <tbody>
+          <tr><td>Code Security</td><td>Hardcoded record IDs, Apex test coverage ≥75%, inactive triggers, API version currency, legacy Visualforce pages</td></tr>
+          <tr><td>Access Control &amp; Authentication</td><td>MFA enforcement, guest user over-permission, minimal admin permissions, password policy</td></tr>
+          <tr><td>Integration &amp; Reliability</td><td>API limit safety, async Apex error rate, callout error rate</td></tr>
+        </tbody>
+      </table>
+      <p>The ISV report also includes:</p>
+      <ul>
+        <li>A pre-submission manual checklist (Code Analyzer, CRUD/FLS, SOQL injection, LWC XSS, named credentials, test script document)</li>
+        <li>The full list of Apex classes in scope for review</li>
+      </ul>
+
+      <h2>Report anatomy</h2>
+      <p>All three compliance reports share the same structure:</p>
+      <ul>
+        <li><strong>Header</strong> — org name, org ID, report date, report type</li>
+        <li><strong>Summary banner</strong> — % compliance score, pass/fail/warn counts, progress bar</li>
+        <li><strong>Check tables</strong> — each row: control name, pass/fail/warn badge, finding detail, specific recommendation</li>
+        <li><strong>Print button</strong> — opens browser print dialog for PDF export</li>
+        <li><strong>Disclaimer</strong> — scope and limitations of automated analysis</li>
+      </ul>
+    </article>
+
     <!-- ══ REPORTS ══ -->
     <article class="doc-section" id="sec-reports">
       <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Features</div>
       <h1>Reports & Exports</h1>
-      <p class="subtitle">Three ways to export your audit results.</p>
+      <p class="subtitle">Seven ways to export and share your audit results — from raw data to compliance-ready PDFs.</p>
 
       <h2>HTML Report</h2>
       <p>Download a self-contained HTML file with the full audit dashboard — score, categories, recommendations, unused fields. Open it in any browser, share it by email, or attach it to a Jira ticket.</p>
@@ -607,6 +770,26 @@ if criticalIssues &gt; 0 then flag as CRITICAL</code></pre>
         <li>"Prepared by [Brand] · Confidential" footer</li>
       </ul>
       <p>Access it at <code>/api/audit/&lt;jobId&gt;/report-pdf</code> — linked from the Download Report button.</p>
+
+      <h2>Shareable Link</h2>
+      <p>Generate a token-based URL from the <strong>Share Report</strong> button. The link is read-only, requires no login for recipients, and expires after 30 days. See <a onclick="nav(document.querySelector('[data-section=sharing]'));return false" href="#sharing" style="color:#0070d2">Sharing Reports</a> for full details.</p>
+
+      <h2>Compliance Reports (3 types)</h2>
+      <p>Generate audit-ready documents from the <strong>Export &amp; Share</strong> card after any completed audit:</p>
+      <table class="score-table">
+        <thead><tr><th>Report</th><th>Button colour</th><th>Audience</th></tr></thead>
+        <tbody>
+          <tr><td><strong>GDPR / DPDP</strong></td><td>Green</td><td>DPO, legal, privacy compliance teams</td></tr>
+          <tr><td><strong>SOC 2 Checklist</strong></td><td>Blue</td><td>Auditors, CISO, security reviews</td></tr>
+          <tr><td><strong>ISV / AppExchange Security</strong></td><td>Purple</td><td>ISV developers preparing AppExchange submissions</td></tr>
+        </tbody>
+      </table>
+      <p>Each report opens in a new tab as a print-ready HTML page. Use <strong>Ctrl+P / Cmd+P</strong> to save as PDF. See <a onclick="nav(document.querySelector('[data-section=compliance]'));return false" href="#compliance" style="color:#0070d2">Compliance Reports</a> for full details on what each report covers.</p>
+
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div class="callout-body"><strong>Tip — consultant workflow</strong>Run the audit → download the Consulting PDF for the client → generate a GDPR or SOC 2 report for the security team → share the raw link with the engineering team. One audit, four different deliverables, under 5 minutes.</div>
+      </div>
     </article>
 
     <!-- ══ SHARING ══ -->
@@ -771,8 +954,17 @@ if criticalIssues &gt; 0 then flag as CRITICAL</code></pre>
       <h2>A</h2>
       <p><strong>API Enabled</strong> — A Salesforce profile permission required to make REST/SOAP API calls. Required for SFHealth to run an audit.</p>
 
+      <h2>B</h2>
+      <p><strong>Burndown Chart</strong> — A weekly line chart in the Debt Tracker showing new debt items added (red line) vs. items resolved (green line). When the green line trends upward and crosses the red line, the team is resolving debt faster than it accumulates.</p>
+
+      <h2>C</h2>
+      <p><strong>Compliance Report</strong> — A print-ready audit document generated from a Salesforce audit. SFHealth produces three types: GDPR/DPDP, SOC 2 Readiness, and ISV/AppExchange Security. Intended to support compliance preparation, not replace formal assessments.</p>
+
+      <h2>D</h2>
+      <p><strong>Debt Item</strong> — A single tracked finding from an audit. Stored in the Debt Tracker backlog with a status (Open / In Progress / Resolved), priority, category, optional assignee, and optional Jira or Linear issue link.</p>
+
       <h2>F</h2>
-      <p><strong>Fleet Score</strong> — The average health score across all orgs in your portfolio.</p>
+      <p><strong>Fleet Score</strong> — The average health score across all orgs in your portfolio. Visible in the Portfolio view.</p>
       <p><strong>Flow</strong> — Salesforce's current-generation declarative automation tool. Replaces Workflow Rules and Process Builder.</p>
 
       <h2>G</h2>
@@ -794,6 +986,10 @@ if criticalIssues &gt; 0 then flag as CRITICAL</code></pre>
       <h2>S</h2>
       <p><strong>SAP</strong> — Sender Authentication Package. A Marketing Cloud configuration that sets up a private domain, dedicated IP, and reply mail management for email sending.</p>
       <p><strong>Score</strong> — A 0–100 number representing org health. Calculated as a weighted average of six category scores.</p>
+      <p><strong>Source Finding Key</strong> — A hash derived from an audit finding's category and action text. Used to prevent duplicate debt items — if an open item with the same key already exists, a second ⊕ Track click returns "Already tracked" instead of creating a duplicate.</p>
+
+      <h2>T</h2>
+      <p><strong>Technical Debt</strong> — Accumulated shortcuts, misconfigurations, deprecated automation, and code quality issues in a Salesforce org. The Debt Tracker turns SFHealth audit findings into a managed backlog to reduce this debt over time.</p>
 
       <h2>W</h2>
       <p><strong>Workflow Rule</strong> — A legacy Salesforce automation tool, predecessor to Process Builder and Flow. Being retired by Salesforce.</p>
@@ -803,17 +999,38 @@ if criticalIssues &gt; 0 then flag as CRITICAL</code></pre>
     <article class="doc-section" id="sec-roadmap">
       <div class="breadcrumb"><a onclick="nav(document.querySelector('[data-section=overview]'))">Docs</a> › Reference</div>
       <h1>Roadmap</h1>
-      <p class="subtitle">What's coming to SFHealth — in order of priority.</p>
+      <p class="subtitle">What's shipped and what's coming to SFHealth.</p>
 
       <div class="callout info">
         <span class="callout-icon">💬</span>
         <div class="callout-body"><strong>Have a request?</strong>Use the feedback button inside the app or open a support ticket. User requests directly shape what we build next.</div>
       </div>
 
+      <h2>Shipped — Sprint 1</h2>
+      <ul>
+        <li><strong>Salesforce org audit</strong> — 38+ checks across 6 categories, weighted health score and grade</li>
+        <li><strong>Marketing Cloud audit</strong> — Email Studio, Journey Builder, Automation Studio, SAP, Data Extensions</li>
+        <li><strong>AI-powered remediation guide</strong> — Streaming step-by-step fix instructions for every finding</li>
+        <li><strong>Audit history &amp; trends</strong> — Score over time charts, category trends, audit comparison</li>
+        <li><strong>HTML, JSON, and Consulting PDF exports</strong> — Three export formats for every audit</li>
+        <li><strong>Shareable report links</strong> — 30-day token-based read-only links, no recipient login required</li>
+        <li><strong>Scheduled audits</strong> — Weekly, monthly, or daily recurring audits with email results</li>
+        <li><strong>User accounts</strong> — Sign up, log in, persistent audit history across sessions</li>
+      </ul>
+
+      <h2>Shipped — Sprint 2</h2>
+      <ul>
+        <li><strong>Technical Debt Tracker</strong> — Turn findings into a managed backlog with Open/In Progress/Resolved statuses, assignees, weekly burndown chart, and Jira/Linear push</li>
+        <li><strong>Portfolio view</strong> — Fleet score, needs-attention filter, multi-org comparison with category breakdown</li>
+        <li><strong>Custom rules engine</strong> — User-defined audit rules in plain <code>if … then flag as …</code> syntax</li>
+        <li><strong>Compliance reports</strong> — GDPR/DPDP, SOC 2 Readiness, and ISV/AppExchange Security review reports</li>
+        <li><strong>Dismiss findings</strong> — Acknowledge false positives or accepted risks; dismissed items are hidden on future audits</li>
+        <li><strong>Marketing Cloud Acknowledge &amp; Track</strong> — Dismiss and track MC audit findings, same as SF findings</li>
+      </ul>
+
       <h2>In progress</h2>
       <ul>
         <li>Real-time audit progress indicator with per-check status</li>
-        <li>AI-powered remediation guide (currently in beta via OpenRouter)</li>
         <li>Scheduled audit email digest improvements</li>
       </ul>
 
