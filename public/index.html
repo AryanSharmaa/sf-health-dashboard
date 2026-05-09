@@ -2544,8 +2544,7 @@ function confirmMcDismiss(index, action) {
 // ─── MC Debt Tracker — Track button ──────────────────────────────────────────
 
 async function addMcToDebtTracker(btn, action) {
-  // MC findings use the MC session's org ID — no SF session required
-  const orgId = window._liveSession?.orgId || (window._mcSubdomain ? `mc:${window._mcSubdomain}` : null);
+  const orgId = window._mcSubdomain ? `mc:${window._mcSubdomain}` : null;
   if (!orgId) {
     alert("No active session found. Please reconnect to Marketing Cloud.");
     return;
